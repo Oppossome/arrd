@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/HEAD/configuration-schema.json
+package: apigen
+output: ../internal/httpapi/apigen/api.gen.go
+generate:
+  models: true
+  std-http-server: true
+  strict-server: true
+  embedded-spec: true
+output-options:
+  # Served by hand for range and caching support.
+  exclude-operation-ids: [getPoster]
+  name-normalizer: ToCamelCaseWithInitialisms
+  additional-initialisms: [TMDB, IMDB, TVDB, RSS, VPN, DNS, TV, MB]

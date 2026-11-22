@@ -1,0 +1,2175 @@
+# arrd's JSON API. This file is the contract: the Go server glue
+# (internal/httpapi/apigen) and the web client types (web/src/lib/api.gen.ts)
+# are generated from it. After editing, run:
+#   go generate ./tools
+#   cd web && npm run gen:api
+openapi: 3.0.3
+info:
+  title: arrd API
+  version: "1"
+  description: |
+    Authentication (enforced by the server's route guards, documented per
+    operation under `security`):
+    - public operations have `security: []`;
+    - setup operations need the setup token and only work until onboarding
+      completes;
+    - everything else needs the API key or a session cookie, and returns 503
+      until onboarding completes. Cookie-authenticated requests that change
+      state must come from the same origin.
+
+security:
+  - apiKey: []
+  - apiKeyQuery: []
+  - session: []
+
+tags:
+  - name: auth
+  - name: setup
+  - name: system
+  - name: settings
+  - name: rootfolders
+  - name: indexers
+  - name: movies
+  - name: discover
+  - name: series
+  - name: episodes
+  - name: queue
+  - name: vpn
+
+paths:
+  # ------------------------------------------------------------ public
+  /api/v1/health:
+    get:
+      operationId: health
+      tags: [system]
+      security: []
+      responses:
+        "200":
+          description: The server is up.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Health" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/auth/session:
+    get:
+      operationId: session
+      tags: [auth]
+      security: []
+      description: What the UI should show (setup, login or the app).
+      responses:
+        "200":
+          description: Session state.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Session" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginRequest" }
+      responses:
+        "204":
+          description: Signed in; the session cookie is set.
+          headers:
+            Set-Cookie: { $ref: "#/components/headers/SetSessionCookie" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      security: []
+      description: Ends the session. Must come from the same origin.
+      responses:
+        "204":
+          description: Signed out; the session cookie is cleared.
+          headers:
+            Set-Cookie: { $ref: "#/components/headers/SetSessionCookie" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/setup/status:
+    get:
+      operationId: setupStatus
+      tags: [setup]
+      security: []
+      responses:
+        "200":
+          description: Whether onboarding is done, and suggested paths.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SetupStatus" }
+        default: { $ref: "#/components/responses/Error" }
+
+  # ------------------------------------------------------------ setup
+  /api/v1/setup:
+    post:
+      operationId: completeSetup
+      tags: [setup]
+      security: [{ setupToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SetupInput" }
+      responses:
+        "201":
+          description: Onboarding is complete and the caller is signed in.
+          headers:
+            Set-Cookie: { $ref: "#/components/headers/SetSessionCookie" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SetupResult" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/setup/validate/paths:
+    post:
+      operationId: validatePaths
+      tags: [setup]
+      security: [{ setupToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PathsInput" }
+      responses:
+        "200":
+          description: Per-path problems; nothing is saved.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PathsCheck" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/setup/validate/vpn:
+    post:
+      operationId: validateVPN
+      tags: [setup]
+      security: [{ setupToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VPNInput" }
+      responses:
+        "200":
+          description: The tunnel works.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/VPNTest" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/setup/validate/tmdb:
+    post:
+      operationId: validateTMDB
+      tags: [setup]
+      security: [{ setupToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TMDBKeyRequest" }
+      responses:
+        "200":
+          description: The key works.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ValidResponse" }
+        default: { $ref: "#/components/responses/Error" }
+
+  # ------------------------------------------------- setup token or auth
+  /api/v1/fs/dirs:
+    get:
+      operationId: listDirs
+      tags: [system]
+      security: [{ setupToken: [] }, { apiKey: [] }, { apiKeyQuery: [] }, { session: [] }]
+      description: Subdirectories of an absolute path, for the folder picker. Hidden directories are left out.
+      parameters:
+        - name: path
+          in: query
+          description: Absolute path; defaults to /.
+          schema: { type: string }
+      responses:
+        "200":
+          description: The directory listing.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DirListing" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/vpn/providers:
+    get:
+      operationId: vpnProviders
+      tags: [vpn]
+      security: [{ setupToken: [] }, { apiKey: [] }, { apiKeyQuery: [] }, { session: [] }]
+      responses:
+        "200":
+          description: VPN providers and the settings each needs.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/VPNProvider" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/vpn/providers/{id}/options/{field}:
+    get:
+      operationId: vpnOptions
+      tags: [vpn]
+      security: [{ setupToken: [] }, { apiKey: [] }, { apiKeyQuery: [] }, { session: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: field, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: The choices for a provider's select field.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SettingOption" }
+        default: { $ref: "#/components/responses/Error" }
+
+  # ------------------------------------------------------------ system
+  /api/v1/status:
+    get:
+      operationId: status
+      tags: [system]
+      responses:
+        "200":
+          description: Whether downloads are running, and why not.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RuntimeStatus" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/posters/{size}/{file}:
+    get:
+      operationId: getPoster
+      tags: [system]
+      description: A cached TMDB poster or backdrop. Served by hand (not generated) for range and caching support.
+      parameters:
+        - name: size
+          in: path
+          required: true
+          schema: { type: string, enum: [w185, w342, w500, w780, w1280], description: "w185-w500 for posters, w780 and w1280 for backdrops." }
+        - { name: file, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: The image.
+          content:
+            image/*:
+              schema: { type: string, format: binary }
+        default: { $ref: "#/components/responses/Error" }
+
+  # ------------------------------------------------------------ settings
+  /api/v1/settings/password:
+    put:
+      operationId: changePassword
+      tags: [settings]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChangePasswordRequest" }
+      responses:
+        "204": { description: Changed; other sessions are signed out. }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/settings/general:
+    get:
+      operationId: getGeneralSettings
+      tags: [settings]
+      responses:
+        "200":
+          description: General settings.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GeneralSettings" }
+        default: { $ref: "#/components/responses/Error" }
+    put:
+      operationId: putGeneralSettings
+      tags: [settings]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GeneralSettingsInput" }
+      responses:
+        "200":
+          description: The saved settings.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GeneralSettings" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/settings/api-key/regenerate:
+    post:
+      operationId: regenerateAPIKey
+      tags: [settings]
+      responses:
+        "200":
+          description: The new key; the old one stops working.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/APIKeyResponse" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/settings/vpn:
+    get:
+      operationId: getVPNSettings
+      tags: [settings, vpn]
+      responses:
+        "200":
+          description: The saved VPN and tunnel state. Secret values are never returned.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/VPNSettings" }
+        default: { $ref: "#/components/responses/Error" }
+    put:
+      operationId: putVPNSettings
+      tags: [settings, vpn]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VPNInput" }
+      responses:
+        "200":
+          description: The saved VPN.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/VPNSettings" }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deleteVPNSettings
+      description: Removes the VPN. Indexer searches and downloads then use the normal connection.
+      tags: [settings, vpn]
+      responses:
+        "204": { description: Removed. }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/settings/vpn/test:
+    post:
+      operationId: testVPN
+      tags: [settings, vpn]
+      description: Tests the posted provider settings, or the running tunnel when the body is empty.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VPNInput" }
+      responses:
+        "200":
+          description: The tunnel works.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/VPNTest" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/settings/downloads:
+    get:
+      operationId: getDownloadSettings
+      tags: [settings]
+      responses:
+        "200":
+          description: Download settings.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DownloadSettings" }
+        default: { $ref: "#/components/responses/Error" }
+    put:
+      operationId: putDownloadSettings
+      tags: [settings]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DownloadSettings" }
+      responses:
+        "200":
+          description: The saved settings, with warnings.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SettingsUpdate" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/settings/quality:
+    get:
+      operationId: getQualitySettings
+      tags: [settings]
+      responses:
+        "200":
+          description: Quality settings.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QualitySettings" }
+        default: { $ref: "#/components/responses/Error" }
+    put:
+      operationId: putQualitySettings
+      tags: [settings]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/QualitySettingsInput" }
+      responses:
+        "200":
+          description: The saved settings.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QualitySettings" }
+        default: { $ref: "#/components/responses/Error" }
+
+  # ------------------------------------------------------------ root folders
+  /api/v1/rootfolders:
+    get:
+      operationId: listRootFolders
+      tags: [rootfolders]
+      parameters:
+        - name: media_type
+          in: query
+          description: Defaults to movie.
+          schema: { $ref: "#/components/schemas/MediaType" }
+      responses:
+        "200":
+          description: Root folders for the media type.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RootFolder" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: createRootFolder
+      tags: [rootfolders]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateRootFolderRequest" }
+      responses:
+        "201":
+          description: The new root folder.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RootFolder" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/rootfolders/{id}/default:
+    post:
+      operationId: setDefaultRootFolder
+      tags: [rootfolders]
+      parameters: [{ $ref: "#/components/parameters/ID" }]
+      responses:
+        "204": { description: Now the default for its media type. }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/rootfolders/{id}:
+    delete:
+      operationId: deleteRootFolder
+      tags: [rootfolders]
+      parameters: [{ $ref: "#/components/parameters/ID" }]
+      responses:
+        "204": { description: Removed. }
+        default: { $ref: "#/components/responses/Error" }
+
+  # ------------------------------------------------------------ indexers
+  /api/v1/indexers:
+    get:
+      operationId: listIndexers
+      tags: [indexers]
+      responses:
+        "200":
+          description: All indexers.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Indexer" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: createIndexer
+      tags: [indexers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/IndexerInput" }
+      responses:
+        "201":
+          description: The new indexer.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Indexer" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/indexers/definitions:
+    get:
+      operationId: indexerDefinitions
+      tags: [indexers]
+      security: [{ setupToken: [] }, { apiKey: [] }, { apiKeyQuery: [] }, { session: [] }]
+      responses:
+        "200":
+          description: The sites indexers can be added for (from the definitions directory) and the settings each needs.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/IndexerDefinition" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: uploadIndexerDefinitions
+      tags: [indexers]
+      security: [{ setupToken: [] }, { apiKey: [] }, { apiKeyQuery: [] }, { session: [] }]
+      description: >-
+        Adds Cardigann definitions to the definitions directory and reloads it. The body is one
+        definition file, or a zip whose *.yml files (at any depth) are definitions; when the zip
+        has versioned folders (definitions/v11, v12 …) only
+        files in those are used, and a site in several versions comes from the newest that parses.
+        Each definition replaces the file that already defines its id.
+      x-max-body-bytes: 67108864
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        "200":
+          description: The definitions saved, files in the upload that were skipped, and all definitions now available.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IndexerDefinitionsUpload" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/indexers/definitions/{definitionId}:
+    delete:
+      operationId: deleteIndexerDefinition
+      tags: [indexers]
+      security: [{ setupToken: [] }, { apiKey: [] }, { apiKeyQuery: [] }, { session: [] }]
+      description: Deletes the file of a definition. Indexers of the site fail until it is added again.
+      parameters:
+        - { name: definitionId, in: path, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Removed. }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/indexers/definitions/reload:
+    post:
+      operationId: reloadIndexerDefinitions
+      tags: [indexers]
+      security: [{ setupToken: [] }, { apiKey: [] }, { apiKeyQuery: [] }, { session: [] }]
+      description: Re-reads the Cardigann definitions directory.
+      responses:
+        "200":
+          description: The definitions now available, and definition files that were skipped.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IndexerDefinitionsReload" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/indexers/{id}:
+    parameters: [{ $ref: "#/components/parameters/ID" }]
+    get:
+      operationId: getIndexer
+      tags: [indexers]
+      responses:
+        "200":
+          description: The indexer.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Indexer" }
+        default: { $ref: "#/components/responses/Error" }
+    put:
+      operationId: updateIndexer
+      tags: [indexers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/IndexerInput" }
+      responses:
+        "200":
+          description: The updated indexer.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Indexer" }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deleteIndexer
+      tags: [indexers]
+      responses:
+        "204": { description: Removed. }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/indexers/{id}/test:
+    post:
+      operationId: testIndexer
+      tags: [indexers]
+      parameters: [{ $ref: "#/components/parameters/ID" }]
+      responses:
+        "200":
+          description: The indexer answered; its capabilities are refreshed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Indexer" }
+        "502":
+          description: The test failed (a normal outcome, not a server error).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        default: { $ref: "#/components/responses/Error" }
+
+  # ------------------------------------------------------------ movies
+  /api/v1/movies/lookup:
+    get:
+      operationId: lookupMovies
+      tags: [movies]
+      parameters:
+        - { $ref: "#/components/parameters/LookupQuery" }
+        - { $ref: "#/components/parameters/LookupYear" }
+      responses:
+        "200":
+          description: TMDB matches.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/LookupMovie" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/movies:
+    get:
+      operationId: listMovies
+      tags: [movies]
+      responses:
+        "200":
+          description: The movie library.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Movie" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: addMovie
+      tags: [movies]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AddMovieRequest" }
+      responses:
+        "201":
+          description: The added movie.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Movie" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/movies/{id}:
+    parameters: [{ $ref: "#/components/parameters/ID" }]
+    get:
+      operationId: getMovie
+      tags: [movies]
+      responses:
+        "200":
+          description: The movie.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Movie" }
+        default: { $ref: "#/components/responses/Error" }
+    put:
+      operationId: updateMovie
+      tags: [movies]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateMovieRequest" }
+      responses:
+        "200":
+          description: The updated movie.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Movie" }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deleteMovie
+      tags: [movies]
+      responses:
+        "204": { description: Removed. }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/movies/{id}/releases:
+    get:
+      operationId: movieReleases
+      tags: [movies]
+      parameters: [{ $ref: "#/components/parameters/ID" }]
+      responses:
+        "200":
+          description: Releases found by an interactive search.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SearchResult" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/movies/{id}/search:
+    post:
+      operationId: searchMovie
+      tags: [movies]
+      parameters: [{ $ref: "#/components/parameters/ID" }]
+      responses:
+        "200":
+          description: The automatic search outcome.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AutoSearchResult" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/movies/{id}/grab:
+    post:
+      operationId: grabMovie
+      tags: [movies]
+      parameters: [{ $ref: "#/components/parameters/ID" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReleaseInput" }
+      responses:
+        "201":
+          description: The started download.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Download" }
+        default: { $ref: "#/components/responses/Error" }
+
+  # ------------------------------------------------------------ discover
+  /api/v1/discover/lists/movies/{list}:
+    get:
+      operationId: movieList
+      tags: [discover]
+      description: The first page (about 20) of one of TMDB's curated movie lists.
+      parameters:
+        - name: list
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/MovieList" }
+      responses:
+        "200":
+          description: The movies on the list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/LookupMovie" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/discover/movies/genres:
+    get:
+      operationId: movieGenres
+      tags: [discover]
+      responses:
+        "200":
+          description: TMDB's movie genres.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Genre" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/discover/movies/browse:
+    get:
+      operationId: browseMovies
+      tags: [discover]
+      description: A page of TMDB movies, optionally of one genre, in the chosen order.
+      parameters:
+        - { $ref: "#/components/parameters/BrowseGenre" }
+        - { $ref: "#/components/parameters/BrowseSort" }
+        - { $ref: "#/components/parameters/BrowsePage" }
+      responses:
+        "200":
+          description: The page.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MovieBrowsePage" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/discover/movies/recommendations:
+    get:
+      operationId: movieRecommendations
+      tags: [discover]
+      description: >-
+        TMDB's recommendations for the most recently added library movies, one
+        row per movie, newest first. Movies in the library or in an earlier row
+        are left out, and empty rows are dropped.
+      responses:
+        "200":
+          description: Rows of recommended movies.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/MovieRecommendations" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/discover/movies/{tmdbId}:
+    get:
+      operationId: discoverMovie
+      tags: [discover]
+      parameters: [{ $ref: "#/components/parameters/TMDBID" }]
+      responses:
+        "200":
+          description: The movie, from TMDB.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LookupMovie" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/discover/movies/{tmdbId}/recommendations:
+    get:
+      operationId: moviesLike
+      tags: [discover]
+      description: Movies TMDB recommends to people who liked this one.
+      parameters: [{ $ref: "#/components/parameters/TMDBID" }]
+      responses:
+        "200":
+          description: The recommended movies.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/LookupMovie" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/discover/movies/{tmdbId}/releases:
+    get:
+      operationId: discoverMovieReleases
+      tags: [discover]
+      description: Searches the indexers for a movie, whether or not it is in the library.
+      parameters: [{ $ref: "#/components/parameters/TMDBID" }]
+      responses:
+        "200":
+          description: Releases found.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SearchResult" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/discover/movies/{tmdbId}/grab:
+    post:
+      operationId: discoverGrabMovie
+      tags: [discover]
+      description: Downloads a release, first adding the movie to the library (unmonitored, default root folder) if it is not there.
+      parameters: [{ $ref: "#/components/parameters/TMDBID" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReleaseInput" }
+      responses:
+        "201":
+          description: The started download.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Download" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/discover/lists/series/{list}:
+    get:
+      operationId: seriesList
+      tags: [discover]
+      description: The first page (about 20) of one of TMDB's curated TV lists.
+      parameters:
+        - name: list
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/SeriesList" }
+      responses:
+        "200":
+          description: The series on the list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/LookupSeries" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/discover/series/genres:
+    get:
+      operationId: seriesGenres
+      tags: [discover]
+      responses:
+        "200":
+          description: TMDB's TV genres.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Genre" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/discover/series/browse:
+    get:
+      operationId: browseSeries
+      tags: [discover]
+      description: A page of TMDB series, optionally of one genre, in the chosen order.
+      parameters:
+        - { $ref: "#/components/parameters/BrowseGenre" }
+        - { $ref: "#/components/parameters/BrowseSort" }
+        - { $ref: "#/components/parameters/BrowsePage" }
+      responses:
+        "200":
+          description: The page.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeriesBrowsePage" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/discover/series/recommendations:
+    get:
+      operationId: seriesRecommendations
+      tags: [discover]
+      description: >-
+        TMDB's recommendations for the most recently added library series, one
+        row per series, newest first. Series in the library or in an earlier row
+        are left out, and empty rows are dropped.
+      responses:
+        "200":
+          description: Rows of recommended series.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SeriesRecommendations" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/discover/series/{tmdbId}:
+    get:
+      operationId: discoverSeries
+      tags: [discover]
+      parameters: [{ $ref: "#/components/parameters/TMDBID" }]
+      responses:
+        "200":
+          description: The series, from TMDB, with its seasons.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LookupSeries" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/discover/series/{tmdbId}/recommendations:
+    get:
+      operationId: seriesLike
+      tags: [discover]
+      description: Series TMDB recommends to people who liked this one.
+      parameters: [{ $ref: "#/components/parameters/TMDBID" }]
+      responses:
+        "200":
+          description: The recommended series.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/LookupSeries" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/discover/series/{tmdbId}/seasons/{season}/releases:
+    get:
+      operationId: discoverSeasonReleases
+      tags: [discover]
+      description: Searches the indexers for a season of a series, whether or not it is in the library.
+      parameters:
+        - { $ref: "#/components/parameters/TMDBID" }
+        - { $ref: "#/components/parameters/Season" }
+      responses:
+        "200":
+          description: Releases found.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SearchResult" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/discover/series/{tmdbId}/grab:
+    post:
+      operationId: discoverGrabSeries
+      tags: [discover]
+      description: Downloads a single-season TV release, first adding the series to the library (unmonitored, default root folder) if it is not there.
+      parameters: [{ $ref: "#/components/parameters/TMDBID" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReleaseInput" }
+      responses:
+        "201":
+          description: The started download.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Download" }
+        default: { $ref: "#/components/responses/Error" }
+
+  # ------------------------------------------------------------ series
+  /api/v1/series/lookup:
+    get:
+      operationId: lookupSeries
+      tags: [series]
+      parameters:
+        - { $ref: "#/components/parameters/LookupQuery" }
+        - { $ref: "#/components/parameters/LookupYear" }
+      responses:
+        "200":
+          description: TMDB matches.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/LookupSeries" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/series:
+    get:
+      operationId: listSeries
+      tags: [series]
+      responses:
+        "200":
+          description: The series library.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Series" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: addSeries
+      tags: [series]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AddSeriesRequest" }
+      responses:
+        "201":
+          description: The added series.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Series" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/series/{id}:
+    parameters: [{ $ref: "#/components/parameters/ID" }]
+    get:
+      operationId: getSeries
+      tags: [series]
+      responses:
+        "200":
+          description: The series.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Series" }
+        default: { $ref: "#/components/responses/Error" }
+    put:
+      operationId: updateSeries
+      tags: [series]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateSeriesRequest" }
+      responses:
+        "200":
+          description: The updated series.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Series" }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deleteSeries
+      tags: [series]
+      responses:
+        "204": { description: Removed. }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/series/{id}/refresh:
+    post:
+      operationId: refreshSeries
+      tags: [series]
+      parameters: [{ $ref: "#/components/parameters/ID" }]
+      responses:
+        "200":
+          description: The series with refreshed metadata.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Series" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/series/{id}/episodes:
+    get:
+      operationId: seriesEpisodes
+      tags: [series]
+      parameters: [{ $ref: "#/components/parameters/ID" }]
+      responses:
+        "200":
+          description: The series' episodes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Episode" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/series/{id}/search:
+    post:
+      operationId: searchSeriesWanted
+      tags: [series]
+      parameters: [{ $ref: "#/components/parameters/ID" }]
+      responses:
+        "204": { description: Searched for every wanted episode. }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/series/{id}/grab:
+    post:
+      operationId: grabSeries
+      tags: [series]
+      parameters: [{ $ref: "#/components/parameters/ID" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReleaseInput" }
+      responses:
+        "201":
+          description: The started download.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Download" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/series/{id}/seasons/{season}:
+    put:
+      operationId: updateSeason
+      tags: [series]
+      parameters:
+        - { $ref: "#/components/parameters/ID" }
+        - { $ref: "#/components/parameters/Season" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MonitoredRequest" }
+      responses:
+        "204": { description: Every episode of the season updated. }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/series/{id}/seasons/{season}/releases:
+    get:
+      operationId: seasonReleases
+      tags: [series]
+      parameters:
+        - { $ref: "#/components/parameters/ID" }
+        - { $ref: "#/components/parameters/Season" }
+      responses:
+        "200":
+          description: Releases found by an interactive search.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SearchResult" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/series/{id}/seasons/{season}/search:
+    post:
+      operationId: searchSeason
+      tags: [series]
+      parameters:
+        - { $ref: "#/components/parameters/ID" }
+        - { $ref: "#/components/parameters/Season" }
+      responses:
+        "200":
+          description: One automatic search outcome per search made.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AutoSearchResult" }
+        default: { $ref: "#/components/responses/Error" }
+
+  # ------------------------------------------------------------ episodes
+  /api/v1/episodes/{id}:
+    put:
+      operationId: updateEpisode
+      tags: [episodes]
+      parameters: [{ $ref: "#/components/parameters/ID" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MonitoredRequest" }
+      responses:
+        "200":
+          description: The updated episode.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Episode" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/episodes/{id}/releases:
+    get:
+      operationId: episodeReleases
+      tags: [episodes]
+      parameters: [{ $ref: "#/components/parameters/ID" }]
+      responses:
+        "200":
+          description: Releases found by an interactive search.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SearchResult" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/episodes/{id}/search:
+    post:
+      operationId: searchEpisode
+      tags: [episodes]
+      parameters: [{ $ref: "#/components/parameters/ID" }]
+      responses:
+        "200":
+          description: The automatic search outcome.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AutoSearchResult" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/episodes/{id}/grab:
+    post:
+      operationId: grabEpisode
+      tags: [episodes]
+      parameters: [{ $ref: "#/components/parameters/ID" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReleaseInput" }
+      responses:
+        "201":
+          description: The started download.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Download" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/rss/sync:
+    post:
+      operationId: rssSync
+      tags: [queue]
+      responses:
+        "200":
+          description: What the RSS sync saw and grabbed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RSSResult" }
+        default: { $ref: "#/components/responses/Error" }
+
+  # ------------------------------------------------------------ queue
+  /api/v1/queue:
+    get:
+      operationId: listQueue
+      tags: [queue]
+      parameters:
+        - { name: movie_id, in: query, schema: { type: integer, format: int64, minimum: 1 } }
+        - { name: series_id, in: query, schema: { type: integer, format: int64, minimum: 1 } }
+      responses:
+        "200":
+          description: Downloads, optionally for one movie or series.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Download" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/queue/{id}:
+    delete:
+      operationId: removeQueueItem
+      tags: [queue]
+      parameters:
+        - { $ref: "#/components/parameters/ID" }
+        - name: delete_data
+          in: query
+          description: Also delete the downloaded data.
+          schema: { type: boolean }
+      responses:
+        "204": { description: Removed. }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/queue/throughput:
+    get:
+      operationId: getThroughput
+      tags: [queue]
+      responses:
+        "200":
+          description: Current transfer rates and the last few minutes of history.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Throughput" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/queue/{id}/peers:
+    get:
+      operationId: listDownloadPeers
+      tags: [queue]
+      parameters:
+        - { $ref: "#/components/parameters/ID" }
+      responses:
+        "200":
+          description: Connected peers, fastest first. Empty when the download is not running.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Peer" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/queue/{id}/pause:
+    post:
+      operationId: pauseDownload
+      tags: [queue]
+      description: Stop transfers until resumed; kept across restarts. Only downloading items can be paused (409 otherwise).
+      parameters:
+        - { $ref: "#/components/parameters/ID" }
+      responses:
+        "204": { description: Paused. }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/queue/{id}/resume:
+    post:
+      operationId: resumeDownload
+      tags: [queue]
+      parameters:
+        - { $ref: "#/components/parameters/ID" }
+      responses:
+        "204": { description: Resumed. }
+        default: { $ref: "#/components/responses/Error" }
+
+components:
+  securitySchemes:
+    apiKey: { type: apiKey, in: header, name: X-Api-Key }
+    apiKeyQuery: { type: apiKey, in: query, name: apikey }
+    session: { type: apiKey, in: cookie, name: arrd_session }
+    setupToken:
+      type: apiKey
+      in: header
+      name: X-Setup-Token
+      description: Printed in the arrd log; only valid until onboarding completes.
+
+  headers:
+    SetSessionCookie:
+      description: Sets or clears the arrd_session cookie.
+      schema: { type: string }
+
+  parameters:
+    ID:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    TMDBID:
+      name: tmdbId
+      in: path
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    Season:
+      name: season
+      in: path
+      required: true
+      schema: { type: integer, minimum: 0 }
+    LookupQuery:
+      name: q
+      in: query
+      description: Title to search for.
+      schema: { type: string }
+    LookupYear:
+      name: year
+      in: query
+      schema: { type: integer }
+    BrowseGenre:
+      name: genre
+      in: query
+      description: A TMDB genre id; every genre when absent.
+      schema: { type: integer, format: int64, minimum: 1 }
+    BrowseSort:
+      name: sort
+      in: query
+      schema: { $ref: "#/components/schemas/DiscoverSort" }
+    BrowsePage:
+      name: page
+      in: query
+      description: TMDB serves at most 500 pages.
+      schema: { type: integer, minimum: 1, maximum: 500, default: 1 }
+
+  responses:
+    Error:
+      description: An error.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error: { type: string }
+        field: { type: string, description: The input field the error is about. }
+
+    Health:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { type: string }
+
+    # ---------------------------------------------------------- enums
+    ImportMode:
+      type: string
+      enum: [hardlink, copy, move]
+    MediaType:
+      type: string
+      enum: [movie, tv]
+    MovieStatus:
+      type: string
+      enum: [missing, downloading, downloaded, unmonitored]
+    DownloadStatus:
+      type: string
+      enum: [downloading, completed, imported, failed]
+    MonitorMode:
+      type: string
+      enum: [all, future, none]
+    SettingFieldKind:
+      type: string
+      description: How a setting is entered.
+      enum: [text, password, textarea, select, toggle]
+
+    # ---------------------------------------------------------- auth
+    Session:
+      type: object
+      additionalProperties: false
+      required: [authenticated, setup_complete]
+      properties:
+        authenticated: { type: boolean }
+        setup_complete: { type: boolean }
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [password]
+      properties:
+        password: { type: string }
+    ChangePasswordRequest:
+      type: object
+      additionalProperties: false
+      required: [current_password, new_password]
+      properties:
+        current_password: { type: string }
+        new_password: { type: string }
+    APIKeyResponse:
+      type: object
+      additionalProperties: false
+      required: [api_key]
+      properties:
+        api_key: { type: string }
+    RuntimeStatus:
+      type: object
+      additionalProperties: false
+      required: [downloads_available]
+      properties:
+        downloads_available: { type: boolean }
+        downloads_error: { type: string }
+
+    # ---------------------------------------------------------- library
+    Movie:
+      type: object
+      additionalProperties: false
+      required: [id, tmdb_id, title, original_title, year, overview, root_folder_id, monitored, added_at, status]
+      properties:
+        id: { type: integer, format: int64 }
+        tmdb_id: { type: integer, format: int64 }
+        imdb_id: { type: string }
+        title: { type: string }
+        original_title: { type: string }
+        year: { type: integer }
+        overview: { type: string }
+        poster_path: { type: string }
+        backdrop_path: { type: string }
+        root_folder_id: { type: integer, format: int64 }
+        monitored: { type: boolean }
+        file_path: { type: string }
+        file_quality: { type: string }
+        added_at: { type: string }
+        status: { $ref: "#/components/schemas/MovieStatus" }
+    AddMovieRequest:
+      type: object
+      additionalProperties: false
+      required: [tmdb_id]
+      properties:
+        tmdb_id: { type: integer, format: int64 }
+        root_folder_id: { type: integer, format: int64, description: Defaults to the default movie root folder. }
+        monitored: { type: boolean, description: Defaults to true. }
+        search: { type: boolean, description: Search for it right away. }
+    UpdateMovieRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        monitored: { type: boolean }
+        root_folder_id: { type: integer, format: int64 }
+
+    SeasonStatus:
+      type: object
+      additionalProperties: false
+      required: [season, episodes, downloaded, monitored, aired, complete]
+      properties:
+        season: { type: integer }
+        episodes: { type: integer }
+        downloaded: { type: integer }
+        monitored: { type: integer, description: Monitored episodes. }
+        aired: { type: integer }
+        complete: { type: boolean, description: Every aired episode has a file. }
+    Series:
+      type: object
+      additionalProperties: false
+      required: [id, tmdb_id, title, original_title, year, overview, status, root_folder_id, monitored, added_at, seasons]
+      properties:
+        id: { type: integer, format: int64 }
+        tmdb_id: { type: integer, format: int64 }
+        tvdb_id: { type: integer, format: int64 }
+        imdb_id: { type: string }
+        title: { type: string }
+        original_title: { type: string }
+        year: { type: integer }
+        overview: { type: string }
+        status: { type: string }
+        poster_path: { type: string }
+        backdrop_path: { type: string }
+        root_folder_id: { type: integer, format: int64 }
+        monitored: { type: boolean }
+        added_at: { type: string }
+        last_refreshed_at: { type: string }
+        seasons:
+          type: array
+          items: { $ref: "#/components/schemas/SeasonStatus" }
+    Episode:
+      type: object
+      additionalProperties: false
+      required: [id, series_id, season, episode, title, monitored, downloading]
+      properties:
+        id: { type: integer, format: int64 }
+        series_id: { type: integer, format: int64 }
+        season: { type: integer }
+        episode: { type: integer }
+        title: { type: string }
+        air_date: { type: string }
+        monitored: { type: boolean }
+        file_path: { type: string }
+        file_quality: { type: string }
+        downloading: { type: boolean }
+    AddSeriesRequest:
+      type: object
+      additionalProperties: false
+      required: [tmdb_id]
+      properties:
+        tmdb_id: { type: integer, format: int64 }
+        root_folder_id: { type: integer, format: int64, description: Defaults to the default TV root folder. }
+        monitor: { $ref: "#/components/schemas/MonitorMode" }
+        search: { type: boolean, description: Search for wanted episodes right away. }
+    UpdateSeriesRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        monitored: { type: boolean }
+        root_folder_id: { type: integer, format: int64 }
+    MonitoredRequest:
+      type: object
+      additionalProperties: false
+      required: [monitored]
+      properties:
+        monitored: { type: boolean }
+
+    LookupMovie:
+      type: object
+      additionalProperties: false
+      description: A TMDB lookup result (not yet in the library).
+      required: [tmdb_id, title, original_title, year, overview]
+      properties:
+        tmdb_id: { type: integer, format: int64 }
+        imdb_id: { type: string }
+        title: { type: string }
+        original_title: { type: string }
+        year: { type: integer, description: 0 if unknown. }
+        overview: { type: string }
+        poster_path: { type: string }
+        library_id: { type: integer, format: int64, description: "The movie's id in the library, when it is there." }
+    LookupSeries:
+      type: object
+      additionalProperties: false
+      description: A TMDB lookup result (not yet in the library).
+      required: [tmdb_id, title, original_title, year, overview]
+      properties:
+        tmdb_id: { type: integer, format: int64 }
+        tvdb_id: { type: integer, format: int64 }
+        imdb_id: { type: string }
+        title: { type: string }
+        original_title: { type: string }
+        year: { type: integer, description: First air year; 0 if unknown. }
+        overview: { type: string }
+        status: { type: string }
+        poster_path: { type: string }
+        library_id: { type: integer, format: int64, description: "The series' id in the library, when it is there." }
+        seasons:
+          type: array
+          items: { $ref: "#/components/schemas/LookupSeason" }
+    MovieList:
+      type: string
+      description: One of TMDB's curated movie lists (trending is this week's).
+      enum: [trending, popular, now_playing, upcoming, top_rated]
+    SeriesList:
+      type: string
+      description: One of TMDB's curated TV lists (trending is this week's).
+      enum: [trending, popular, airing_today, on_the_air, top_rated]
+    DiscoverSort:
+      type: string
+      description: >-
+        Browse order. top_rated only counts titles with enough votes; newest
+        leaves out titles not yet released.
+      enum: [popular, top_rated, newest]
+      default: popular
+    Genre:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+    MovieBrowsePage:
+      type: object
+      additionalProperties: false
+      required: [page, total_pages, items]
+      properties:
+        page: { type: integer }
+        total_pages: { type: integer }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/LookupMovie" }
+    SeriesBrowsePage:
+      type: object
+      additionalProperties: false
+      required: [page, total_pages, items]
+      properties:
+        page: { type: integer }
+        total_pages: { type: integer }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/LookupSeries" }
+    RecommendationSource:
+      type: object
+      additionalProperties: false
+      description: The library title a row of recommendations is based on.
+      required: [tmdb_id, title]
+      properties:
+        tmdb_id: { type: integer, format: int64 }
+        title: { type: string }
+    MovieRecommendations:
+      type: object
+      additionalProperties: false
+      description: Movies TMDB recommends to people who liked a library movie; none are in the library.
+      required: [because, items]
+      properties:
+        because: { $ref: "#/components/schemas/RecommendationSource" }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/LookupMovie" }
+    SeriesRecommendations:
+      type: object
+      additionalProperties: false
+      description: Series TMDB recommends to people who liked a library series; none are in the library.
+      required: [because, items]
+      properties:
+        because: { $ref: "#/components/schemas/RecommendationSource" }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/LookupSeries" }
+    LookupSeason:
+      type: object
+      additionalProperties: false
+      required: [season_number, episode_count]
+      properties:
+        season_number: { type: integer }
+        episode_count: { type: integer }
+
+    # ---------------------------------------------------------- downloads
+    Progress:
+      type: object
+      additionalProperties: false
+      required: [info_hash, name, have_info, bytes_completed, bytes_total, active_peers, total_peers, seeders, complete, download_rate, upload_rate, eta_seconds, countries]
+      properties:
+        info_hash: { type: string }
+        name: { type: string }
+        have_info: { type: boolean }
+        bytes_completed: { type: integer, format: int64 }
+        bytes_total: { type: integer, format: int64, description: 0 until metadata is known. }
+        active_peers: { type: integer }
+        total_peers: { type: integer }
+        seeders: { type: integer }
+        complete: { type: boolean }
+        download_rate: { type: number, format: double, description: Smoothed payload rate in bytes per second. }
+        upload_rate: { type: number, format: double, description: Smoothed payload rate in bytes per second. }
+        eta_seconds: { type: integer, format: int64, description: Estimated seconds left; 0 when unknown, paused or complete. }
+        countries:
+          type: array
+          description: Connected peers by country, most first.
+          items: { $ref: "#/components/schemas/CountryCount" }
+    CountryCount:
+      type: object
+      additionalProperties: false
+      required: [country, count]
+      properties:
+        country: { type: string, description: "ISO 3166-1 alpha-2 code; empty when the location is unknown." }
+        count: { type: integer }
+    Download:
+      type: object
+      additionalProperties: false
+      required: [id, info_hash, release_title, quality, size, status, paused, added_at]
+      properties:
+        id: { type: integer, format: int64 }
+        movie_id: { type: integer, format: int64 }
+        series_id: { type: integer, format: int64 }
+        title: { type: string }
+        year: { type: integer }
+        poster_path: { type: string }
+        backdrop_path: { type: string }
+        episodes: { type: array, items: { type: string } }
+        indexer_id: { type: integer, format: int64 }
+        info_hash: { type: string }
+        release_title: { type: string }
+        quality: { type: string }
+        size: { type: integer, format: int64 }
+        status: { $ref: "#/components/schemas/DownloadStatus" }
+        paused: { type: boolean, description: Transfers are stopped; only set while status is downloading. }
+        error: { type: string }
+        added_at: { type: string }
+        completed_at: { type: string }
+        imported_at: { type: string }
+        progress: { $ref: "#/components/schemas/Progress" }
+    Peer:
+      type: object
+      additionalProperties: false
+      required: [ip, port, country, client, source, download_rate, upload_rate, progress]
+      properties:
+        ip: { type: string }
+        port: { type: integer }
+        country: { type: string, description: "ISO 3166-1 alpha-2 code; empty when the location is unknown." }
+        client: { type: string, description: The peer's client name or peer-ID prefix; empty if unknown. }
+        source:
+          type: string
+          description: How the peer was found; empty if unknown.
+          enum: ["", tracker, dht, pex, incoming, lpd, holepunch, direct]
+        download_rate: { type: number, format: double, description: Bytes per second received from the peer. }
+        upload_rate: { type: number, format: double, description: Bytes per second sent to the peer. }
+        progress: { type: number, format: double, description: Fraction of the torrent the peer has, 0 to 1. }
+    ThroughputSample:
+      type: object
+      additionalProperties: false
+      required: [at, download_rate, upload_rate]
+      properties:
+        at: { type: string, format: date-time }
+        download_rate: { type: number, format: double }
+        upload_rate: { type: number, format: double }
+    Throughput:
+      type: object
+      additionalProperties: false
+      required: [download_rate, upload_rate, peak_download_rate, active, history]
+      properties:
+        download_rate: { type: number, format: double, description: All downloads, bytes per second. }
+        upload_rate: { type: number, format: double }
+        peak_download_rate: { type: number, format: double, description: Highest download rate since the engine started. }
+        active: { type: integer, description: Downloads still downloading, paused ones included. }
+        history:
+          type: array
+          description: One sample per second, oldest first, up to five minutes.
+          items: { $ref: "#/components/schemas/ThroughputSample" }
+
+    ReleaseResult:
+      type: object
+      additionalProperties: false
+      required: [title, indexer_id, indexer, size, seeders, peers, publish_date, quality, accepted, score]
+      properties: &releaseProperties
+        title: { type: string }
+        indexer_id: { type: integer, format: int64 }
+        indexer: { type: string }
+        download_url: { type: string }
+        magnet_uri: { type: string }
+        info_hash: { type: string }
+        size: { type: integer, format: int64 }
+        seeders: { type: integer }
+        peers: { type: integer }
+        publish_date: { type: string, format: date-time }
+        quality: { type: string }
+        accepted: { type: boolean }
+        rejections: { type: array, items: { type: string } }
+        score: { type: integer }
+        season: { type: integer }
+        episodes: { type: array, items: { type: integer } }
+        season_pack: { type: boolean }
+    ReleaseInput:
+      type: object
+      additionalProperties: false
+      description: A release to grab, as returned by a search. Only title and indexer_id are needed.
+      required: [title, indexer_id]
+      properties: *releaseProperties
+    IndexerFailure:
+      type: object
+      additionalProperties: false
+      required: [indexer_id, indexer, error]
+      properties:
+        indexer_id: { type: integer, format: int64 }
+        indexer: { type: string }
+        error: { type: string }
+    SearchResult:
+      type: object
+      additionalProperties: false
+      required: [releases, indexer_failures]
+      properties:
+        releases: { type: array, items: { $ref: "#/components/schemas/ReleaseResult" } }
+        indexer_failures: { type: array, items: { $ref: "#/components/schemas/IndexerFailure" } }
+    AutoSearchResult:
+      type: object
+      additionalProperties: false
+      required: [releases_considered, indexer_failures]
+      properties:
+        grabbed: { $ref: "#/components/schemas/Download" }
+        releases_considered: { type: integer }
+        indexer_failures: { type: array, items: { $ref: "#/components/schemas/IndexerFailure" } }
+    RSSResult:
+      type: object
+      additionalProperties: false
+      required: [releases_seen, grabbed, indexer_failures]
+      properties:
+        releases_seen: { type: integer }
+        grabbed: { type: array, items: { $ref: "#/components/schemas/Download" } }
+        indexer_failures: { type: array, items: { $ref: "#/components/schemas/IndexerFailure" } }
+
+    # ---------------------------------------------------------- settings
+    DownloadSettings:
+      type: object
+      additionalProperties: false
+      required: [incomplete_dir, complete_dir, import_mode]
+      properties:
+        incomplete_dir: { type: string }
+        complete_dir: { type: string }
+        import_mode: { $ref: "#/components/schemas/ImportMode" }
+    DownloadSettingsInput:
+      type: object
+      additionalProperties: false
+      description: Download settings during setup; omitted fields get defaults.
+      properties:
+        incomplete_dir: { type: string }
+        complete_dir: { type: string }
+        import_mode: { $ref: "#/components/schemas/ImportMode" }
+    SettingsUpdate:
+      type: object
+      additionalProperties: false
+      required: [settings]
+      properties:
+        settings: { $ref: "#/components/schemas/DownloadSettings" }
+        warnings: { type: array, items: { type: string } }
+    QualitySettings:
+      type: object
+      additionalProperties: false
+      required: [min_resolution, max_resolution, max_size_mb]
+      properties:
+        min_resolution: { type: integer }
+        max_resolution: { type: integer }
+        max_size_mb: { type: integer, format: int64, description: 0 = unlimited. }
+    QualitySettingsInput:
+      type: object
+      additionalProperties: false
+      required: [min_resolution, max_resolution]
+      properties:
+        min_resolution: { type: integer }
+        max_resolution: { type: integer }
+        max_size_mb: { type: integer, format: int64, description: 0 or omitted = unlimited. }
+    GeneralSettings:
+      type: object
+      additionalProperties: false
+      required: [tmdb_api_key_set]
+      properties:
+        tmdb_api_key_set: { type: boolean }
+    GeneralSettingsInput:
+      type: object
+      additionalProperties: false
+      required: [tmdb_api_key]
+      properties:
+        tmdb_api_key: { type: string }
+    RootFolder:
+      type: object
+      additionalProperties: false
+      required: [id, media_type, path, is_default]
+      properties:
+        id: { type: integer, format: int64 }
+        media_type: { $ref: "#/components/schemas/MediaType" }
+        path: { type: string }
+        is_default: { type: boolean }
+    CreateRootFolderRequest:
+      type: object
+      additionalProperties: false
+      required: [media_type, path]
+      properties:
+        media_type: { $ref: "#/components/schemas/MediaType" }
+        path: { type: string }
+
+    # ---------------------------------------------------------- indexers
+    SearchCap:
+      type: object
+      additionalProperties: false
+      required: [available, params]
+      properties:
+        available: { type: boolean }
+        params: { type: array, items: { type: string } }
+    IndexerCategory:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        subcats: { type: array, items: { $ref: "#/components/schemas/IndexerCategory" } }
+    IndexerCaps:
+      type: object
+      additionalProperties: false
+      required: [search, movie_search, tv_search, categories]
+      properties:
+        search: { $ref: "#/components/schemas/SearchCap" }
+        movie_search: { $ref: "#/components/schemas/SearchCap" }
+        tv_search: { $ref: "#/components/schemas/SearchCap" }
+        categories: { type: array, items: { $ref: "#/components/schemas/IndexerCategory" } }
+    Indexer:
+      type: object
+      additionalProperties: false
+      required: [id, name, definition, settings, movie_categories, tv_categories, enabled, enable_rss, enable_search, priority, min_seeders]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        definition: { type: string, description: An IndexerDefinition id. }
+        settings: { $ref: "#/components/schemas/SettingValues" }
+        secrets_set: { type: array, items: { type: string }, description: Secret settings that have a saved value. }
+        movie_categories: { type: array, items: { type: integer } }
+        tv_categories: { type: array, items: { type: integer } }
+        enabled: { type: boolean }
+        enable_rss: { type: boolean }
+        enable_search: { type: boolean }
+        priority: { type: integer, format: int64 }
+        min_seeders: { type: integer, format: int64 }
+        caps: { $ref: "#/components/schemas/IndexerCaps" }
+        last_error: { type: string }
+        last_error_at: { type: string }
+    IndexerInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, description: "Defaults to the site's name on create; omitted on update, the saved one is kept." }
+        definition: { type: string, description: "An IndexerDefinition id. Required on create (a site has at most one indexer); omitted on update, the saved one is kept." }
+        settings:
+          $ref: "#/components/schemas/SettingValues"
+          description: The definition's settings. Omitted on update, the saved settings are kept; a secret left empty keeps the saved value when the definition is unchanged.
+        movie_categories: { type: array, items: { type: integer } }
+        tv_categories: { type: array, items: { type: integer } }
+        enabled: { type: boolean }
+        enable_rss: { type: boolean }
+        enable_search: { type: boolean }
+        priority: { type: integer, format: int64 }
+        min_seeders: { type: integer, format: int64 }
+    IndexerDefinition:
+      type: object
+      additionalProperties: false
+      description: A site arrd can search, from a Cardigann definition, and the settings it needs.
+      required: [id, name, fields, rss]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        fields: { type: array, items: { $ref: "#/components/schemas/SettingField" } }
+        unsupported: { type: string, description: Why arrd cannot use this site (e.g. it needs a captcha). Absent for usable sites. }
+        rss: { type: boolean, description: "Can list recent releases, which RSS sync needs; indexers of other sites have RSS off." }
+    IndexerDefinitionsReload:
+      type: object
+      additionalProperties: false
+      required: [definitions, errors]
+      properties:
+        definitions: { type: array, items: { $ref: "#/components/schemas/IndexerDefinition" } }
+        errors: { type: array, items: { type: string }, description: Definition files that could not be read. }
+    IndexerDefinitionsUpload:
+      type: object
+      additionalProperties: false
+      required: [saved, errors, definitions]
+      properties:
+        saved: { type: array, items: { type: string }, description: Ids of the definitions written. }
+        errors: { type: array, items: { type: string }, description: Files in the upload that were skipped. }
+        definitions: { type: array, items: { $ref: "#/components/schemas/IndexerDefinition" } }
+
+    # ---------------------------------------------------------- settings forms
+    SettingField:
+      type: object
+      additionalProperties: false
+      description: One setting an integration (VPN provider, indexer site) needs, declared by the server.
+      required: [key, label, kind]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        kind: { $ref: "#/components/schemas/SettingFieldKind" }
+        required: { type: boolean }
+        help: { type: string }
+        placeholder: { type: string }
+        default: { type: string, description: The value a new form starts with. }
+        secret: { type: boolean, description: "Write-only: never returned; left empty, the saved value is kept." }
+        options: { type: boolean, description: "Choices come from GET /api/v1/vpn/providers/{id}/options/{key}." }
+        choices: { type: array, items: { $ref: "#/components/schemas/SettingOption" }, description: A select's fixed choices. }
+        file_accept: { type: string, description: A textarea may be filled from a file with these extensions. }
+
+    # ---------------------------------------------------------- vpn
+    VPNProvider:
+      type: object
+      additionalProperties: false
+      required: [id, name, fields, renews]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        fields: { type: array, items: { $ref: "#/components/schemas/SettingField" } }
+        renews: { type: boolean, description: Connecting fetches fresh credentials, so the tunnel renews itself. }
+    SettingOption:
+      type: object
+      additionalProperties: false
+      required: [value, label]
+      properties:
+        value: { type: string }
+        label: { type: string }
+        tags: { type: array, items: { type: string } }
+    SettingValues:
+      type: object
+      description: Settings by field key; toggles are "true" / "false".
+      additionalProperties: { type: string }
+    VPNInput:
+      type: object
+      additionalProperties: false
+      required: [provider, values]
+      properties:
+        provider: { type: string }
+        values: { $ref: "#/components/schemas/SettingValues" }
+    VPNSettings:
+      type: object
+      additionalProperties: false
+      required: [configured, tunnel_up]
+      properties:
+        configured: { type: boolean }
+        provider: { type: string }
+        values: { $ref: "#/components/schemas/SettingValues" }
+        secrets_set: { type: array, items: { type: string }, description: Secret fields that have a saved value. }
+        tunnel_up: { type: boolean }
+        last_handshake: { type: string, format: date-time }
+        tunnel_error: { type: string }
+        server: { type: string }
+        forwarded_port: { type: integer }
+        addresses: { type: array, items: { type: string } }
+        endpoints: { type: array, items: { type: string } }
+        dns: { type: array, items: { type: string } }
+        ignored_keys: { type: array, items: { type: string } }
+    VPNTest:
+      type: object
+      additionalProperties: false
+      required: [public_ip, dns_configured]
+      properties:
+        public_ip: { type: string }
+        ignored_keys: { type: array, items: { type: string } }
+        dns_configured: { type: boolean }
+
+    # ---------------------------------------------------------- setup
+    SuggestedPaths:
+      type: object
+      additionalProperties: false
+      required: [incomplete_dir, complete_dir, movie_root, tv_root]
+      properties:
+        incomplete_dir: { type: string }
+        complete_dir: { type: string }
+        movie_root: { type: string }
+        tv_root: { type: string }
+    SetupStatus:
+      type: object
+      additionalProperties: false
+      required: [setup_complete, suggested]
+      properties:
+        setup_complete: { type: boolean }
+        suggested: { $ref: "#/components/schemas/SuggestedPaths" }
+    SetupInput:
+      type: object
+      additionalProperties: false
+      required: [admin_password, tmdb_api_key]
+      properties:
+        admin_password: { type: string }
+        tmdb_api_key: { type: string }
+        downloads: { $ref: "#/components/schemas/DownloadSettingsInput" }
+        vpn: { $ref: "#/components/schemas/VPNInput" }
+        movie_root: { type: string }
+        tv_root: { type: string }
+        indexers: { type: array, items: { $ref: "#/components/schemas/IndexerInput" } }
+        create_missing: { type: boolean, description: Create missing directories. }
+    SetupResult:
+      type: object
+      additionalProperties: false
+      required: [api_key]
+      properties:
+        api_key: { type: string }
+        warnings: { type: array, items: { type: string } }
+        runtime_error: { type: string }
+    PathsInput:
+      type: object
+      additionalProperties: false
+      properties:
+        downloads: { $ref: "#/components/schemas/DownloadSettingsInput" }
+        movie_root: { type: string }
+        tv_root: { type: string }
+        create_missing: { type: boolean }
+    PathsCheck:
+      type: object
+      additionalProperties: false
+      required: [valid, errors, warnings]
+      properties:
+        valid: { type: boolean }
+        errors:
+          type: object
+          description: Problems by field, e.g. "downloads.incomplete_dir".
+          additionalProperties: { type: string }
+        warnings: { type: array, items: { type: string } }
+    TMDBKeyRequest:
+      type: object
+      additionalProperties: false
+      required: [tmdb_api_key]
+      properties:
+        tmdb_api_key: { type: string }
+    ValidResponse:
+      type: object
+      additionalProperties: false
+      required: [valid]
+      properties:
+        valid: { type: boolean }
+    DirListing:
+      type: object
+      additionalProperties: false
+      required: [path, dirs]
+      properties:
+        path: { type: string }
+        parent: { type: string, description: Empty at the filesystem root. }
+        dirs: { type: array, items: { type: string } }

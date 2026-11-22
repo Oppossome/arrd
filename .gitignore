@@ -1,0 +1,39 @@
+# Build output
+/arrd
+/bin/
+/dist/
+
+# Go test/coverage artifacts
+*.test
+*.out
+coverage.*
+
+# Local runtime config and state (see arrd.example.yaml)
+/data/
+/downloads/
+/media/
+*.db
+*.db-shm
+*.db-wal
+
+# Secrets: WireGuard configs contain private keys
+*.conf
+.env
+.env.*
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Nix
+result
+result-*
+.direnv/
+
+# Web UI build output and dependencies (dist/ is embedded after `go generate ./web`)
+/web/node_modules/
+/web/dist/*
+!/web/dist/.gitkeep
+/web/.svelte-kit/
