@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net"
 	"net/netip"
 	"strconv"
@@ -13,6 +12,7 @@ import (
 
 	"generic-arr-project/internal/netx"
 
+	"github.com/rs/zerolog"
 	"golang.zx2c4.com/wireguard/conn"
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/tun/netstack"
@@ -32,7 +32,7 @@ type Tunnel struct {
 
 // Up creates the tunnel and starts WireGuard. It does not wait for a
 // handshake; use WaitForHandshake for that.
-func Up(ctx context.Context, cfg *Config, log *slog.Logger) (*Tunnel, error) {
+func Up(ctx context.Context, cfg *Config, log *zerolog.Logger) (*Tunnel, error) {
 	uapi, err := cfg.uapi(ctx, net.DefaultResolver)
 	if err != nil {
 		return nil, err
@@ -55,10 +55,10 @@ func Up(ctx context.Context, cfg *Config, log *slog.Logger) (*Tunnel, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create netstack tun: %w", err)
 	}
-	wgLog := log.With("component", "wireguard")
+	wgLog := log.With().Str("component", "wireguard").Logger()
 	dev := device.NewDevice(tunDev, conn.NewDefaultBind(), &device.Logger{
-		Verbosef: func(format string, args ...any) { wgLog.Debug(fmt.Sprintf(format, args...)) },
-		Errorf:   func(format string, args ...any) { wgLog.Error(fmt.Sprintf(format, args...)) },
+		Verbosef: func(format string, args ...any) { wgLog.Debug().Msgf(format, args...) },
+		Errorf:   func(format string, args ...any) { wgLog.Error().Msgf(format, args...) },
 	})
 	if err := dev.IpcSet(uapi); err != nil {
 		dev.Close()
@@ -378,7 +378,7 @@ func (t *Tunnel) ListenPort() (uint16, error) {
 // Start brings a tunnel up and waits up to handshakeTimeout for a
 // handshake, so a bad config or unreachable endpoint fails fast instead of
 // leaving a tunnel that silently carries nothing.
-func Start(ctx context.Context, cfg *Config, log *slog.Logger, handshakeTimeout time.Duration) (*Tunnel, error) {
+func Start(ctx context.Context, cfg *Config, log *zerolog.Logger, handshakeTimeout time.Duration) (*Tunnel, error) {
 	tun, err := Up(ctx, cfg, log)
 	if err != nil {
 		return nil, err

@@ -133,13 +133,13 @@ func (s *Service) AddMovie(ctx context.Context, in AddMovieInput) (Movie, error)
 		}
 		return Movie{}, fmt.Errorf("add movie: %w", err)
 	}
-	s.log.Info("movie added", "movie", row.ID, "title", row.Title, "year", row.Year)
+	s.log.Info().Int64("movie", row.ID).Str("title", row.Title).Int64("year", row.Year).Msg("movie added")
 	if in.Search && monitored {
 		// The search outcome is visible in the queue and logs; adding has
 		// succeeded either way.
 		go func() {
 			if err := s.searcher.SearchNewMovie(context.WithoutCancel(ctx), row.ID); err != nil {
-				s.log.Warn("search after add", "movie", row.ID, "err", err)
+				s.log.Warn().Int64("movie", row.ID).Err(err).Msg("search after add")
 			}
 		}()
 	}

@@ -73,7 +73,7 @@ func (s *Service) RSSSync(ctx context.Context) (RSSResult, error) {
 			}
 			dl, err := s.GrabMovieRelease(ctx, cand.movieID, cand.release)
 			if err != nil {
-				s.log.Warn("rss grab", "release", cand.release.Title, "err", err)
+				s.log.Warn().Str("release", cand.release.Title).Err(err).Msg("rss grab")
 				continue
 			}
 			grabbedMovies[cand.movieID] = true
@@ -85,7 +85,7 @@ func (s *Service) RSSSync(ctx context.Context) (RSSResult, error) {
 		}
 		dl, err := s.GrabSeriesRelease(ctx, cand.seriesID, cand.release)
 		if err != nil {
-			s.log.Warn("rss grab", "release", cand.release.Title, "err", err)
+			s.log.Warn().Str("release", cand.release.Title).Err(err).Msg("rss grab")
 			continue
 		}
 		for _, id := range cand.episodeIDs {
@@ -94,7 +94,7 @@ func (s *Service) RSSSync(ctx context.Context) (RSSResult, error) {
 		out.Grabbed = append(out.Grabbed, dl)
 	}
 	if len(out.Grabbed) > 0 {
-		s.log.Info("rss sync grabbed releases", "count", len(out.Grabbed), "seen", out.Releases)
+		s.log.Info().Int("count", len(out.Grabbed)).Int("seen", out.Releases).Msg("rss sync grabbed releases")
 	}
 	return out, nil
 }

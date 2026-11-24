@@ -16,7 +16,6 @@ import (
 	"generic-arr-project/internal/vpn/provider"
 	"generic-arr-project/internal/vpn/provider/wireguard"
 	"generic-arr-project/internal/vpn/vpntest"
-	"log/slog"
 	"net"
 	"net/http"
 	"slices"
@@ -24,6 +23,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/rs/zerolog"
 )
 
 // lockedBuffer collects log output from any goroutine.
@@ -56,7 +57,7 @@ func newVPNEnv(t *testing.T) (*libtest.Env, *piatest.Fake, *lockedBuffer) {
 	logs := &lockedBuffer{}
 	env := libtest.NewEnv(t, t.TempDir(), "http://unused", nil, nil, func(d *library.Deps) {
 		d.VPNProviders = reg
-		d.Log = slog.New(slog.NewTextHandler(logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
+		d.Log = new(zerolog.New(logs).Level(zerolog.DebugLevel))
 	})
 	return env, fake, logs
 }

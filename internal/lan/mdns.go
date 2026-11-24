@@ -9,10 +9,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net"
 
 	"github.com/pion/mdns/v2"
+	"github.com/rs/zerolog"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
 )
@@ -33,7 +33,7 @@ type Responder struct {
 // ResponderOptions configure a Responder.
 type ResponderOptions struct {
 	Hostname string
-	Log      *slog.Logger
+	Log      *zerolog.Logger
 	// IncludeLoopback also answers on loopback interfaces; for tests.
 	IncludeLoopback bool
 }
@@ -61,20 +61,20 @@ func StartResponder(opts ResponderOptions) (*Responder, error) {
 		return nil, fmt.Errorf("listen for mDNS on port %s: %w", mdnsPort, errors.Join(err4, err6))
 	}
 	if err6 != nil {
-		opts.Log.Debug("mDNS over IPv6 unavailable", "err", err6)
+		opts.Log.Debug().Err(err6).Msg("mDNS over IPv6 unavailable")
 	}
 
 	conn, err := mdns.Server(pc4, pc6, &mdns.Config{
 		Name:            "arrd",
 		LocalNames:      []string{opts.Hostname},
-		LoggerFactory:   slogFactory{opts.Log},
+		LoggerFactory:   zerologFactory{opts.Log},
 		IncludeLoopback: opts.IncludeLoopback,
 	})
 	if err != nil {
 		closeAll(pc4, pc6)
 		return nil, fmt.Errorf("start mDNS responder: %w", err)
 	}
-	opts.Log.Info("announcing on the local network over mDNS", "hostname", opts.Hostname)
+	opts.Log.Info().Str("hostname", opts.Hostname).Msg("announcing on the local network over mDNS")
 	return &Responder{conn: conn}, nil
 }
 

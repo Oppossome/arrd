@@ -5,7 +5,6 @@ package acquire
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"sync"
 	"time"
 
@@ -15,6 +14,8 @@ import (
 	"generic-arr-project/internal/library/media"
 	"generic-arr-project/internal/library/settings"
 	"generic-arr-project/internal/store"
+
+	"github.com/rs/zerolog"
 )
 
 // Service grabs and imports releases.
@@ -25,7 +26,7 @@ type Service struct {
 	indexers *indexers.Service
 	media    *media.Service
 	geo      *geoip.DB
-	log      *slog.Logger
+	log      *zerolog.Logger
 
 	importMu    sync.Mutex
 	importRetry map[int64]time.Time // download id -> earliest next import attempt
@@ -39,7 +40,7 @@ type Deps struct {
 	Indexers *indexers.Service
 	Media    *media.Service
 	Geo      *geoip.DB // locates peers
-	Log      *slog.Logger
+	Log      *zerolog.Logger
 }
 
 // New creates a Service and registers it to restore downloads whenever

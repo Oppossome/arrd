@@ -7,7 +7,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log/slog"
 	"sync"
 
 	"generic-arr-project/internal/netx"
@@ -15,6 +14,8 @@ import (
 	"generic-arr-project/internal/torrent"
 	"generic-arr-project/internal/vpn"
 	"generic-arr-project/internal/vpn/provider"
+
+	"github.com/rs/zerolog"
 )
 
 // Settings are the saved settings the runtime is built from.
@@ -53,7 +54,7 @@ type Manager struct {
 	newRuntime Factory
 	direct     netx.Network
 	vpn        *provider.Registry
-	log        *slog.Logger
+	log        *zerolog.Logger
 	onStart    []StartHook
 
 	// mu guards the runtime. Work that uses the engine holds a read lock
@@ -70,7 +71,7 @@ type Deps struct {
 	NewRuntime Factory
 	Direct     netx.Network
 	VPN        *provider.Registry
-	Log        *slog.Logger
+	Log        *zerolog.Logger
 }
 
 // New creates a Manager with no runtime.
@@ -163,14 +164,14 @@ func (m *Manager) Apply(ctx context.Context) error {
 	rt, err := m.newRuntime(ctx, settings)
 	if err != nil {
 		m.err = err
-		m.log.Error("runtime not started", "vpn", settings.VPN != nil, "err", err)
+		m.log.Error().Bool("vpn", settings.VPN != nil).Err(err).Msg("runtime not started")
 		return errDownloadsUnavailable(err)
 	}
 	m.rt, m.err = rt, nil
-	m.log.Info("runtime started", "vpn", rt.VPN != nil)
+	m.log.Info().Bool("vpn", rt.VPN != nil).Msg("runtime started")
 	for _, hook := range m.onStart {
 		if err := hook(ctx, rt.Engine); err != nil {
-			m.log.Error("engine start hook", "err", err)
+			m.log.Error().Err(err).Msg("engine start hook")
 		}
 	}
 	return nil
@@ -183,7 +184,7 @@ func (m *Manager) Retry(ctx context.Context) {
 		return
 	}
 	if err := m.Apply(ctx); err == nil {
-		m.log.Info("downloads available again")
+		m.log.Info().Msg("downloads available again")
 	}
 }
 

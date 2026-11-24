@@ -511,7 +511,7 @@ func (s *Service) clearBackoff(id int64) {
 func (s *Service) recordIndexerFailure(ctx context.Context, id int64, cause error) {
 	msg := cause.Error()
 	if err := s.store.RecordIndexerError(ctx, db.RecordIndexerErrorParams{ID: id, LastError: &msg}); err != nil {
-		s.log.Error("record indexer error", "indexer", id, "err", err)
+		s.log.Error().Int64("indexer", id).Err(err).Msg("record indexer error")
 	}
 	s.backoffMu.Lock()
 	defer s.backoffMu.Unlock()
@@ -523,7 +523,7 @@ func (s *Service) recordIndexerFailure(ctx context.Context, id int64, cause erro
 			d = backoffMax
 		}
 		b.until = time.Now().Add(d)
-		s.log.Warn("indexer backing off", "indexer", id, "failures", b.failures, "until", b.until, "err", cause)
+		s.log.Warn().Int64("indexer", id).Int("failures", b.failures).Time("until", b.until).Err(cause).Msg("indexer backing off")
 	}
 	s.backoff[id] = b
 }
@@ -534,7 +534,7 @@ func (s *Service) recordIndexerSuccess(ctx context.Context, row db.Indexer) {
 		return
 	}
 	if err := s.store.ClearIndexerError(ctx, row.ID); err != nil {
-		s.log.Error("clear indexer error", "indexer", row.ID, "err", err)
+		s.log.Error().Int64("indexer", row.ID).Err(err).Msg("clear indexer error")
 	}
 }
 

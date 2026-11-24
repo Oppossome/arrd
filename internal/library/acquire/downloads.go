@@ -223,15 +223,16 @@ func (s *Service) addAndRecord(ctx context.Context, eng *torrent.Engine, target 
 		rmCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), removeTimeout)
 		defer cancel()
 		if rmErr := dl.Remove(rmCtx); rmErr != nil {
-			s.log.Error("remove torrent after failed grab", "info_hash", dl.InfoHash(), "err", rmErr)
+			s.log.Error().Str("info_hash", dl.InfoHash()).Err(rmErr).Msg("remove torrent after failed grab")
 		}
 		if apperr.IsUniqueViolation(err) {
 			return Download{}, apperr.Conflict("torrent %s was already grabbed", dl.InfoHash())
 		}
 		return Download{}, fmt.Errorf("record download: %w", err)
 	}
-	s.log.Info("grabbed release", "release", r.Title, "indexer", ixRow.Name, "info_hash", row.InfoHash,
-		"movie", deref(target.movieID), "series", deref(target.seriesID), "episodes", len(target.episodeIDs))
+	s.log.Info().Str("release", r.Title).Str("indexer", ixRow.Name).Str("info_hash", row.InfoHash).
+		Int64("movie", deref(target.movieID)).Int64("series", deref(target.seriesID)).Int("episodes", len(target.episodeIDs)).
+		Msg("grabbed release")
 	return s.downloadFromRow(eng, row), nil
 }
 
@@ -318,7 +319,7 @@ func (s *Service) RestoreDownloads(ctx context.Context, eng *torrent.Engine) err
 			continue
 		}
 		if err := s.ensureInEngine(ctx, eng, r); err != nil {
-			s.log.Error("restore download", "download", r.ID, "release", r.ReleaseTitle, "err", err)
+			s.log.Error().Int64("download", r.ID).Str("release", r.ReleaseTitle).Err(err).Msg("restore download")
 			s.setDownloadError(ctx, r.ID, err)
 		}
 	}
@@ -399,7 +400,7 @@ func (s *Service) processDownloads(ctx context.Context, eng *torrent.Engine) err
 	}
 	for _, r := range downloading {
 		if err := s.processDownloading(ctx, eng, r); err != nil {
-			s.log.Error("process download", "download", r.ID, "release", r.ReleaseTitle, "err", err)
+			s.log.Error().Int64("download", r.ID).Str("release", r.ReleaseTitle).Err(err).Msg("process download")
 			s.setDownloadError(ctx, r.ID, err)
 		}
 	}
@@ -416,7 +417,7 @@ func (s *Service) processDownloads(ctx context.Context, eng *torrent.Engine) err
 func (s *Service) processDownloading(ctx context.Context, eng *torrent.Engine, r db.Download) error {
 	dl, ok := eng.Get(r.InfoHash)
 	if !ok {
-		s.log.Warn("download missing from engine, re-adding", "download", r.ID)
+		s.log.Warn().Int64("download", r.ID).Msg("download missing from engine, re-adding")
 		return s.ensureInEngine(ctx, eng, r)
 	}
 	if !dl.HaveInfo() {
@@ -458,7 +459,7 @@ func (s *Service) finishDownload(ctx context.Context, eng *torrent.Engine, r db.
 		if err := os.Rename(src, dst); err != nil {
 			// Put the torrent back where it was so it keeps seeding.
 			if _, addErr := eng.AddTorrentBytes(r.Metainfo, r.IncompleteDir); addErr != nil {
-				s.log.Error("re-add after failed move", "download", r.ID, "err", addErr)
+				s.log.Error().Int64("download", r.ID).Err(addErr).Msg("re-add after failed move")
 			}
 			return s.failDownload(ctx, r.ID, fmt.Errorf("move to complete directory (incomplete and complete directories must be on the same filesystem): %w", err))
 		}
@@ -469,7 +470,7 @@ func (s *Service) finishDownload(ctx context.Context, eng *torrent.Engine, r db.
 	if err := s.store.MarkDownloadCompleted(ctx, r.ID); err != nil {
 		return fmt.Errorf("mark completed: %w", err)
 	}
-	s.log.Info("download complete", "download", r.ID, "release", r.ReleaseTitle)
+	s.log.Info().Int64("download", r.ID).Str("release", r.ReleaseTitle).Msg("download complete")
 	r.Status = media.DownloadCompleted
 	s.maybeImport(ctx, eng, r)
 	return nil
@@ -480,14 +481,14 @@ func (s *Service) failDownload(ctx context.Context, id int64, cause error) error
 	if err := s.store.MarkDownloadFailed(ctx, db.MarkDownloadFailedParams{ID: id, Error: &msg}); err != nil {
 		return fmt.Errorf("%w (and recording the failure: %v)", cause, err)
 	}
-	s.log.Error("download failed", "download", id, "err", cause)
+	s.log.Error().Int64("download", id).Err(cause).Msg("download failed")
 	return nil
 }
 
 func (s *Service) setDownloadError(ctx context.Context, id int64, cause error) {
 	msg := cause.Error()
 	if err := s.store.SetDownloadError(ctx, db.SetDownloadErrorParams{ID: id, Error: &msg}); err != nil {
-		s.log.Error("record download error", "download", id, "err", err)
+		s.log.Error().Int64("download", id).Err(err).Msg("record download error")
 	}
 }
 
@@ -500,7 +501,7 @@ func (s *Service) maybeImport(ctx context.Context, eng *torrent.Engine, r db.Dow
 		return
 	}
 	if err := s.importDownload(ctx, eng, r); err != nil {
-		s.log.Warn("import failed, will retry", "download", r.ID, "release", r.ReleaseTitle, "retry_in", importRetryDelay, "err", err)
+		s.log.Warn().Int64("download", r.ID).Str("release", r.ReleaseTitle).Dur("retry_in", importRetryDelay).Err(err).Msg("import failed, will retry")
 		s.setDownloadError(ctx, r.ID, fmt.Errorf("import: %w", err))
 		s.importMu.Lock()
 		s.importRetry[r.ID] = time.Now().Add(importRetryDelay)

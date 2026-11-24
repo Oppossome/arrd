@@ -58,7 +58,7 @@ func (s *Services) RunScheduler(ctx context.Context, sch Schedule) {
 
 	logErr := func(job string, err error) {
 		if err != nil && ctx.Err() == nil {
-			s.log.Error(job, "err", err)
+			s.log.Error().Err(err).Msg(job)
 		}
 	}
 	for {
@@ -78,12 +78,12 @@ func (s *Services) RunScheduler(ctx context.Context, sch Schedule) {
 			logErr("rss sync", err)
 			rss.Reset(sch.RSSSync)
 		case <-refresh.C:
-			s.log.Info("refreshing series metadata")
+			s.log.Info().Msg("refreshing series metadata")
 			logErr("refresh series", s.Media.RefreshAllSeries(ctx))
 			logErr("backfill backdrops", s.Media.BackfillBackdrops(ctx))
 			refresh.Reset(sch.RefreshSeries)
 		case <-wanted.C:
-			s.log.Info("searching for wanted movies and episodes")
+			s.log.Info().Msg("searching for wanted movies and episodes")
 			logErr("wanted movie search", s.Acquire.SearchWantedMovies(ctx))
 			logErr("wanted episode search", s.Acquire.SearchWantedEpisodes(ctx, nil))
 			wanted.Reset(sch.WantedSearch)
@@ -97,7 +97,7 @@ func (s *Services) RunScheduler(ctx context.Context, sch Schedule) {
 func (s *Services) runGeoIPUpdates(ctx context.Context, interval time.Duration) {
 	for {
 		if err := s.geo.Update(ctx); err != nil && ctx.Err() == nil {
-			s.log.Error("update ip geolocation database", "err", err)
+			s.log.Error().Err(err).Msg("update ip geolocation database")
 		}
 		select {
 		case <-ctx.Done():

@@ -4,11 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/rs/zerolog"
 )
 
 // stubMDNS counts responder starts and stops; it fails to start while err is set.
@@ -34,7 +35,7 @@ func newTestExposer(t *testing.T, baseAddr string, mdns *stubMDNS) *exposer {
 	srv := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprint(w, "ok")
 	})}
-	e := newExposer(srv, baseAddr, mdns.start, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	e := newExposer(srv, baseAddr, mdns.start, new(zerolog.Nop()))
 	t.Cleanup(func() {
 		_ = srv.Close()
 		e.Close()

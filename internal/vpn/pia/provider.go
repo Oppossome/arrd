@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"sync"
 	"time"
 
 	"generic-arr-project/internal/vpn"
 	"generic-arr-project/internal/vpn/provider"
+
+	"github.com/rs/zerolog"
 )
 
 // ProviderID is the provider id.
@@ -147,7 +148,7 @@ type piaProvider struct {
 // tunnel up. With port forwarding requested and enabled it also gets and
 // binds a port through the tunnel; if that fails the tunnel is closed, so
 // the engine never runs without the port it was promised.
-func (p *piaProvider) Connect(ctx context.Context, opts provider.ConnectOptions, log *slog.Logger) (*provider.Connection, error) {
+func (p *piaProvider) Connect(ctx context.Context, opts provider.ConnectOptions, log *zerolog.Logger) (*provider.Connection, error) {
 	regions, err := p.c.Regions(ctx)
 	if err != nil {
 		return nil, err
@@ -183,7 +184,7 @@ func (p *piaProvider) Connect(ctx context.Context, opts provider.ConnectOptions,
 		k := &portKeeper{fw: fw, lastBind: time.Now()}
 		conn.ForwardedPort, conn.Maintain = fw.Port, k.maintain
 	}
-	log.Info("pia tunnel up", "pia", p.s, "server", conn.Server, "forwarded_port", conn.ForwardedPort)
+	log.Info().Stringer("pia", p.s).Str("server", conn.Server).Uint16("forwarded_port", conn.ForwardedPort).Msg("pia tunnel up")
 	return conn, nil
 }
 

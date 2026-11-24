@@ -5,13 +5,14 @@ package media
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"time"
 
 	"generic-arr-project/internal/library/settings"
 	"generic-arr-project/internal/library/tmdb"
 	"generic-arr-project/internal/netx"
 	"generic-arr-project/internal/store"
+
+	"github.com/rs/zerolog"
 )
 
 // WantedSearcher searches for what a newly added title wants.
@@ -31,7 +32,7 @@ type Service struct {
 	direct        netx.Network
 	posterBaseURL string
 	dataDir       string
-	log           *slog.Logger
+	log           *zerolog.Logger
 	now           func() time.Time
 	posters       posterFetcher
 }
@@ -47,7 +48,7 @@ type Deps struct {
 	// DataDir holds the poster cache.
 	DataDir       string
 	PosterBaseURL string // default DefaultPosterBaseURL
-	Log           *slog.Logger
+	Log           *zerolog.Logger
 	Now           func() time.Time // default time.Now
 }
 

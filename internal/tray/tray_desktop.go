@@ -14,7 +14,7 @@ import (
 // desktop session is available.
 func Run(ctx context.Context, o Options) {
 	if !desktopSession(os.Getenv, fileExists) {
-		o.Log.Info("tray: no desktop session; tray icon disabled")
+		o.Log.Info().Msg("tray: no desktop session; tray icon disabled")
 		return
 	}
 	// The native event loop must stay on one OS thread (required on Windows).
@@ -38,10 +38,10 @@ func onReady(ctx context.Context, o Options) {
 				return
 			case <-open.ClickedCh:
 				if err := openBrowser(o.URL); err != nil {
-					o.Log.Error("tray: open browser", "url", o.URL, "err", err)
+					o.Log.Error().Str("url", o.URL).Err(err).Msg("tray: open browser")
 				}
 			case <-quit.ClickedCh:
-				o.Log.Info("tray: quit requested")
+				o.Log.Info().Msg("tray: quit requested")
 				o.Quit()
 				return
 			}

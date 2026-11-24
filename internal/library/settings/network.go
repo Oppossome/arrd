@@ -70,7 +70,7 @@ func (s *Service) UpdateNetworkSettings(ctx context.Context, in NetworkSettingsI
 	}
 	if err := s.store.SetExposeLAN(ctx, in.ExposeLAN); err != nil {
 		if undoErr := s.network.ApplyLAN(current.ExposeLAN); undoErr != nil {
-			s.log.Error("restore LAN access after failed save", "err", undoErr)
+			s.log.Error().Err(undoErr).Msg("restore LAN access after failed save")
 		}
 		return NetworkSettings{}, fmt.Errorf("save LAN access: %w", err)
 	}

@@ -4,7 +4,6 @@ package setup
 
 import (
 	"errors"
-	"log/slog"
 
 	"generic-arr-project/internal/library/auth"
 	"generic-arr-project/internal/library/engine"
@@ -12,6 +11,8 @@ import (
 	"generic-arr-project/internal/library/settings"
 	"generic-arr-project/internal/library/vpnconfig"
 	"generic-arr-project/internal/store"
+
+	"github.com/rs/zerolog"
 )
 
 // Service completes onboarding.
@@ -23,7 +24,7 @@ type Service struct {
 	indexers *indexers.Service
 	engine   *engine.Manager
 	dataDir  string
-	log      *slog.Logger
+	log      *zerolog.Logger
 }
 
 // Deps are the Service's collaborators.
@@ -36,7 +37,7 @@ type Deps struct {
 	Engine   *engine.Manager // started once setup is saved
 	// DataDir is used to suggest default paths.
 	DataDir string
-	Log     *slog.Logger
+	Log     *zerolog.Logger
 }
 
 // New creates a Service.

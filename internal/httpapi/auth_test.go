@@ -1,9 +1,10 @@
 package httpapi
 
 import (
-	"log/slog"
 	"net/http"
 	"testing"
+
+	"github.com/rs/zerolog"
 )
 
 func TestAuth(t *testing.T) {
@@ -17,7 +18,7 @@ func TestAuth(t *testing.T) {
 	if code, _ := do(t, srv, "GET", "/api/v1/movies?apikey="+srv.apiKey, "", false); code != http.StatusOK {
 		t.Errorf("movies with query key = %d", code)
 	}
-	if _, err := New(nil, "", slog.Default(), nil); err == nil {
+	if _, err := New(nil, "", new(zerolog.Nop()), nil); err == nil {
 		t.Error("empty API key accepted")
 	}
 }

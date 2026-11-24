@@ -6,11 +6,11 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"io"
-	"log/slog"
 	"net/netip"
 	"testing"
 	"time"
+
+	"github.com/rs/zerolog"
 
 	"generic-arr-project/internal/vpn"
 )
@@ -51,7 +51,7 @@ func Pair(t testing.TB) (a, b *vpn.Tunnel) {
 		}},
 	}
 
-	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	log := new(zerolog.Nop())
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -130,7 +130,7 @@ func NewServer(ctx context.Context, clientPub vpn.Key) (server *vpn.Tunnel, serv
 			AllowedIPs: []netip.Prefix{netip.PrefixFrom(AddrA, 32)},
 		}},
 	}
-	server, err = vpn.Up(ctx, cfg, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	server, err = vpn.Up(ctx, cfg, new(zerolog.Nop()))
 	if err != nil {
 		return nil, vpn.Key{}, 0, fmt.Errorf("vpn server: %w", err)
 	}

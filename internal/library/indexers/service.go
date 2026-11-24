@@ -4,7 +4,6 @@ package indexers
 
 import (
 	"errors"
-	"log/slog"
 	"sync"
 	"sync/atomic"
 
@@ -12,13 +11,15 @@ import (
 	"generic-arr-project/internal/library/engine"
 	"generic-arr-project/internal/store"
 	"generic-arr-project/internal/store/db"
+
+	"github.com/rs/zerolog"
 )
 
 // Service manages and searches indexers.
 type Service struct {
 	store  *store.Store
 	engine *engine.Manager
-	log    *slog.Logger
+	log    *zerolog.Logger
 
 	// definitions is replaced when indexer definitions are reloaded.
 	definitions atomic.Pointer[indexer.Catalog]
@@ -40,7 +41,7 @@ type Deps struct {
 	// DefinitionsDir holds the Cardigann site definitions (*.yml) indexers
 	// are built from; empty or missing means none.
 	DefinitionsDir string
-	Log            *slog.Logger
+	Log            *zerolog.Logger
 }
 
 // New creates a Service and loads the site definitions.

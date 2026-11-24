@@ -4,13 +4,14 @@ package vpnconfig
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"time"
 
 	"generic-arr-project/internal/library/apperr"
 	"generic-arr-project/internal/library/engine"
 	"generic-arr-project/internal/store"
 	"generic-arr-project/internal/store/db"
+
+	"github.com/rs/zerolog"
 )
 
 // DefaultIPEchoURL answers with the caller's public IP as plain text.
@@ -21,7 +22,7 @@ type Service struct {
 	store     *store.Store
 	engine    *engine.Manager
 	ipEchoURL string
-	log       *slog.Logger
+	log       *zerolog.Logger
 	now       func() time.Time
 }
 
@@ -30,7 +31,7 @@ type Deps struct {
 	Store     *store.Store
 	Engine    *engine.Manager
 	IPEchoURL string // default DefaultIPEchoURL
-	Log       *slog.Logger
+	Log       *zerolog.Logger
 	Now       func() time.Time // default time.Now
 }
 

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -16,6 +15,8 @@ import (
 	"generic-arr-project/internal/store"
 	"generic-arr-project/internal/torrent"
 	"generic-arr-project/internal/vpn/provider"
+
+	"github.com/rs/zerolog"
 )
 
 // FetchOptions configures a one-off download.
@@ -36,7 +37,7 @@ const progressInterval = 2 * time.Second
 // forwarded port: a running "arrd serve" may own it, and a short fetch
 // does not need incoming peers. Providers that renew credentials register
 // a separate key for this tunnel.
-func fetchTunnel(ctx context.Context, st *store.Store, log *slog.Logger) (*provider.Connection, error) {
+func fetchTunnel(ctx context.Context, st *store.Store, log *zerolog.Logger) (*provider.Connection, error) {
 	reg, err := engine.DefaultVPNProviders(netx.Direct{})
 	if err != nil {
 		return nil, err
@@ -54,7 +55,7 @@ func fetchTunnel(ctx context.Context, st *store.Store, log *slog.Logger) (*provi
 // Fetch downloads a single magnet link through the saved VPN (never falling
 // back to direct when one is configured), or direct without one, printing the
 // network's public IP and progress to out. Onboarding must be complete.
-func Fetch(ctx context.Context, log *slog.Logger, opts FetchOptions, out io.Writer) error {
+func Fetch(ctx context.Context, log *zerolog.Logger, opts FetchOptions, out io.Writer) error {
 	st, err := openStore(ctx, opts.DataDir)
 	if err != nil {
 		return err

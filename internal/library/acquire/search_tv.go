@@ -240,7 +240,7 @@ func (s *Service) AutoSearchSeason(ctx context.Context, seriesID int64, season i
 			return s.GrabSeriesRelease(ctx, seriesID, r)
 		})
 		if err != nil {
-			s.log.Warn("season pack grab", "series", seriesID, "season", season, "err", err)
+			s.log.Warn().Int64("series", seriesID).Int("season", season).Err(err).Msg("season pack grab")
 		}
 		results = append(results, out)
 		if out.Grabbed != nil {
@@ -260,7 +260,7 @@ func (s *Service) AutoSearchSeason(ctx context.Context, seriesID int64, season i
 		}
 		res, err := s.AutoSearchEpisode(ctx, ep.ID)
 		if err != nil {
-			s.log.Warn("episode search", "series", seriesID, "episode", fmt.Sprintf("S%02dE%02d", ep.Season, ep.Episode), "err", err)
+			s.log.Warn().Int64("series", seriesID).Str("episode", fmt.Sprintf("S%02dE%02d", ep.Season, ep.Episode)).Err(err).Msg("episode search")
 		}
 		results = append(results, res)
 	}
@@ -330,7 +330,7 @@ func (s *Service) SearchWantedEpisodes(ctx context.Context, seriesID *int64) err
 			return ctx.Err()
 		}
 		if _, err := s.AutoSearchSeason(ctx, k.series, k.season); err != nil {
-			s.log.Warn("wanted season search", "series", k.series, "season", k.season, "err", err)
+			s.log.Warn().Int64("series", k.series).Int("season", k.season).Err(err).Msg("wanted season search")
 		}
 	}
 	return nil

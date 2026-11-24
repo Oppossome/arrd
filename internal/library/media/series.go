@@ -197,11 +197,11 @@ func (s *Service) AddSeries(ctx context.Context, in AddSeriesInput) (Series, err
 		}
 		return Series{}, fmt.Errorf("add series: %w", err)
 	}
-	s.log.Info("series added", "series", row.ID, "title", row.Title, "seasons", len(seasons))
+	s.log.Info().Int64("series", row.ID).Str("title", row.Title).Int("seasons", len(seasons)).Msg("series added")
 	if in.Search && in.Monitor != MonitorNone {
 		go func() {
 			if err := s.searcher.SearchNewSeries(context.WithoutCancel(ctx), row.ID); err != nil {
-				s.log.Warn("search after add", "series", row.ID, "err", err)
+				s.log.Warn().Int64("series", row.ID).Err(err).Msg("search after add")
 			}
 		}()
 	}
@@ -308,7 +308,7 @@ func (s *Service) RefreshAllSeries(ctx context.Context) error {
 			return ctx.Err()
 		}
 		if _, err := s.RefreshSeries(ctx, r.ID); err != nil {
-			s.log.Warn("refresh series", "series", r.ID, "title", r.Title, "err", err)
+			s.log.Warn().Int64("series", r.ID).Str("title", r.Title).Err(err).Msg("refresh series")
 		}
 	}
 	return nil

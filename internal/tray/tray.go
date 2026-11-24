@@ -4,15 +4,16 @@
 package tray
 
 import (
-	"log/slog"
 	"net"
+
+	"github.com/rs/zerolog"
 )
 
 // Options configure the tray icon.
 type Options struct {
-	URL  string       // page opened by "Open arrd"
-	Quit func()       // called by "Quit"; should trigger graceful shutdown
-	Log  *slog.Logger // required
+	URL  string          // page opened by "Open arrd"
+	Quit func()          // called by "Quit"; should trigger graceful shutdown
+	Log  *zerolog.Logger // required
 }
 
 // BrowseURL is the http:// URL a local browser should use to reach a server

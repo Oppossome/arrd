@@ -9,7 +9,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -21,6 +20,8 @@ import (
 	"generic-arr-project/internal/store"
 	"generic-arr-project/internal/tray"
 	"generic-arr-project/web"
+
+	"github.com/rs/zerolog"
 )
 
 const shutdownTimeout = 10 * time.Second
@@ -58,7 +59,7 @@ func openStore(ctx context.Context, dataDir string) (*store.Store, error) {
 }
 
 // Run starts arrd and blocks until ctx is cancelled or the HTTP server fails.
-func Run(ctx context.Context, opts Options, log *slog.Logger) error {
+func Run(ctx context.Context, opts Options, log *zerolog.Logger) error {
 	release, err := lockDataDir(opts.DataDir)
 	if err != nil {
 		return err
@@ -93,9 +94,10 @@ func Run(ctx context.Context, opts Options, log *slog.Logger) error {
 			return err
 		}
 		openURL = fmt.Sprintf("%s/setup?token=%s", openURL, setupToken)
-		log.Warn("setup required: complete onboarding with this one-time token",
-			"url", openURL,
-			"api", "POST /api/v1/setup with header X-Setup-Token")
+		log.Warn().
+			Str("url", openURL).
+			Str("api", "POST /api/v1/setup with header X-Setup-Token").
+			Msg("setup required: complete onboarding with this one-time token")
 	}
 
 	api, err := httpapi.New(svc, setupToken, log, web.Dist())
@@ -130,7 +132,7 @@ func Run(ctx context.Context, opts Options, log *slog.Logger) error {
 	case err := <-listener.Failed():
 		runErr = fmt.Errorf("http server: %w", err)
 	case <-runCtx.Done(): // signal, or Quit from the tray
-		log.Info("shutting down")
+		log.Info().Msg("shutting down")
 	}
 	cancel()
 	shutdownCtx, stop := context.WithTimeout(context.Background(), shutdownTimeout)
@@ -145,7 +147,7 @@ func Run(ctx context.Context, opts Options, log *slog.Logger) error {
 // startListener binds the HTTP listener per the saved LAN setting. If LAN
 // access cannot start (port taken, no multicast) arrd still starts on
 // -listen, so a network problem cannot lock the user out.
-func startListener(ctx context.Context, st *store.Store, listener *exposer, log *slog.Logger) error {
+func startListener(ctx context.Context, st *store.Store, listener *exposer, log *zerolog.Logger) error {
 	exposeLAN, err := savedExposeLAN(ctx, st)
 	if err != nil {
 		return err
@@ -155,7 +157,7 @@ func startListener(ctx context.Context, st *store.Store, listener *exposer, log 
 		if err == nil {
 			return nil
 		}
-		log.Warn("LAN access unavailable; serving on the listen address only", "err", err)
+		log.Warn().Err(err).Msg("LAN access unavailable; serving on the listen address only")
 	}
 	return listener.ApplyLAN(false)
 }

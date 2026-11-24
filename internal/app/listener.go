@@ -4,12 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net"
 	"net/http"
 	"sync"
 
 	"generic-arr-project/internal/lan"
+
+	"github.com/rs/zerolog"
 )
 
 // exposer owns the HTTP server's listener and switches it between the
@@ -19,7 +20,7 @@ type exposer struct {
 	srv       *http.Server
 	baseAddr  string                    // the -listen address
 	startMDNS func() (io.Closer, error) // announces lan.Hostname
-	log       *slog.Logger
+	log       *zerolog.Logger
 	failed    chan error // the server can no longer serve; buffered 1
 
 	mu   sync.Mutex
@@ -28,12 +29,12 @@ type exposer struct {
 	mdns io.Closer
 }
 
-func newExposer(srv *http.Server, baseAddr string, startMDNS func() (io.Closer, error), log *slog.Logger) *exposer {
+func newExposer(srv *http.Server, baseAddr string, startMDNS func() (io.Closer, error), log *zerolog.Logger) *exposer {
 	return &exposer{srv: srv, baseAddr: baseAddr, startMDNS: startMDNS, log: log, failed: make(chan error, 1)}
 }
 
 // startMDNSResponder is the production startMDNS.
-func startMDNSResponder(log *slog.Logger) func() (io.Closer, error) {
+func startMDNSResponder(log *zerolog.Logger) func() (io.Closer, error) {
 	return func() (io.Closer, error) {
 		return lan.StartResponder(lan.ResponderOptions{Hostname: lan.Hostname, Log: log})
 	}
@@ -98,7 +99,7 @@ func (e *exposer) ApplyLAN(enabled bool) error {
 	}
 
 	e.ln, e.lan = ln, enabled
-	e.log.Info("http server listening", "addr", ln.Addr().String(), "lan", enabled)
+	e.log.Info().Str("addr", ln.Addr().String()).Bool("lan", enabled).Msg("http server listening")
 	go e.serve(ln)
 	return nil
 }
@@ -154,7 +155,7 @@ func (e *exposer) stopMDNS() {
 		return
 	}
 	if err := e.mdns.Close(); err != nil {
-		e.log.Warn("stop mDNS responder", "err", err)
+		e.log.Warn().Err(err).Msg("stop mDNS responder")
 	}
 	e.mdns = nil
 }

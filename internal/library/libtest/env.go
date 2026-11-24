@@ -5,13 +5,13 @@ package libtest
 
 import (
 	"context"
-	"io"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/rs/zerolog"
 
 	"generic-arr-project/internal/library"
 	"generic-arr-project/internal/library/engine"
@@ -184,4 +184,4 @@ type V4Only struct{ netx.Direct }
 func (V4Only) HasIPv6() bool { return false }
 
 // QuietLog discards everything.
-func QuietLog() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
+func QuietLog() *zerolog.Logger { return new(zerolog.Nop()) }

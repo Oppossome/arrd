@@ -86,7 +86,7 @@ func (s *Service) importMovieDownload(ctx context.Context, eng *torrent.Engine, 
 		return err
 	}
 	if res.Method != mode {
-		s.log.Warn("import used a different method", "requested", mode, "used", res.Method, "file", dst)
+		s.log.Warn().Str("requested", string(mode)).Str("used", string(res.Method)).Str("file", dst).Msg("import used a different method")
 	}
 	err = s.store.WithTx(ctx, func(q *db.Queries) error {
 		if err := q.SetMovieFile(ctx, db.SetMovieFileParams{ID: movie.ID, FilePath: &dst, FileQuality: &r.Quality}); err != nil {
@@ -97,6 +97,6 @@ func (s *Service) importMovieDownload(ctx context.Context, eng *torrent.Engine, 
 	if err != nil {
 		return fmt.Errorf("record import: %w", err)
 	}
-	s.log.Info("imported movie", "movie", movie.ID, "title", movie.Title, "file", dst, "method", res.Method)
+	s.log.Info().Int64("movie", movie.ID).Str("title", movie.Title).Str("file", dst).Str("method", string(res.Method)).Msg("imported movie")
 	return nil
 }

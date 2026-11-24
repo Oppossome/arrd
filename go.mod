@@ -13,6 +13,7 @@ require (
 	github.com/oschwald/maxminddb-golang/v2 v2.9.1
 	github.com/pion/logging v0.2.4
 	github.com/pion/mdns/v2 v2.0.7
+	github.com/rs/zerolog v1.35.1
 	golang.org/x/crypto v0.59.0
 	golang.org/x/net v0.63.0
 	golang.org/x/sys v0.50.0
@@ -77,6 +78,7 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.3 // indirect
+	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/minio/sha256-simd v1.0.0 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log/slog"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -14,6 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/rs/zerolog"
 
 	"generic-arr-project/internal/library"
 	"generic-arr-project/internal/library/engine"
@@ -46,7 +47,7 @@ func newUnconfiguredServer(t *testing.T) *testServer {
 func newUnconfiguredServerUI(t *testing.T, ui fs.FS) *testServer {
 	t.Helper()
 	ctx := context.Background()
-	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	log := new(zerolog.Nop())
 	base := t.TempDir()
 	dataDir := filepath.Join(base, "data")
 	if err := os.MkdirAll(dataDir, 0o700); err != nil {

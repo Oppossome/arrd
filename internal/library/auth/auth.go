@@ -175,7 +175,7 @@ func (s *Service) Login(ctx context.Context, password, clientKey string) (string
 	}
 	if !ok {
 		s.logins.fail(clientKey, now)
-		s.log.Warn("failed login", "client", clientKey)
+		s.log.Warn().Str("client", clientKey).Msg("failed login")
 		return "", apperr.ErrInvalidCredentials
 	}
 	s.logins.reset(clientKey)
@@ -217,7 +217,7 @@ func (s *Service) ValidateSession(ctx context.Context, token string) (bool, erro
 		if err := s.store.TouchSession(ctx, db.TouchSessionParams{
 			IDHash: idHash, Now: now.Format(timeLayout), ExpiresAt: now.Add(sessionTTL).Format(timeLayout),
 		}); err != nil {
-			s.log.Warn("extend session", "err", err)
+			s.log.Warn().Err(err).Msg("extend session")
 		}
 	}
 	return true, nil

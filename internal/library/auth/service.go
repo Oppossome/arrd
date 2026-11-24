@@ -10,17 +10,18 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"log/slog"
 	"sync/atomic"
 	"time"
 
 	"generic-arr-project/internal/store"
+
+	"github.com/rs/zerolog"
 )
 
 // Service checks credentials.
 type Service struct {
 	store  *store.Store
-	log    *slog.Logger
+	log    *zerolog.Logger
 	now    func() time.Time
 	logins loginLimiter
 
@@ -31,7 +32,7 @@ type Service struct {
 // Deps are the Service's collaborators.
 type Deps struct {
 	Store *store.Store
-	Log   *slog.Logger
+	Log   *zerolog.Logger
 	Now   func() time.Time // default time.Now
 }
 
@@ -88,7 +89,7 @@ func (s *Service) RegenerateAPIKey(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("save api key: %w", err)
 	}
 	s.apiKey.Store(&key)
-	s.log.Info("api key regenerated")
+	s.log.Info().Msg("api key regenerated")
 	return key, nil
 }
 

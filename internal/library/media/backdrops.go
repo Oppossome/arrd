@@ -30,7 +30,7 @@ func (s *Service) BackfillBackdrops(ctx context.Context) error {
 		}
 		if err := s.backfillMovieBackdrop(ctx, m.ID, m.TMDBID); err != nil {
 			failed++
-			s.log.Warn("backfill movie backdrop", "movie", m.ID, "title", m.Title, "err", err)
+			s.log.Warn().Int64("movie", m.ID).Str("title", m.Title).Err(err).Msg("backfill movie backdrop")
 		}
 	}
 	for _, r := range series {
@@ -39,7 +39,7 @@ func (s *Service) BackfillBackdrops(ctx context.Context) error {
 		}
 		if err := s.backfillSeriesBackdrop(ctx, r.ID, r.TMDBID); err != nil {
 			failed++
-			s.log.Warn("backfill series backdrop", "series", r.ID, "title", r.Title, "err", err)
+			s.log.Warn().Int64("series", r.ID).Str("title", r.Title).Err(err).Msg("backfill series backdrop")
 		}
 	}
 	if failed > 0 {

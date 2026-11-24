@@ -94,9 +94,9 @@ func (s *Service) SetVPN(ctx context.Context, in VPNInput) (VPNSettings, error) 
 	if err := s.store.UpsertVPNSettings(ctx, params); err != nil {
 		return VPNSettings{}, fmt.Errorf("save vpn settings: %w", err)
 	}
-	s.log.Info("vpn settings saved", "provider", def.ID)
+	s.log.Info().Str("provider", def.ID).Msg("vpn settings saved")
 	if err := s.engine.Apply(ctx); err != nil {
-		s.log.Warn("vpn settings saved but runtime failed", "err", err)
+		s.log.Warn().Err(err).Msg("vpn settings saved but runtime failed")
 	}
 	return s.VPNSettings(ctx)
 }
@@ -107,7 +107,7 @@ func (s *Service) RemoveVPN(ctx context.Context) error {
 	if err := s.store.DeleteVPNSettings(ctx); err != nil {
 		return fmt.Errorf("remove vpn: %w", err)
 	}
-	s.log.Warn("vpn removed; indexer and download traffic now uses the direct connection")
+	s.log.Warn().Msg("vpn removed; indexer and download traffic now uses the direct connection")
 	return s.engine.Apply(ctx)
 }
 
@@ -242,7 +242,7 @@ func (s *Service) CheckVPN(ctx context.Context) error {
 	if err != nil || reason == "" {
 		return err
 	}
-	s.log.Warn("reconnecting vpn", "reason", reason)
+	s.log.Warn().Str("reason", reason).Msg("reconnecting vpn")
 	return s.engine.Apply(ctx)
 }
 

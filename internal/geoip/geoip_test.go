@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"io"
-	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -18,9 +16,10 @@ import (
 
 	"github.com/maxmind/mmdbwriter"
 	"github.com/maxmind/mmdbwriter/mmdbtype"
+	"github.com/rs/zerolog"
 )
 
-func quietLog() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
+func quietLog() *zerolog.Logger { return new(zerolog.Nop()) }
 
 // fixtureDB builds a gzipped country database mapping documentation
 // ranges to countries.

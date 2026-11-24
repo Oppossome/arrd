@@ -56,9 +56,9 @@ func (h *handlers) writeErr(w http.ResponseWriter, r *http.Request, err error) {
 	default:
 		if r.Context().Err() != nil {
 			// The client went away (e.g. the page changed); nothing failed.
-			h.log.Debug("request canceled", "method", r.Method, "path", r.URL.Path, "err", err)
+			h.log.Debug().Str("method", r.Method).Str("path", r.URL.Path).Err(err).Msg("request canceled")
 		} else {
-			h.log.Error("request failed", "method", r.Method, "path", r.URL.Path, "err", err)
+			h.log.Error().Str("method", r.Method).Str("path", r.URL.Path).Err(err).Msg("request failed")
 		}
 		writeJSON(w, http.StatusInternalServerError, errorBody{Error: err.Error()})
 	}

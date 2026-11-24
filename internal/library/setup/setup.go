@@ -179,7 +179,7 @@ func (s *Service) CompleteSetup(ctx context.Context, in SetupInput) (SetupResult
 	if vpnParams != nil {
 		vpnProvider = vpnParams.Provider
 	}
-	s.log.Info("setup complete", "vpn_provider", vpnProvider)
+	s.log.Info().Str("vpn_provider", vpnProvider).Msg("setup complete")
 
 	out := SetupResult{APIKey: apiKey, SessionToken: session, Warnings: s.settings.HardlinkWarnings(ctx, downloads)}
 	if err := s.engine.Apply(ctx); err != nil {

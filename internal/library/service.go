@@ -15,7 +15,6 @@ package library
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"path/filepath"
 	"time"
 
@@ -32,6 +31,8 @@ import (
 	"generic-arr-project/internal/netx"
 	"generic-arr-project/internal/store"
 	"generic-arr-project/internal/vpn/provider"
+
+	"github.com/rs/zerolog"
 )
 
 // geoIPTimeout bounds one geolocation database download (~8 MiB).
@@ -51,7 +52,7 @@ type Services struct {
 	Setup    *setup.Service
 
 	geo *geoip.DB
-	log *slog.Logger
+	log *zerolog.Logger
 }
 
 // Deps are the services' shared collaborators.
@@ -65,7 +66,7 @@ type Deps struct {
 	// DefinitionsDir holds the Cardigann site definitions (*.yml) indexers
 	// are built from; empty or missing means none.
 	DefinitionsDir string
-	Log            *slog.Logger
+	Log            *zerolog.Logger
 
 	// Optional overrides, mainly for tests.
 	Direct        netx.Network       // default netx.Direct{}
@@ -95,7 +96,8 @@ func New(d Deps) (*Services, error) {
 		}
 		d.VPNProviders = reg
 	}
-	log := d.Log.With("component", "library")
+	logger := d.Log.With().Str("component", "library").Logger()
+	log := &logger
 	s := &Services{
 		geo: geoip.New(filepath.Join(d.DataDir, "cache", "geoip"), d.GeoIPBaseURL, netx.HTTPClient(d.Direct, geoIPTimeout), d.Log),
 		log: log,
@@ -158,14 +160,14 @@ func (w wantedSearcher) SearchNewSeries(ctx context.Context, id int64) error {
 // logged and retried by the scheduler rather than failing startup.
 func (s *Services) Start(ctx context.Context) error {
 	if err := s.geo.Open(); err != nil {
-		s.log.Warn("peer countries unavailable until the ip geolocation database is downloaded again", "err", err)
+		s.log.Warn().Err(err).Msg("peer countries unavailable until the ip geolocation database is downloaded again")
 	}
 	done, err := s.Auth.Load(ctx)
 	if err != nil || !done {
 		return err // !done: onboarding pending
 	}
 	if err := s.Engine.Apply(ctx); err != nil {
-		s.log.Error("downloads unavailable", "err", err)
+		s.log.Error().Err(err).Msg("downloads unavailable")
 	}
 	return nil
 }

@@ -3,19 +3,19 @@ package pia_test
 import (
 	"context"
 	"errors"
-	"io"
-	"log/slog"
 	"slices"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/rs/zerolog"
 
 	"generic-arr-project/internal/vpn/pia"
 	"generic-arr-project/internal/vpn/pia/piatest"
 	"generic-arr-project/internal/vpn/provider"
 )
 
-func quietLog() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
+func quietLog() *zerolog.Logger { return new(zerolog.Nop()) }
 
 func goodValues() provider.Values {
 	return provider.Values{"username": piatest.Username, "password": piatest.Password, "region": piatest.Region}

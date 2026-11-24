@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"io"
-	"log/slog"
 	"net/netip"
 	"os"
 	"path/filepath"
@@ -16,11 +14,12 @@ import (
 	atorrent "github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/bencode"
 	"github.com/anacrolix/torrent/metainfo"
+	"github.com/rs/zerolog"
 
 	"generic-arr-project/internal/vpn/vpntest"
 )
 
-func quietLog() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
+func quietLog() *zerolog.Logger { return new(zerolog.Nop()) }
 
 // makeTorrent writes a random payload into dir and returns its metainfo.
 func makeTorrent(t *testing.T, dir string, size int) (*metainfo.MetaInfo, []byte) {

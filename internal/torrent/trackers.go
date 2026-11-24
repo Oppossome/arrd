@@ -25,7 +25,7 @@ func (e *Engine) resolveUDPTrackers(tiers [][]string) [][]string {
 		for _, raw := range tier {
 			rewritten, err := e.resolveUDPTracker(ctx, raw)
 			if err != nil {
-				e.log.Warn("dropping tracker", "tracker", raw, "err", err)
+				e.log.Warn().Str("tracker", raw).Err(err).Msg("dropping tracker")
 				continue
 			}
 			kept = append(kept, rewritten)

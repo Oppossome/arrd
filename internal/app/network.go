@@ -2,18 +2,19 @@ package app
 
 import (
 	"context"
-	"log/slog"
 
 	"generic-arr-project/internal/library/engine"
 	"generic-arr-project/internal/netx"
 	"generic-arr-project/internal/torrent"
 	"generic-arr-project/internal/vpn/provider"
+
+	"github.com/rs/zerolog"
 )
 
 // newRuntimeFactory builds the torrent engine, on the VPN tunnel when one is
 // configured and direct otherwise. A configured VPN never falls back to
 // direct: if the tunnel fails, no engine is started.
-func newRuntimeFactory(stateDir string, log *slog.Logger) engine.Factory {
+func newRuntimeFactory(stateDir string, log *zerolog.Logger) engine.Factory {
 	return func(ctx context.Context, rs engine.Settings) (*engine.Runtime, error) {
 		rt := &engine.Runtime{}
 		var n netx.Network = netx.Direct{}

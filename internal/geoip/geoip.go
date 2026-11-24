@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/netip"
 	"os"
@@ -19,6 +18,7 @@ import (
 	"time"
 
 	"github.com/oschwald/maxminddb-golang/v2"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -39,7 +39,7 @@ type DB struct {
 	dir     string
 	baseURL string
 	client  *http.Client
-	log     *slog.Logger
+	log     *zerolog.Logger
 	now     func() time.Time
 
 	reader   atomic.Pointer[maxminddb.Reader]
@@ -48,13 +48,14 @@ type DB struct {
 
 // New returns a DB that keeps its file in dir and downloads from baseURL
 // (DefaultBaseURL if empty) with client. Call Open and Update to load it.
-func New(dir, baseURL string, client *http.Client, log *slog.Logger) *DB {
+func New(dir, baseURL string, client *http.Client, log *zerolog.Logger) *DB {
 	if baseURL == "" {
 		baseURL = DefaultBaseURL
 	}
+	logger := log.With().Str("component", "geoip").Logger()
 	return &DB{
 		dir: dir, baseURL: baseURL, client: client, now: time.Now,
-		log: log.With("component", "geoip"),
+		log: &logger,
 	}
 }
 
@@ -82,7 +83,7 @@ func (d *DB) Update(ctx context.Context) error {
 			return nil
 		}
 		// Fresh but not loadable (e.g. truncated): download it again.
-		d.log.Warn("replacing unreadable database", "err", err)
+		d.log.Warn().Err(err).Msg("replacing unreadable database")
 	}
 	if err := d.download(ctx); err != nil {
 		return err
@@ -90,7 +91,7 @@ func (d *DB) Update(ctx context.Context) error {
 	if err := d.load(); err != nil {
 		return err
 	}
-	d.log.Info("ip geolocation database updated")
+	d.log.Info().Msg("ip geolocation database updated")
 	return nil
 }
 
@@ -109,7 +110,7 @@ func (d *DB) Country(addr netip.Addr) string {
 		} `maxminddb:"country"`
 	}
 	if err := r.Lookup(addr).Decode(&rec); err != nil {
-		d.log.Debug("lookup", "addr", addr, "err", err)
+		d.log.Debug().Stringer("addr", addr).Err(err).Msg("lookup")
 		return ""
 	}
 	return rec.Country.ISOCode

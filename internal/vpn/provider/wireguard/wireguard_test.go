@@ -3,9 +3,9 @@ package wireguard
 import (
 	"context"
 	"errors"
-	"io"
-	"log/slog"
 	"testing"
+
+	"github.com/rs/zerolog"
 
 	"generic-arr-project/internal/vpn/provider"
 	"generic-arr-project/internal/vpn/vpntest"
@@ -34,7 +34,7 @@ func TestConnect(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	conn, err := p.Connect(context.Background(), provider.ConnectOptions{PortForward: true}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	conn, err := p.Connect(context.Background(), provider.ConnectOptions{PortForward: true}, new(zerolog.Nop()))
 	if err != nil {
 		t.Fatal(err)
 	}

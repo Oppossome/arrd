@@ -48,7 +48,7 @@ func (s *Service) UploadIndexerDefinitions(data []byte) (UploadResult, error) {
 		return UploadResult{}, err
 	}
 	catalog, _ := s.loadDefinitions() // problems with other files are logged and shown on reload
-	s.log.Info("indexer definitions uploaded", "saved", len(res.Saved), "skipped", len(res.Errors))
+	s.log.Info().Int("saved", len(res.Saved)).Int("skipped", len(res.Errors)).Msg("indexer definitions uploaded")
 	return UploadResult{Saved: res.Saved, Errors: errorStrings(res.Errors), Definitions: catalog.List()}, nil
 }
 
@@ -73,10 +73,10 @@ func (s *Service) DeleteIndexerDefinition(id string) error {
 func (s *Service) loadDefinitions() (*indexer.Catalog, []error) {
 	catalog, errs := indexer.LoadDir(s.definitionsDir)
 	for _, err := range errs {
-		s.log.Warn("indexer definition skipped", "err", err)
+		s.log.Warn().Err(err).Msg("indexer definition skipped")
 	}
 	s.definitions.Store(catalog)
-	s.log.Info("indexer definitions loaded", "dir", s.definitionsDir, "definitions", len(catalog.List()), "skipped", len(errs))
+	s.log.Info().Str("dir", s.definitionsDir).Int("definitions", len(catalog.List())).Int("skipped", len(errs)).Msg("indexer definitions loaded")
 	return catalog, errs
 }
 

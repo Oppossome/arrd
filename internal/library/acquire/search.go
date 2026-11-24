@@ -174,7 +174,7 @@ func (s *Service) grabBest(ctx context.Context, res SearchResult, grab func(Rele
 		}
 		dl, err := grab(r)
 		if err != nil {
-			s.log.Warn("grab failed, trying next release", "release", r.Title, "err", err)
+			s.log.Warn().Str("release", r.Title).Err(err).Msg("grab failed, trying next release")
 			grabErrs = append(grabErrs, fmt.Errorf("%s: %w", r.Title, err))
 			continue
 		}
@@ -237,7 +237,7 @@ func (s *Service) SearchWantedMovies(ctx context.Context) error {
 			return ctx.Err()
 		}
 		if _, err := s.AutoSearchMovie(ctx, m.ID); err != nil {
-			s.log.Warn("wanted search", "movie", m.ID, "title", m.Title, "err", err)
+			s.log.Warn().Int64("movie", m.ID).Str("title", m.Title).Err(err).Msg("wanted search")
 		}
 	}
 	return nil
@@ -255,7 +255,7 @@ func (s *Service) AutoSearchMovie(ctx context.Context, movieID int64) (AutoSearc
 		return s.GrabMovieRelease(ctx, movieID, r)
 	})
 	if err == nil && out.Grabbed == nil {
-		s.log.Info("no acceptable release found", "movie", movieID, "considered", len(res.Releases), "indexer_failures", len(res.Failures))
+		s.log.Info().Int64("movie", movieID).Int("considered", len(res.Releases)).Int("indexer_failures", len(res.Failures)).Msg("no acceptable release found")
 	}
 	return out, err
 }

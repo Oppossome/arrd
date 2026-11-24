@@ -22,6 +22,7 @@ import (
 	atorrent "github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/metainfo"
 	"github.com/anacrolix/torrent/storage"
+	"github.com/rs/zerolog"
 
 	"generic-arr-project/internal/netx"
 )
@@ -45,7 +46,7 @@ type Config struct {
 type Engine struct {
 	cl        *atorrent.Client
 	net       netx.Network
-	log       *slog.Logger
+	log       *zerolog.Logger
 	listeners []net.Listener
 	pieces    storage.PieceCompletion
 
@@ -59,7 +60,7 @@ type Engine struct {
 }
 
 // New starts a torrent client bound to cfg.Network.
-func New(cfg Config, log *slog.Logger) (*Engine, error) {
+func New(cfg Config, log *zerolog.Logger) (*Engine, error) {
 	if cfg.Network == nil {
 		return nil, errors.New("torrent: Network is required")
 	}
@@ -67,7 +68,8 @@ func New(cfg Config, log *slog.Logger) (*Engine, error) {
 		return nil, errors.New("torrent: StateDir is required")
 	}
 	n := cfg.Network
-	log = log.With("component", "torrent", "network", n.Name())
+	logger := log.With().Str("component", "torrent").Str("network", n.Name()).Logger()
+	log = &logger
 	if err := os.MkdirAll(cfg.StateDir, 0o700); err != nil {
 		return nil, fmt.Errorf("torrent state dir: %w", err)
 	}
@@ -92,7 +94,7 @@ func New(cfg Config, log *slog.Logger) (*Engine, error) {
 		PieceCompletion: sharedPieceCompletion{pieces},
 	})
 	cc.Seed = cfg.Seed
-	cc.Slogger = log
+	cc.Slogger = slog.New(zerolog.NewSlogHandler(*log)) // anacrolix logs through slog
 	cc.ListenHost = func(string) string { return "" }
 	cc.ListenPort = cfg.ListenPort
 	cc.DisableIPv4 = !n.HasIPv4()
@@ -146,12 +148,12 @@ func New(cfg Config, log *slog.Logger) (*Engine, error) {
 			pieces.Close()
 			return nil, err
 		}
-		log.Debug("tcp port taken, retrying with another port", "err", err)
+		log.Debug().Err(err).Msg("tcp port taken, retrying with another port")
 	}
 	e.stopSampler = make(chan struct{})
 	e.samplerDone = make(chan struct{})
 	go e.runSampler()
-	log.Info("torrent engine started", "port", e.cl.LocalPort())
+	log.Info().Int("port", e.cl.LocalPort()).Msg("torrent engine started")
 	return e, nil
 }
 
@@ -169,7 +171,7 @@ func (e *Engine) addTCP(port int) error {
 		if err != nil {
 			if f.network == "tcp6" {
 				// Hosts without IPv6 are common; IPv4 alone is enough.
-				e.log.Warn("no IPv6 TCP listener", "err", err)
+				e.log.Warn().Err(err).Msg("no IPv6 TCP listener")
 				continue
 			}
 			return fmt.Errorf("torrent tcp listen: %w", err)
@@ -193,7 +195,7 @@ func (e *Engine) Close() {
 	}
 	e.closeClient()
 	if err := e.pieces.Close(); err != nil {
-		e.log.Warn("torrent piece completion close", "err", err)
+		e.log.Warn().Err(err).Msg("torrent piece completion close")
 	}
 }
 
@@ -201,7 +203,7 @@ func (e *Engine) Close() {
 func (e *Engine) closeClient() {
 	if e.cl != nil {
 		for _, err := range e.cl.Close() {
-			e.log.Warn("torrent client close", "err", err)
+			e.log.Warn().Err(err).Msg("torrent client close")
 		}
 		e.cl = nil
 	}

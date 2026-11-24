@@ -11,12 +11,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"slices"
 	"time"
 
 	"generic-arr-project/internal/formspec"
 	"generic-arr-project/internal/vpn"
+
+	"github.com/rs/zerolog"
 )
 
 // The settings form types are shared with other integrations; see formspec.
@@ -78,7 +79,7 @@ func (d Definition) Redact(v Values) (public Values, secretsSet []string) { retu
 // Provider connects tunnels with parsed settings.
 type Provider interface {
 	// Connect brings up a tunnel and waits for its first handshake.
-	Connect(ctx context.Context, opts ConnectOptions, log *slog.Logger) (*Connection, error)
+	Connect(ctx context.Context, opts ConnectOptions, log *zerolog.Logger) (*Connection, error)
 }
 
 // ConnectOptions tune a connection.

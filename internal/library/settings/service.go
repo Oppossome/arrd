@@ -4,18 +4,19 @@ package settings
 
 import (
 	"errors"
-	"log/slog"
 	"sync"
 
 	"generic-arr-project/internal/library/tmdb"
 	"generic-arr-project/internal/store"
+
+	"github.com/rs/zerolog"
 )
 
 // Service reads and saves settings.
 type Service struct {
 	store *store.Store
 	tmdb  *tmdb.Provider
-	log   *slog.Logger
+	log   *zerolog.Logger
 
 	netMu   sync.Mutex // guards network and serializes network updates
 	network NetworkApplier
@@ -25,7 +26,7 @@ type Service struct {
 type Deps struct {
 	Store *store.Store
 	TMDB  *tmdb.Provider // validates a new TMDB key before it is saved
-	Log   *slog.Logger
+	Log   *zerolog.Logger
 }
 
 // New creates a Service.

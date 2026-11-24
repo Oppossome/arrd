@@ -4,11 +4,12 @@ package wireguard
 
 import (
 	"context"
-	"log/slog"
 	"strings"
 
 	"generic-arr-project/internal/vpn"
 	"generic-arr-project/internal/vpn/provider"
+
+	"github.com/rs/zerolog"
 )
 
 // ID is the provider id.
@@ -52,9 +53,9 @@ type static struct{ cfg *vpn.Config }
 
 // Connect brings the configured tunnel up. A static config has nothing to
 // renew and no forwarded port to request.
-func (s static) Connect(ctx context.Context, _ provider.ConnectOptions, log *slog.Logger) (*provider.Connection, error) {
+func (s static) Connect(ctx context.Context, _ provider.ConnectOptions, log *zerolog.Logger) (*provider.Connection, error) {
 	for _, k := range s.cfg.IgnoredKeys {
-		log.Warn("wireguard config entry has no effect in arrd", "entry", k)
+		log.Warn().Str("entry", k).Msg("wireguard config entry has no effect in arrd")
 	}
 	tun, err := vpn.Start(ctx, s.cfg, log, provider.HandshakeTimeout)
 	if err != nil {

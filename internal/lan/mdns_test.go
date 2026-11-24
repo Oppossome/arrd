@@ -2,18 +2,17 @@ package lan
 
 import (
 	"context"
-	"io"
-	"log/slog"
 	"net"
 	"testing"
 	"time"
 
 	"github.com/pion/mdns/v2"
+	"github.com/rs/zerolog"
 	"golang.org/x/net/ipv4"
 )
 
 func TestResponderAnswersQueries(t *testing.T) {
-	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	log := new(zerolog.Nop())
 	const name = "arrd-test.local" // not Hostname, so a running arrd cannot answer instead
 	r, err := StartResponder(ResponderOptions{Hostname: name, Log: log, IncludeLoopback: true})
 	if err != nil {
@@ -26,7 +25,7 @@ func TestResponderAnswersQueries(t *testing.T) {
 	if err != nil {
 		t.Skipf("mDNS client socket unavailable: %v", err)
 	}
-	client, err := mdns.Server(ipv4.NewPacketConn(l), nil, &mdns.Config{IncludeLoopback: true, LoggerFactory: slogFactory{log}})
+	client, err := mdns.Server(ipv4.NewPacketConn(l), nil, &mdns.Config{IncludeLoopback: true, LoggerFactory: zerologFactory{log}})
 	if err != nil {
 		t.Skipf("mDNS client unavailable: %v", err)
 	}

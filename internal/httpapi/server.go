@@ -9,11 +9,12 @@ package httpapi
 import (
 	"errors"
 	"io/fs"
-	"log/slog"
 	"net/http"
 
 	"generic-arr-project/internal/httpapi/apigen"
 	"generic-arr-project/internal/library"
+
+	"github.com/rs/zerolog"
 )
 
 // New returns the HTTP handler. The API routes come from the generated
@@ -29,14 +30,15 @@ import (
 //   - All other paths serve the web UI from ui (may be nil).
 //
 // setupToken may be empty when setup is already complete.
-func New(svc *library.Services, setupToken string, log *slog.Logger, ui fs.FS) (http.Handler, error) {
+func New(svc *library.Services, setupToken string, log *zerolog.Logger, ui fs.FS) (http.Handler, error) {
 	if svc == nil {
 		return nil, errors.New("httpapi: service is required")
 	}
 	if !svc.Auth.SetupComplete() && setupToken == "" {
 		return nil, errors.New("httpapi: a setup token is required until setup is complete")
 	}
-	h := &handlers{svc: svc, log: log.With("component", "httpapi")}
+	logger := log.With().Str("component", "httpapi").Logger()
+	h := &handlers{svc: svc, log: &logger}
 
 	_, router, err := loadSpec()
 	if err != nil {
@@ -83,7 +85,7 @@ func New(svc *library.Services, setupToken string, log *slog.Logger, ui fs.FS) (
 // handlers implements the generated API.
 type handlers struct {
 	svc *library.Services
-	log *slog.Logger
+	log *zerolog.Logger
 }
 
 var _ apigen.StrictServerInterface = (*handlers)(nil)

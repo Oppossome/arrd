@@ -109,7 +109,7 @@ func (s *Service) importSeriesDownload(ctx context.Context, eng *torrent.Engine,
 			return err
 		}
 		if res.Method != mode {
-			s.log.Warn("import used a different method", "requested", mode, "used", res.Method, "file", p.dst)
+			s.log.Warn().Str("requested", string(mode)).Str("used", string(res.Method)).Str("file", p.dst).Msg("import used a different method")
 		}
 	}
 	imported := map[int64]bool{}
@@ -128,7 +128,7 @@ func (s *Service) importSeriesDownload(ctx context.Context, eng *torrent.Engine,
 	if err != nil {
 		return fmt.Errorf("record import: %w", err)
 	}
-	s.log.Info("imported episodes", "series", series.Title, "files", len(plan), "download", r.ID)
+	s.log.Info().Str("series", series.Title).Int("files", len(plan)).Int64("download", r.ID).Msg("imported episodes")
 
 	// Report expected episodes the download turned out not to contain.
 	expected, err := s.store.ListDownloadEpisodes(ctx, r.ID)

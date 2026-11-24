@@ -24,11 +24,15 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"log/slog"
+	"io"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
+	"time"
+
+	"github.com/rs/zerolog"
 
 	"generic-arr-project/internal/app"
 	"generic-arr-project/internal/library/vpnconfig"
@@ -68,11 +72,11 @@ func run(args []string) error {
 		return err
 	}
 
-	var level slog.Level
-	if err := level.UnmarshalText([]byte(*logLevel)); err != nil {
+	level, err := parseLogLevel(*logLevel)
+	if err != nil {
 		return fmt.Errorf("-log-level: %w", err)
 	}
-	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
+	log := newLogger(os.Stderr, level)
 	absData, err := filepath.Abs(*dataDir)
 	if err != nil {
 		return fmt.Errorf("-data-dir: %w", err)
@@ -120,4 +124,29 @@ func defaultDataDir() (string, error) {
 		return "", fmt.Errorf("find home directory (set -data-dir or ARRD_DATA_DIR): %w", err)
 	}
 	return filepath.Join(home, ".local", "share", "arrd"), nil
+}
+
+// parseLogLevel accepts the levels -log-level documents, in any case.
+func parseLogLevel(s string) (zerolog.Level, error) {
+	switch strings.ToLower(s) {
+	case "debug":
+		return zerolog.DebugLevel, nil
+	case "info":
+		return zerolog.InfoLevel, nil
+	case "warn":
+		return zerolog.WarnLevel, nil
+	case "error":
+		return zerolog.ErrorLevel, nil
+	}
+	return zerolog.NoLevel, fmt.Errorf("unknown level %q: want debug, info, warn or error", s)
+}
+
+// newLogger writes readable console lines to a terminal and JSON lines
+// otherwise (systemd, containers, log files).
+func newLogger(out *os.File, level zerolog.Level) *zerolog.Logger {
+	var w io.Writer = out
+	if info, err := out.Stat(); err == nil && info.Mode()&os.ModeCharDevice != 0 {
+		w = zerolog.ConsoleWriter{Out: out, TimeFormat: time.DateTime}
+	}
+	return new(zerolog.New(w).Level(level).With().Timestamp().Logger())
 }
