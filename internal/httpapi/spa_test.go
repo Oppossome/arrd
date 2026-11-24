@@ -78,4 +78,8 @@ func TestCSPAllowsOnlyTheInlineBootstrap(t *testing.T) {
 	if strings.Count(csp, "sha256-") != 1 {
 		t.Errorf("external script hashed too: %s", csp)
 	}
+	// Only the trailer player may be framed; nothing may frame arrd.
+	if !strings.Contains(csp, "frame-src https://www.youtube-nocookie.com;") || !strings.Contains(csp, "frame-ancestors 'none'") {
+		t.Errorf("csp frames = %s", csp)
+	}
 }

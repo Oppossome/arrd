@@ -135,6 +135,29 @@ func TestDiscoverSeries(t *testing.T) {
 	if _, err := svc.SearchDiscoveredSeason(ctx, 800001, 9); !errors.Is(err, ErrNotFound) {
 		t.Errorf("missing season = %v", err)
 	}
+	season, err := svc.DiscoveredSeason(ctx, 800001, 1)
+	if err != nil || len(season.Episodes) != 3 || season.Episodes[1].Title != "Low Tide" {
+		t.Fatalf("season = %+v, %v", season, err)
+	}
+	if _, err := svc.DiscoveredSeason(ctx, 800001, 9); !errors.Is(err, ErrNotFound) {
+		t.Errorf("missing season details = %v", err)
+	}
+
+	// One episode: only that episode is accepted, the season pack is not.
+	epRes, err := svc.SearchDiscoveredEpisode(ctx, 800001, 1, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	accepted := map[string]bool{}
+	for _, r := range epRes.Releases {
+		accepted[r.Title] = r.Accepted
+	}
+	if !accepted["Harbor.Watch.S01E02.720p.HDTV.x264-PIKA"] || accepted[packName] {
+		t.Errorf("episode search = %+v", epRes.Releases)
+	}
+	if _, err := svc.SearchDiscoveredEpisode(ctx, 800001, 1, 9); !errors.Is(err, ErrNotFound) {
+		t.Errorf("missing episode = %v", err)
+	}
 	if list, _ := svc.SeriesList(ctx); len(list) != 0 {
 		t.Fatalf("search added series: %+v", list)
 	}
@@ -153,6 +176,9 @@ func TestDiscoverSeries(t *testing.T) {
 	// Once in the library, the season is searched as a library season.
 	if _, err := svc.SearchDiscoveredSeason(ctx, 800001, 1); err != nil {
 		t.Errorf("search of library series = %v", err)
+	}
+	if _, err := svc.SearchDiscoveredEpisode(ctx, 800001, 1, 2); err != nil {
+		t.Errorf("episode search of library series = %v", err)
 	}
 	if show, _ := svc.DiscoveredSeries(ctx, 800001); show.LibraryID == nil || *show.LibraryID != list[0].ID {
 		t.Errorf("discovered after grab = %+v", show)

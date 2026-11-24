@@ -15,18 +15,20 @@ func TestDiscoverRoutes(t *testing.T) {
 		t.Fatal(err)
 	}
 	for path, want := range map[string]string{
-		"/api/v1/discover/languages":                     "discoverLanguages",
-		"/api/v1/discover/lists/movies/popular":          "movieList",
-		"/api/v1/discover/movies/genres":                 "movieGenres",
-		"/api/v1/discover/movies/browse":                 "browseMovies",
-		"/api/v1/discover/movies/recommendations":        "movieRecommendations",
-		"/api/v1/discover/movies/900001":                 "discoverMovie",
-		"/api/v1/discover/movies/900001/recommendations": "moviesLike",
-		"/api/v1/discover/lists/series/on_the_air":       "seriesList",
-		"/api/v1/discover/series/genres":                 "seriesGenres",
-		"/api/v1/discover/series/browse":                 "browseSeries",
-		"/api/v1/discover/series/recommendations":        "seriesRecommendations",
-		"/api/v1/discover/series/800001/recommendations": "seriesLike",
+		"/api/v1/discover/languages":                                   "discoverLanguages",
+		"/api/v1/discover/lists/movies/popular":                        "movieList",
+		"/api/v1/discover/movies/genres":                               "movieGenres",
+		"/api/v1/discover/movies/browse":                               "browseMovies",
+		"/api/v1/discover/movies/recommendations":                      "movieRecommendations",
+		"/api/v1/discover/movies/900001":                               "discoverMovie",
+		"/api/v1/discover/movies/900001/recommendations":               "moviesLike",
+		"/api/v1/discover/lists/series/on_the_air":                     "seriesList",
+		"/api/v1/discover/series/genres":                               "seriesGenres",
+		"/api/v1/discover/series/browse":                               "browseSeries",
+		"/api/v1/discover/series/recommendations":                      "seriesRecommendations",
+		"/api/v1/discover/series/800001/recommendations":               "seriesLike",
+		"/api/v1/discover/series/800001/seasons/1":                     "discoverSeason",
+		"/api/v1/discover/series/800001/seasons/1/episodes/2/releases": "discoverEpisodeReleases",
 	} {
 		route, _, err := router.FindRoute(httptest.NewRequest(http.MethodGet, path, nil))
 		if err != nil {
@@ -53,6 +55,7 @@ func TestDiscoverRejectsBadParams(t *testing.T) {
 		"/api/v1/discover/movies/browse?lang=jpn",
 		"/api/v1/movies/lookup?q=orchard&lang=j",
 		"/api/v1/series/lookup?q=harbor&genre=zero",
+		"/api/v1/discover/series/800001/seasons/1/episodes/0/releases",
 	} {
 		if code, body := do(t, srv, "GET", path, "", true); code != http.StatusBadRequest {
 			t.Errorf("%s = %d %v, want 400", path, code, body)

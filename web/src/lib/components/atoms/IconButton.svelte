@@ -6,11 +6,22 @@
 		icon: IconName;
 		label: string;
 		tone?: 'default' | 'danger';
+		/** Spin the icon (e.g. a refresh in progress); the button is disabled meanwhile. */
+		spinning?: boolean;
 	}
-	let { icon, label, tone = 'default', type = 'button', ...rest }: Props = $props();
+	let { icon, label, tone = 'default', spinning = false, type = 'button', disabled, ...rest }: Props = $props();
 </script>
 
-<button {type} class="icon-btn {tone}" aria-label={label} title={label} {...rest}>
+<button
+	{type}
+	class="icon-btn {tone}"
+	class:spinning
+	aria-label={label}
+	title={label}
+	aria-busy={spinning || undefined}
+	disabled={disabled || spinning}
+	{...rest}
+>
 	<Icon name={icon} />
 </button>
 
@@ -35,5 +46,22 @@
 	.icon-btn:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
+	}
+	.spinning:disabled {
+		opacity: 1;
+		cursor: progress;
+	}
+	.spinning :global(svg) {
+		animation: spin 900ms linear infinite;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.spinning :global(svg) {
+			animation-duration: 3s;
+		}
+	}
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
 	}
 </style>

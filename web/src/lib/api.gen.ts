@@ -222,7 +222,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description A cached TMDB poster or backdrop. Served by hand (not generated) for range and caching support. */
+        /** @description A cached TMDB poster, backdrop, episode still or cast photo. Served by hand (not generated) for range and caching support. */
         get: operations["getPoster"];
         put?: never;
         post?: never;
@@ -843,6 +843,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/discover/series/{tmdbId}/seasons/{season}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["discoverSeason"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/discover/series/{tmdbId}/seasons/{season}/episodes/{episode}/releases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Searches the indexers for one episode of a series, whether or not it is in the library. Season packs are rejected. */
+        get: operations["discoverEpisodeReleases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/discover/series/{tmdbId}/seasons/{season}/releases": {
         parameters: {
             query?: never;
@@ -1376,11 +1409,13 @@ export interface components {
             year: number;
             overview: string;
             poster_path?: string;
+            backdrop_path?: string;
             /**
              * Format: int64
              * @description The movie's id in the library, when it is there.
              */
             library_id?: number;
+            extras?: components["schemas"]["MediaExtras"];
         };
         /** @description A TMDB lookup result (not yet in the library). */
         LookupSeries: {
@@ -1396,12 +1431,69 @@ export interface components {
             overview: string;
             status?: string;
             poster_path?: string;
+            backdrop_path?: string;
             /**
              * Format: int64
              * @description The series' id in the library, when it is there.
              */
             library_id?: number;
             seasons?: components["schemas"]["LookupSeason"][];
+            extras?: components["schemas"]["MediaExtras"];
+        };
+        /** @description Detail-page information. Only returned when fetching a single title, not in lists or searches. */
+        MediaExtras: {
+            tagline?: string;
+            /** @description Minutes; for a series, a typical episode's. */
+            runtime?: number;
+            /**
+             * Format: double
+             * @description TMDB user score out of 10.
+             */
+            vote_average?: number;
+            /** Format: int64 */
+            vote_count?: number;
+            /** @description US age rating, such as PG-13 or TV-MA. */
+            certification?: string;
+            genres: components["schemas"]["Genre"][];
+            /** @description Series only. */
+            networks?: string[];
+            /** @description Top-billed cast, in billing order. */
+            cast: components["schemas"]["CastMember"][];
+            trailer?: components["schemas"]["Trailer"];
+        };
+        CastMember: {
+            name: string;
+            character?: string;
+            profile_path?: string;
+        };
+        /** @description A trailer hosted on YouTube. */
+        Trailer: {
+            /** @description YouTube video id. */
+            youtube_key: string;
+            name: string;
+        };
+        /** @description A season of a TMDB series, with its episodes. */
+        SeasonDetails: {
+            season_number: number;
+            name: string;
+            overview: string;
+            poster_path?: string;
+            air_date?: string;
+            episodes: components["schemas"]["LookupEpisode"][];
+        };
+        /** @description An episode, from TMDB. */
+        LookupEpisode: {
+            season: number;
+            episode: number;
+            title: string;
+            overview: string;
+            /** @description YYYY-MM-DD; absent if unknown. */
+            air_date?: string;
+            /** @description Minutes. */
+            runtime?: number;
+            still_path?: string;
+            /** Format: double */
+            vote_average?: number;
         };
         /**
          * @description One of TMDB's curated movie lists (trending is this week's).
@@ -1459,6 +1551,9 @@ export interface components {
         LookupSeason: {
             season_number: number;
             episode_count: number;
+            name?: string;
+            poster_path?: string;
+            air_date?: string;
         };
         Progress: {
             info_hash: string;
@@ -1680,6 +1775,10 @@ export interface components {
         };
         GeneralSettings: {
             tmdb_api_key_set: boolean;
+            /** @description The saved TMDB key with all but its first and last two characters masked; omitted when no key is saved. */
+            tmdb_api_key_hint?: string;
+            /** @description The app API key with all but its first and last two characters masked. */
+            api_key_hint: string;
         };
         GeneralSettingsInput: {
             tmdb_api_key: string;
@@ -1902,6 +2001,7 @@ export interface components {
         ID: number;
         TMDBID: number;
         Season: number;
+        EpisodeNumber: number;
         /** @description Title to search for. */
         LookupQuery: string;
         LookupYear: number;
@@ -2225,7 +2325,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                size: "w185" | "w342" | "w500" | "w780" | "w1280";
+                size: "w185" | "w300" | "w342" | "w500" | "w780" | "w1280";
                 file: string;
             };
             cookie?: never;
@@ -3409,6 +3509,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LookupSeries"][];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    discoverSeason: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tmdbId: components["parameters"]["TMDBID"];
+                season: components["parameters"]["Season"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The season, from TMDB, with its episodes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeasonDetails"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    discoverEpisodeReleases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tmdbId: components["parameters"]["TMDBID"];
+                season: components["parameters"]["Season"];
+                episode: components["parameters"]["EpisodeNumber"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Releases found. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchResult"];
                 };
             };
             default: components["responses"]["Error"];

@@ -99,7 +99,11 @@ func (h *handlers) DeleteRootFolder(ctx context.Context, req apigen.DeleteRootFo
 }
 
 func toAPIGeneralSettings(s library.GeneralSettings) apigen.GeneralSettings {
-	return apigen.GeneralSettings{TMDBAPIKeySet: s.TMDBAPIKeySet}
+	out := apigen.GeneralSettings{TMDBAPIKeySet: s.TMDBAPIKeySet, APIKeyHint: s.APIKeyHint}
+	if s.TMDBAPIKeyHint != "" {
+		out.TMDBAPIKeyHint = &s.TMDBAPIKeyHint
+	}
+	return out
 }
 
 func toAPIDownloadSettings(s library.DownloadSettings) apigen.DownloadSettings {

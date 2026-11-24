@@ -25,8 +25,8 @@ const (
 )
 
 var (
-	// w780 and w1280 are backdrop sizes.
-	posterSizes = map[string]bool{"w185": true, "w342": true, "w500": true, "w780": true, "w1280": true}
+	// w300 is for episode stills; w780 and w1280 are backdrop sizes.
+	posterSizes = map[string]bool{"w185": true, "w300": true, "w342": true, "w500": true, "w780": true, "w1280": true}
 	// TMDB image files are short random names; anything else is refused so
 	// the name can never escape the cache directory.
 	posterFile = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}\.(jpg|png)$`)
@@ -44,13 +44,13 @@ type posterCall struct {
 }
 
 // Poster returns the local path of a cached TMDB poster, downloading it on
-// first use. size must be w185, w342, w500 (posters), w780 or w1280
+// first use. size must be w185, w342, w500 (posters), w300 (stills), w780 or w1280
 // (backdrops); file is a TMDB file name such
 // as "abc123.jpg" (a leading "/" is accepted).
 func (s *Service) Poster(ctx context.Context, size, file string) (string, error) {
 	file = strings.TrimPrefix(file, "/")
 	if !posterSizes[size] {
-		return "", invalid("size", "must be w185, w342, w500, w780 or w1280")
+		return "", invalid("size", "must be w185, w300, w342, w500, w780 or w1280")
 	}
 	if !posterFile.MatchString(file) {
 		return "", invalid("file", "not a TMDB image file name")

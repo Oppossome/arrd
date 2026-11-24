@@ -5,3 +5,4 @@ export { default as ListLayout } from './ListLayout.svelte';
 export { default as SettingsLayout } from './SettingsLayout.svelte';
 export { default as WizardLayout } from './WizardLayout.svelte';
 export { default as Section } from './Section.svelte';
+export { default as SourcesDialog } from './SourcesDialog.svelte';

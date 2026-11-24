@@ -17,6 +17,7 @@ import { ApiError, api, filterQuery } from './api';
 import type * as T from './types';
 import type { DiscoverList } from './discover';
 import type { MediaKind } from './links';
+import type { ReleaseSource } from './releases';
 import { optionFields } from './settingsForm';
 
 // ---------------------------------------------------------------- client
@@ -110,7 +111,10 @@ export const keys = {
 		movie: (tmdbId: number) => ['discover', 'movie', tmdbId] as const,
 		show: (tmdbId: number) => ['discover', 'show', tmdbId] as const,
 		movieReleases: (tmdbId: number) => ['discover', 'movieReleases', tmdbId] as const,
-		seasonReleases: (tmdbId: number, season: number) => ['discover', 'seasonReleases', tmdbId, season] as const
+		seasonReleases: (tmdbId: number, season: number) => ['discover', 'seasonReleases', tmdbId, season] as const,
+		episodeReleases: (tmdbId: number, season: number, episode: number) =>
+			['discover', 'episodeReleases', tmdbId, season, episode] as const,
+		season: (tmdbId: number, season: number) => ['discover', 'season', tmdbId, season] as const
 	},
 	movies: {
 		all: ['movies'] as const,
@@ -164,13 +168,7 @@ export function throughputRefetchInterval(t: T.Throughput | undefined): number {
 	return t && t.active > 0 ? 2_000 : 15_000;
 }
 
-/** What a manual release search is for. */
-export type ReleaseSource =
-	| { kind: 'movie'; movieId: number }
-	| { kind: 'season'; seriesId: number; season: number }
-	| { kind: 'episode'; seriesId: number; episodeId: number }
-	| { kind: 'discoverMovie'; tmdbId: number }
-	| { kind: 'discoverSeason'; tmdbId: number; season: number };
+export type { ReleaseSource };
 
 export function releaseKey(source: ReleaseSource): QueryKey {
 	switch (source.kind) {
@@ -184,6 +182,8 @@ export function releaseKey(source: ReleaseSource): QueryKey {
 			return keys.discover.movieReleases(source.tmdbId);
 		case 'discoverSeason':
 			return keys.discover.seasonReleases(source.tmdbId, source.season);
+		case 'discoverEpisode':
+			return keys.discover.episodeReleases(source.tmdbId, source.season, source.episode);
 	}
 }
 
@@ -199,6 +199,8 @@ function searchReleases(source: ReleaseSource): Promise<T.SearchResult> {
 			return api.discover.movieReleases(source.tmdbId);
 		case 'discoverSeason':
 			return api.discover.seasonReleases(source.tmdbId, source.season);
+		case 'discoverEpisode':
+			return api.discover.episodeReleases(source.tmdbId, source.season, source.episode);
 	}
 }
 
@@ -312,6 +314,12 @@ export const queries = {
 	}),
 	discoverMovie: (tmdbId: number) => ({ queryKey: keys.discover.movie(tmdbId), queryFn: () => api.discover.movie(tmdbId) }),
 	discoverShow: (tmdbId: number) => ({ queryKey: keys.discover.show(tmdbId), queryFn: () => api.discover.show(tmdbId) }),
+	// TMDB episode lists change rarely; a season's are fetched when its tab opens.
+	discoverSeason: (tmdbId: number, season: number) => ({
+		queryKey: keys.discover.season(tmdbId, season),
+		queryFn: () => api.discover.season(tmdbId, season),
+		staleTime: 30 * 60_000
+	}),
 
 	queue: (f: QueueFilter = {}) => ({
 		queryKey: keys.queue.list(f),
@@ -465,7 +473,9 @@ export const mutations = {
 	}),
 	grabDiscoverSeries: (qc: QueryClient) => ({
 		mutationFn: (v: { tmdbId: number; release: T.ReleaseResult }) => api.discover.grabSeries(v.tmdbId, v.release),
-		onSuccess: () => invalidate(qc, keys.queue.all, keys.series.list, ...libraryMarks)
+		// The series may already be in the library: its episodes change too.
+		onSuccess: () =>
+			invalidate(qc, keys.queue.all, keys.series.list, ['series', 'episodes'], ['series', 'detail'], ...libraryMarks)
 	}),
 	grabSeries: (qc: QueryClient) => ({
 		mutationFn: (v: { id: number; release: T.ReleaseResult }) => api.series.grab(v.id, v.release),
@@ -529,7 +539,10 @@ export const mutations = {
 		mutationFn: (tmdbKey: string) => api.settings.updateGeneral(tmdbKey),
 		onSuccess: () => invalidate(qc, keys.settings.general)
 	}),
-	regenerateAPIKey: () => ({ mutationFn: () => api.settings.regenerateAPIKey() }),
+	regenerateAPIKey: (qc: QueryClient) => ({
+		mutationFn: () => api.settings.regenerateAPIKey(),
+		onSuccess: () => invalidate(qc, keys.settings.general)
+	}),
 	changePassword: () => ({
 		mutationFn: (v: { current: string; next: string }) => api.settings.changePassword(v.current, v.next)
 	}),

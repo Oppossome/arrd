@@ -13,6 +13,7 @@ export { default as Link } from './Link.svelte';
 export { default as Poster } from './Poster.svelte';
 export { default as ProgressBar } from './ProgressBar.svelte';
 export { default as ProgressRing } from './ProgressRing.svelte';
+export { default as Rating } from './Rating.svelte';
 export { default as Select } from './Select.svelte';
 export { default as Skeleton } from './Skeleton.svelte';
 export { default as Sparkline } from './Sparkline.svelte';

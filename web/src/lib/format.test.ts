@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { episodeCode, formatBytes, formatETA, formatRate, percent, timeAgo } from './format';
+import { episodeCode, formatBytes, formatETA, formatRate, formatRuntime, percent, timeAgo } from './format';
 
 describe('format', () => {
 	it('formats bytes with binary units', () => {
@@ -40,5 +40,15 @@ describe('transfer formatting', () => {
 		expect(formatETA(245)).toBe('4m 05s');
 		expect(formatETA(4_800)).toBe('1h 20m');
 		expect(formatETA(2 * 86_400 + 3 * 3_600 + 59)).toBe('2d 3h');
+	});
+});
+
+describe('formatRuntime', () => {
+	it('shows hours and minutes, and nothing when unknown', () => {
+		expect(formatRuntime(118)).toBe('1h 58m');
+		expect(formatRuntime(47)).toBe('47m');
+		expect(formatRuntime(120)).toBe('2h');
+		expect(formatRuntime(0)).toBe('');
+		expect(formatRuntime(undefined)).toBe('');
 	});
 });

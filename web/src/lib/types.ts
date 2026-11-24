@@ -23,6 +23,14 @@ export type Episode = Schemas['Episode'];
 /** A TMDB lookup result (not yet in the library). */
 export type LookupMovie = Schemas['LookupMovie'];
 export type LookupSeries = Schemas['LookupSeries'];
+/** Detail-page information for a single TMDB title. */
+export type MediaExtras = Schemas['MediaExtras'];
+export type CastMember = Schemas['CastMember'];
+export type Trailer = Schemas['Trailer'];
+export type LookupSeason = Schemas['LookupSeason'];
+/** A TMDB season with its episodes. */
+export type SeasonDetails = Schemas['SeasonDetails'];
+export type LookupEpisode = Schemas['LookupEpisode'];
 export type MovieRecommendations = Schemas['MovieRecommendations'];
 export type SeriesRecommendations = Schemas['SeriesRecommendations'];
 export type MovieList = Schemas['MovieList'];

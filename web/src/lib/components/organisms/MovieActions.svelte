@@ -1,14 +1,19 @@
 <script lang="ts">
 	import { createQuery } from '@tanstack/svelte-query';
 	import { goto } from '$app/navigation';
-	import { Button, Heading, Poster, Skeleton, Text } from '#lib/components/atoms/index.js';
+	import { Button, Icon, IconButton, Text } from '#lib/components/atoms/index.js';
 	import { ConfirmDialog, ErrorMessage, MonitorToggle, StatusBadge } from '#lib/components/molecules/index.js';
-	import { posterURL } from '#lib/api.js';
 	import { LIBRARY } from '#lib/links.js';
 	import { queries, useMutation } from '#lib/query.js';
+	import type { SourcesRequest } from '#lib/releases.js';
 	import { toasts } from '#lib/toast.svelte.js';
 
-	let { id }: { id: number } = $props();
+	interface Props {
+		id: number;
+		/** Show the sources to download from. */
+		ondownload: (request: SourcesRequest) => void;
+	}
+	let { id, ondownload }: Props = $props();
 
 	const movie = createQuery(() => queries.movie(id));
 	const monitor = useMutation('setMovieMonitored');
@@ -26,33 +31,36 @@
 	}
 </script>
 
-{#if movie.isPending}
-	<Skeleton height="12rem" />
-{:else if movie.isError}
+{#if movie.isError}
 	<ErrorMessage error={movie.error} />
-{:else}
+{:else if movie.data}
 	{@const m = movie.data}
-	<div class="header">
-		<div class="poster"><Poster src={posterURL(m.poster_path, 'w342')} alt={m.title} /></div>
-		<div class="info">
-			<div class="title">
-				<Heading level={1}>{m.title}</Heading>
-				<Text tone="muted" as="span">{m.year || 'Year unknown'}</Text>
-				<StatusBadge status={m.status} />
-			</div>
-			<Text size="sm">{m.overview}</Text>
-			{#if m.file_path}
-				<Text size="sm" tone="success">{m.file_quality} · <span class="path">{m.file_path}</span></Text>
-			{/if}
-			<div class="actions">
-				<label class="monitor">
-					<MonitorToggle monitored={m.monitored} what="this movie" onchange={(v) => monitor.mutate({ id, monitored: v })} />
-					<Text size="sm" as="span">{m.monitored ? 'Monitored' : 'Not monitored'}</Text>
-				</label>
-				<Button variant="primary" loading={search.isPending} onclick={autoSearch}>Automatic search</Button>
-				<Button variant="danger" onclick={() => (confirming = true)}>Delete</Button>
-			</div>
+	{@const showStatus = m.status !== 'unmonitored'}
+	<div class="stack">
+		<div class="actions">
+			<Button variant="primary" onclick={() => ondownload({ title: m.title, source: { kind: 'movie', movieId: id } })}>
+				<Icon name="download" />Download
+			</Button>
+			<Button loading={search.isPending} onclick={autoSearch}><Icon name="search" />Automatic search</Button>
+			<MonitorToggle
+				showLabel
+				monitored={m.monitored}
+				what="this movie"
+				disabled={monitor.isPending}
+				onchange={(v) => monitor.mutate({ id, monitored: v })}
+			/>
+			<span class="end">
+				<IconButton icon="trash" tone="danger" label="Delete movie" onclick={() => (confirming = true)} />
+			</span>
 		</div>
+		{#if showStatus || m.file_path}
+			<div class="meta">
+				{#if showStatus}<StatusBadge status={m.status} />{/if}
+				{#if m.file_path}
+					<Text size="sm" tone="success" as="span">{m.file_quality} · <span class="path">{m.file_path}</span></Text>
+				{/if}
+			</div>
+		{/if}
 	</div>
 	<ConfirmDialog
 		open={confirming}
@@ -68,21 +76,8 @@
 {/if}
 
 <style>
-	.header {
+	.stack {
 		display: grid;
-		grid-template-columns: 12rem 1fr;
-		gap: var(--space-5);
-	}
-	.info,
-	.title {
-		display: grid;
-		gap: var(--space-3);
-		align-content: start;
-	}
-	.title {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: baseline;
 		gap: var(--space-3);
 	}
 	.actions {
@@ -91,21 +86,17 @@
 		align-items: center;
 		gap: var(--space-3);
 	}
-	.monitor {
+	.end {
+		margin-left: auto;
+	}
+	.meta {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		gap: var(--space-2);
 	}
 	.path {
 		font-family: var(--font-mono);
 		word-break: break-all;
-	}
-	@media (max-width: 40rem) {
-		.header {
-			grid-template-columns: 1fr;
-		}
-		.poster {
-			max-width: 10rem;
-		}
 	}
 </style>

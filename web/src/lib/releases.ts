@@ -1,5 +1,20 @@
 import type { ReleaseResult } from './types';
 
+/** What a manual release search is for. */
+export type ReleaseSource =
+	| { kind: 'movie'; movieId: number }
+	| { kind: 'season'; seriesId: number; season: number }
+	| { kind: 'episode'; seriesId: number; episodeId: number }
+	| { kind: 'discoverMovie'; tmdbId: number }
+	| { kind: 'discoverSeason'; tmdbId: number; season: number }
+	| { kind: 'discoverEpisode'; tmdbId: number; season: number; episode: number };
+
+/** A request to show the sources (releases) for something, with a heading for them. */
+export interface SourcesRequest {
+	title: string;
+	source: ReleaseSource;
+}
+
 export type ReleaseSortKey = 'rank' | 'quality' | 'size' | 'seeders' | 'age';
 
 /**

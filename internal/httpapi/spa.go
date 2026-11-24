@@ -86,8 +86,13 @@ func setSecurityHeaders(w http.ResponseWriter, csp string) {
 // inlineScript matches <script> elements without a src attribute.
 var inlineScript = regexp.MustCompile(`(?s)<script(?:\s[^>]*)?>(.*?)</script>`)
 
+// trailerOrigin hosts the embedded trailer player on title pages
+// (YouTube's privacy-enhanced, cookie-less domain).
+const trailerOrigin = "https://www.youtube-nocookie.com"
+
 // contentSecurityPolicy allows only same-origin resources, plus the exact
-// inline bootstrap script(s) SvelteKit writes into index.html, by hash.
+// inline bootstrap script(s) SvelteKit writes into index.html, by hash, and
+// trailer frames from trailerOrigin.
 func contentSecurityPolicy(index []byte) string {
 	scriptSrc := "'self'"
 	for _, m := range inlineScript.FindAllSubmatch(index, -1) {
@@ -98,5 +103,6 @@ func contentSecurityPolicy(index []byte) string {
 		scriptSrc += " 'sha256-" + base64.StdEncoding.EncodeToString(sum[:]) + "'"
 	}
 	return "default-src 'self'; script-src " + scriptSrc +
-		"; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+		"; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-src " + trailerOrigin +
+		"; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 }

@@ -22,22 +22,40 @@ type Series struct {
 	// GenreIDs and OriginalLanguage (ISO 639-1) come with search, list and
 	// discover results, not with GetSeries.
 	GenreIDs         []int64 `json:"genre_ids,omitempty"`
-	OriginalLanguage string  `json:"original_language,omitempty"`
+	OriginalLanguage string   `json:"original_language,omitempty"`
+	Networks         []string `json:"networks,omitempty"` // only from GetSeries
+	Extras
 }
 
 // SeasonSummary lists a season without its episodes.
 type SeasonSummary struct {
-	Number       int `json:"season_number"`
-	EpisodeCount int `json:"episode_count"`
+	Number       int    `json:"season_number"`
+	EpisodeCount int    `json:"episode_count"`
+	Name         string `json:"name,omitempty"`
+	PosterPath   string `json:"poster_path,omitempty"`
+	AirDate      string `json:"air_date,omitempty"` // YYYY-MM-DD; empty if unknown
+}
+
+// Season is one season with its episodes.
+type Season struct {
+	Number     int       `json:"season_number"`
+	Name       string    `json:"name"`
+	Overview   string    `json:"overview"`
+	PosterPath string    `json:"poster_path,omitempty"`
+	AirDate    string    `json:"air_date,omitempty"`
+	Episodes   []Episode `json:"episodes"`
 }
 
 // Episode is one episode of a season.
 type Episode struct {
-	Season   int    `json:"season"`
-	Number   int    `json:"episode"`
-	Title    string `json:"title"`
-	AirDate  string `json:"air_date,omitempty"` // YYYY-MM-DD; empty if unknown
-	Overview string `json:"overview"`
+	Season      int     `json:"season"`
+	Number      int     `json:"episode"`
+	Title       string  `json:"title"`
+	AirDate     string  `json:"air_date,omitempty"` // YYYY-MM-DD; empty if unknown
+	Overview    string  `json:"overview"`
+	Runtime     int     `json:"runtime,omitempty"` // minutes
+	StillPath   string  `json:"still_path,omitempty"`
+	VoteAverage float64 `json:"vote_average,omitempty"`
 }
 
 type tmdbSeries struct {
@@ -52,13 +70,28 @@ type tmdbSeries struct {
 	GenreIDs         []int64 `json:"genre_ids"`
 	OriginalLanguage string  `json:"original_language"`
 	Seasons          []struct {
-		SeasonNumber int `json:"season_number"`
-		EpisodeCount int `json:"episode_count"`
+		SeasonNumber int    `json:"season_number"`
+		EpisodeCount int    `json:"episode_count"`
+		Name         string `json:"name"`
+		PosterPath   string `json:"poster_path"`
+		AirDate      string `json:"air_date"`
 	} `json:"seasons"`
 	ExternalIDs struct {
 		TVDBID int64  `json:"tvdb_id"`
 		IMDBID string `json:"imdb_id"`
 	} `json:"external_ids"`
+	// Detail-only fields (GetSeries).
+	Tagline        string  `json:"tagline"`
+	EpisodeRunTime []int   `json:"episode_run_time"`
+	VoteAverage    float64 `json:"vote_average"`
+	VoteCount      int64   `json:"vote_count"`
+	Genres         []Genre `json:"genres"`
+	Networks       []struct {
+		Name string `json:"name"`
+	} `json:"networks"`
+	Videos           tmdbVideos         `json:"videos"`
+	AggregateCredits tmdbCredits        `json:"aggregate_credits"`
+	ContentRatings   tmdbContentRatings `json:"content_ratings"`
 }
 
 func (s tmdbSeries) toSeries() Series {
@@ -67,9 +100,23 @@ func (s tmdbSeries) toSeries() Series {
 		Title: s.Name, OriginalTitle: s.OriginalName, Year: yearOf(s.FirstAirDate),
 		Overview: s.Overview, Status: s.Status, PosterPath: s.PosterPath, BackdropPath: s.BackdropPath,
 		GenreIDs: s.GenreIDs, OriginalLanguage: s.OriginalLanguage,
+		Extras: Extras{
+			Tagline: s.Tagline, VoteAverage: s.VoteAverage, VoteCount: s.VoteCount,
+			Certification: s.ContentRatings.certification(), Genres: s.Genres,
+			Cast: topCast(s.AggregateCredits.Cast), Trailer: pickTrailer(s.Videos.Results),
+		},
+	}
+	if len(s.EpisodeRunTime) > 0 {
+		out.Runtime = s.EpisodeRunTime[0]
+	}
+	for _, n := range s.Networks {
+		out.Networks = append(out.Networks, n.Name)
 	}
 	for _, season := range s.Seasons {
-		out.Seasons = append(out.Seasons, SeasonSummary{Number: season.SeasonNumber, EpisodeCount: season.EpisodeCount})
+		out.Seasons = append(out.Seasons, SeasonSummary{
+			Number: season.SeasonNumber, EpisodeCount: season.EpisodeCount,
+			Name: season.Name, PosterPath: season.PosterPath, AirDate: season.AirDate,
+		})
 	}
 	return out
 }
@@ -105,7 +152,7 @@ func (c *TMDB) SearchSeries(ctx context.Context, query string, year int) ([]Seri
 // GetSeries fetches a series with its season list and external IDs.
 func (c *TMDB) GetSeries(ctx context.Context, tmdbID int64) (*Series, error) {
 	var s tmdbSeries
-	params := url.Values{"append_to_response": {"external_ids"}}
+	params := url.Values{"append_to_response": {"external_ids,videos,aggregate_credits,content_ratings"}}
 	if err := c.get(ctx, "/tv/"+strconv.FormatInt(tmdbID, 10), params, &s); err != nil {
 		return nil, err
 	}
@@ -115,22 +162,46 @@ func (c *TMDB) GetSeries(ctx context.Context, tmdbID int64) (*Series, error) {
 
 // GetSeason fetches the episodes of one season.
 func (c *TMDB) GetSeason(ctx context.Context, tmdbID int64, season int) ([]Episode, error) {
+	s, err := c.GetSeasonDetails(ctx, tmdbID, season)
+	if err != nil {
+		return nil, err
+	}
+	return s.Episodes, nil
+}
+
+// GetSeasonDetails fetches one season with its episodes.
+func (c *TMDB) GetSeasonDetails(ctx context.Context, tmdbID int64, season int) (*Season, error) {
 	var resp struct {
-		Episodes []struct {
-			SeasonNumber  int    `json:"season_number"`
-			EpisodeNumber int    `json:"episode_number"`
-			Name          string `json:"name"`
-			AirDate       string `json:"air_date"`
-			Overview      string `json:"overview"`
+		SeasonNumber int    `json:"season_number"`
+		Name         string `json:"name"`
+		Overview     string `json:"overview"`
+		PosterPath   string `json:"poster_path"`
+		AirDate      string `json:"air_date"`
+		Episodes     []struct {
+			SeasonNumber  int     `json:"season_number"`
+			EpisodeNumber int     `json:"episode_number"`
+			Name          string  `json:"name"`
+			AirDate       string  `json:"air_date"`
+			Overview      string  `json:"overview"`
+			Runtime       int     `json:"runtime"`
+			StillPath     string  `json:"still_path"`
+			VoteAverage   float64 `json:"vote_average"`
 		} `json:"episodes"`
 	}
 	path := "/tv/" + strconv.FormatInt(tmdbID, 10) + "/season/" + strconv.Itoa(season)
 	if err := c.get(ctx, path, nil, &resp); err != nil {
 		return nil, err
 	}
-	out := make([]Episode, 0, len(resp.Episodes))
+	out := &Season{
+		Number: resp.SeasonNumber, Name: resp.Name, Overview: resp.Overview,
+		PosterPath: resp.PosterPath, AirDate: resp.AirDate,
+		Episodes: make([]Episode, 0, len(resp.Episodes)),
+	}
 	for _, e := range resp.Episodes {
-		out = append(out, Episode{Season: e.SeasonNumber, Number: e.EpisodeNumber, Title: e.Name, AirDate: e.AirDate, Overview: e.Overview})
+		out.Episodes = append(out.Episodes, Episode{
+			Season: e.SeasonNumber, Number: e.EpisodeNumber, Title: e.Name, AirDate: e.AirDate,
+			Overview: e.Overview, Runtime: e.Runtime, StillPath: e.StillPath, VoteAverage: e.VoteAverage,
+		})
 	}
 	return out, nil
 }

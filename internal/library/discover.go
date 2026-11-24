@@ -160,12 +160,7 @@ func (s *Service) SearchDiscoveredSeason(ctx context.Context, tmdbID int64, seas
 	if err != nil {
 		return SearchResult{}, err
 	}
-	count := -1
-	for _, ss := range meta.Seasons {
-		if ss.Number == season {
-			count = ss.EpisodeCount
-		}
-	}
+	count := seasonEpisodeCount(meta, season)
 	if count <= 0 {
 		return SearchResult{}, fmt.Errorf("series %d season %d: %w", tmdbID, season, ErrNotFound)
 	}
@@ -173,14 +168,72 @@ func (s *Service) SearchDiscoveredSeason(ctx context.Context, tmdbID int64, seas
 	for e := 1; e <= count; e++ {
 		want.Episodes = append(want.Episodes, e)
 	}
+	return s.searchSeason(ctx, discoveredSeriesRow(meta), want)
+}
+
+// SearchDiscoveredEpisode searches the indexers for one episode of a TMDB
+// series. Season packs are rejected. A series in the library is searched as
+// such.
+func (s *Service) SearchDiscoveredEpisode(ctx context.Context, tmdbID int64, season, episode int) (SearchResult, error) {
+	if season < 0 || episode < 1 {
+		return SearchResult{}, invalid("episode", "season must be >= 0 and episode >= 1")
+	}
+	if row, err := s.store.GetSeriesByTMDBID(ctx, tmdbID); err == nil {
+		return s.searchEpisode(ctx, row, season, episode)
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		return SearchResult{}, fmt.Errorf("check library: %w", err)
+	}
+	meta, err := s.tmdbSeries(ctx, tmdbID)
+	if err != nil {
+		return SearchResult{}, err
+	}
+	if episode > seasonEpisodeCount(meta, season) {
+		return SearchResult{}, fmt.Errorf("series %d S%02dE%02d: %w", tmdbID, season, episode, ErrNotFound)
+	}
+	return s.searchEpisode(ctx, discoveredSeriesRow(meta), season, episode)
+}
+
+// DiscoverSeason is a TMDB season with its episodes.
+type DiscoverSeason = metadata.Season
+
+// DiscoveredSeason returns one season of a TMDB series with its episodes.
+func (s *Service) DiscoveredSeason(ctx context.Context, tmdbID int64, season int) (DiscoverSeason, error) {
+	tm, err := s.tmdb(ctx)
+	if err != nil {
+		return DiscoverSeason{}, err
+	}
+	out, err := tm.GetSeasonDetails(ctx, tmdbID, season)
+	if errors.Is(err, metadata.ErrNotFound) {
+		return DiscoverSeason{}, fmt.Errorf("series with TMDB id %d season %d: %w", tmdbID, season, ErrNotFound)
+	}
+	if err != nil {
+		return DiscoverSeason{}, err
+	}
+	return *out, nil
+}
+
+// seasonEpisodeCount is how many episodes TMDB lists for season; -1 if the
+// season is unknown.
+func seasonEpisodeCount(meta *metadata.Series, season int) int {
+	for _, ss := range meta.Seasons {
+		if ss.Number == season {
+			return ss.EpisodeCount
+		}
+	}
+	return -1
+}
+
+// discoveredSeriesRow is a series that is not in the library, shaped like a
+// library row so it can be searched for.
+func discoveredSeriesRow(meta *metadata.Series) db.Series {
 	var tvdb *int64
 	if meta.TVDBID != 0 {
 		tvdb = &meta.TVDBID
 	}
-	return s.searchSeason(ctx, db.Series{
+	return db.Series{
 		TMDBID: meta.TMDBID, TVDBID: tvdb, Title: meta.Title,
 		OriginalTitle: meta.OriginalTitle, Year: int64(meta.Year),
-	}, want)
+	}
 }
 
 // GrabDiscoveredMovie downloads r for a TMDB movie, first adding the movie

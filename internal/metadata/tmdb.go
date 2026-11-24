@@ -41,6 +41,7 @@ type Movie struct {
 	// discover results, not with GetMovie.
 	GenreIDs         []int64 `json:"genre_ids,omitempty"`
 	OriginalLanguage string  `json:"original_language,omitempty"`
+	Extras
 }
 
 // SearchMovies searches by title, optionally narrowed by year (0 = any).
@@ -62,10 +63,11 @@ func (c *TMDB) SearchMovies(ctx context.Context, query string, year int) ([]Movi
 	return out, nil
 }
 
-// GetMovie fetches one movie, including its IMDb ID.
+// GetMovie fetches one movie, including its IMDb ID and Extras.
 func (c *TMDB) GetMovie(ctx context.Context, tmdbID int64) (*Movie, error) {
 	var m tmdbMovie
-	if err := c.get(ctx, "/movie/"+strconv.FormatInt(tmdbID, 10), nil, &m); err != nil {
+	params := url.Values{"append_to_response": {"videos,credits,release_dates"}}
+	if err := c.get(ctx, "/movie/"+strconv.FormatInt(tmdbID, 10), params, &m); err != nil {
 		return nil, err
 	}
 	movie := m.toMovie()
@@ -83,6 +85,15 @@ type tmdbMovie struct {
 	BackdropPath     string  `json:"backdrop_path"`
 	GenreIDs         []int64 `json:"genre_ids"`
 	OriginalLanguage string  `json:"original_language"`
+	// Detail-only fields (GetMovie).
+	Tagline      string           `json:"tagline"`
+	Runtime      int              `json:"runtime"`
+	VoteAverage  float64          `json:"vote_average"`
+	VoteCount    int64            `json:"vote_count"`
+	Genres       []Genre          `json:"genres"`
+	Videos       tmdbVideos       `json:"videos"`
+	Credits      tmdbCredits      `json:"credits"`
+	ReleaseDates tmdbReleaseDates `json:"release_dates"`
 }
 
 func (m tmdbMovie) toMovie() Movie {
@@ -94,6 +105,11 @@ func (m tmdbMovie) toMovie() Movie {
 		TMDBID: m.ID, IMDBID: m.IMDBID, Title: m.Title, OriginalTitle: m.OriginalTitle,
 		Year: year, Overview: m.Overview, PosterPath: m.PosterPath, BackdropPath: m.BackdropPath,
 		GenreIDs: m.GenreIDs, OriginalLanguage: m.OriginalLanguage,
+		Extras: Extras{
+			Tagline: m.Tagline, Runtime: m.Runtime, VoteAverage: m.VoteAverage, VoteCount: m.VoteCount,
+			Certification: m.ReleaseDates.certification(), Genres: m.Genres,
+			Cast: topCast(m.Credits.Cast), Trailer: pickTrailer(m.Videos.Results),
+		},
 	}
 }
 

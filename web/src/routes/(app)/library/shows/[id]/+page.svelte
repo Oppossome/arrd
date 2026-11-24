@@ -1,36 +1,29 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { EpisodeTable, QueueTable, ReleaseTable, SeasonList, SeriesHeader } from '#lib/components/organisms/index.js';
-	import { DetailLayout, Section } from '#lib/components/templates/index.js';
-	import { episodeCode } from '#lib/format.js';
-	import type { Episode } from '#lib/types.js';
+	import { QueueTable, ReleaseTable, SeasonBrowser, SeriesActions, TitleHero } from '#lib/components/organisms/index.js';
+	import { DetailLayout, Section, SourcesDialog } from '#lib/components/templates/index.js';
+	import type { SourcesRequest } from '#lib/releases.js';
 
 	const id = $derived(Number(page.params.id));
-	let episode = $state<Episode | null>(null);
+	let sources = $state<SourcesRequest | null>(null);
 </script>
 
 {#key id}
-	<DetailLayout>
-		{#snippet header()}<SeriesHeader {id} />{/snippet}
-		<Section title="Seasons">
-			<SeasonList seriesId={id}>
-				{#snippet season(s)}
-					<EpisodeTable seriesId={id} season={s.season} onreleases={(e) => (episode = e)} />
-					<Section title="Season releases" description="Packs and episodes for this season.">
-						<ReleaseTable source={{ kind: 'season', seriesId: id, season: s.season }} />
-					</Section>
-				{/snippet}
-			</SeasonList>
-		</Section>
-		{#if episode}
-			{#key episode.id}
-				<Section title="Releases for {episodeCode(episode.season, episode.episode)} {episode.title}">
-					<ReleaseTable source={{ kind: 'episode', seriesId: id, episodeId: episode.id }} />
-				</Section>
-			{/key}
-		{/if}
+	<DetailLayout bleed>
+		{#snippet header()}
+			<TitleHero kind="series" libraryId={id}>
+				{#snippet actions()}<SeriesActions {id} />{/snippet}
+			</TitleHero>
+		{/snippet}
+		<SeasonBrowser seriesId={id} ondownload={(r) => (sources = r)} />
 		<Section title="Downloads">
 			<QueueTable filter={{ seriesId: id }} compact />
 		</Section>
 	</DetailLayout>
 {/key}
+
+<SourcesDialog title={sources?.title} onclose={() => (sources = null)}>
+	{#snippet children(heading)}
+		{#if sources}<ReleaseTable source={sources.source} {heading} auto />{/if}
+	{/snippet}
+</SourcesDialog>

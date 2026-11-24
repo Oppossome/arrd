@@ -70,3 +70,12 @@ export function formatETA(seconds: number): string {
 	if (m > 0) return `${m}m ${String(sec).padStart(2, '0')}s`;
 	return `${sec}s`;
 }
+
+/** A running time in minutes as "1h 58m" or "47m"; "" when unknown. */
+export function formatRuntime(minutes?: number): string {
+	if (!minutes || minutes <= 0) return '';
+	const h = Math.floor(minutes / 60);
+	const m = minutes % 60;
+	if (h === 0) return `${m}m`;
+	return m ? `${h}h ${m}m` : `${h}h`;
+}

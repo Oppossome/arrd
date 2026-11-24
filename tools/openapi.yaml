@@ -253,12 +253,12 @@ paths:
     get:
       operationId: getPoster
       tags: [system]
-      description: A cached TMDB poster or backdrop. Served by hand (not generated) for range and caching support.
+      description: A cached TMDB poster, backdrop, episode still or cast photo. Served by hand (not generated) for range and caching support.
       parameters:
         - name: size
           in: path
           required: true
-          schema: { type: string, enum: [w185, w342, w500, w780, w1280], description: "w185-w500 for posters, w780 and w1280 for backdrops." }
+          schema: { type: string, enum: [w185, w300, w342, w500, w780, w1280], description: "w185-w500 for posters (w185 also for cast photos), w300 for episode stills, w780 and w1280 for backdrops." }
         - { name: file, in: path, required: true, schema: { type: string } }
       responses:
         "200":
@@ -999,6 +999,38 @@ paths:
                 items: { $ref: "#/components/schemas/LookupSeries" }
         default: { $ref: "#/components/responses/Error" }
 
+  /api/v1/discover/series/{tmdbId}/seasons/{season}:
+    get:
+      operationId: discoverSeason
+      tags: [discover]
+      parameters:
+        - { $ref: "#/components/parameters/TMDBID" }
+        - { $ref: "#/components/parameters/Season" }
+      responses:
+        "200":
+          description: The season, from TMDB, with its episodes.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonDetails" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/discover/series/{tmdbId}/seasons/{season}/episodes/{episode}/releases:
+    get:
+      operationId: discoverEpisodeReleases
+      tags: [discover]
+      description: Searches the indexers for one episode of a series, whether or not it is in the library. Season packs are rejected.
+      parameters:
+        - { $ref: "#/components/parameters/TMDBID" }
+        - { $ref: "#/components/parameters/Season" }
+        - { $ref: "#/components/parameters/EpisodeNumber" }
+      responses:
+        "200":
+          description: Releases found.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SearchResult" }
+        default: { $ref: "#/components/responses/Error" }
+
   /api/v1/discover/series/{tmdbId}/seasons/{season}/releases:
     get:
       operationId: discoverSeasonReleases
@@ -1408,6 +1440,11 @@ components:
       in: path
       required: true
       schema: { type: integer, minimum: 0 }
+    EpisodeNumber:
+      name: episode
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
     LookupQuery:
       name: q
       in: query
@@ -1642,7 +1679,9 @@ components:
         year: { type: integer, description: 0 if unknown. }
         overview: { type: string }
         poster_path: { type: string }
+        backdrop_path: { type: string }
         library_id: { type: integer, format: int64, description: "The movie's id in the library, when it is there." }
+        extras: { $ref: "#/components/schemas/MediaExtras" }
     LookupSeries:
       type: object
       additionalProperties: false
@@ -1658,10 +1697,79 @@ components:
         overview: { type: string }
         status: { type: string }
         poster_path: { type: string }
+        backdrop_path: { type: string }
         library_id: { type: integer, format: int64, description: "The series' id in the library, when it is there." }
         seasons:
           type: array
           items: { $ref: "#/components/schemas/LookupSeason" }
+        extras: { $ref: "#/components/schemas/MediaExtras" }
+    MediaExtras:
+      type: object
+      additionalProperties: false
+      description: Detail-page information. Only returned when fetching a single title, not in lists or searches.
+      required: [genres, cast]
+      properties:
+        tagline: { type: string }
+        runtime: { type: integer, description: "Minutes; for a series, a typical episode's." }
+        vote_average: { type: number, format: double, description: TMDB user score out of 10. }
+        vote_count: { type: integer, format: int64 }
+        certification: { type: string, description: "US age rating, such as PG-13 or TV-MA." }
+        genres:
+          type: array
+          items: { $ref: "#/components/schemas/Genre" }
+        networks:
+          type: array
+          description: Series only.
+          items: { type: string }
+        cast:
+          type: array
+          description: Top-billed cast, in billing order.
+          items: { $ref: "#/components/schemas/CastMember" }
+        trailer: { $ref: "#/components/schemas/Trailer" }
+    CastMember:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: { type: string }
+        character: { type: string }
+        profile_path: { type: string }
+    Trailer:
+      type: object
+      additionalProperties: false
+      description: A trailer hosted on YouTube.
+      required: [youtube_key, name]
+      properties:
+        youtube_key: { type: string, description: YouTube video id. }
+        name: { type: string }
+    SeasonDetails:
+      type: object
+      additionalProperties: false
+      description: A season of a TMDB series, with its episodes.
+      required: [season_number, name, overview, episodes]
+      properties:
+        season_number: { type: integer }
+        name: { type: string }
+        overview: { type: string }
+        poster_path: { type: string }
+        air_date: { type: string }
+        episodes:
+          type: array
+          items: { $ref: "#/components/schemas/LookupEpisode" }
+    LookupEpisode:
+      type: object
+      additionalProperties: false
+      description: An episode, from TMDB.
+      required: [season, episode, title, overview]
+      properties:
+        season: { type: integer }
+        episode: { type: integer }
+        title: { type: string }
+        overview: { type: string }
+        air_date: { type: string, description: YYYY-MM-DD; absent if unknown. }
+        runtime: { type: integer, description: Minutes. }
+        still_path: { type: string }
+        vote_average: { type: number, format: double }
     MovieList:
       type: string
       description: One of TMDB's curated movie lists (trending is this week's).
@@ -1746,6 +1854,9 @@ components:
       properties:
         season_number: { type: integer }
         episode_count: { type: integer }
+        name: { type: string }
+        poster_path: { type: string }
+        air_date: { type: string }
 
     # ---------------------------------------------------------- downloads
     Progress:
@@ -1942,9 +2053,15 @@ components:
     GeneralSettings:
       type: object
       additionalProperties: false
-      required: [tmdb_api_key_set]
+      required: [tmdb_api_key_set, api_key_hint]
       properties:
         tmdb_api_key_set: { type: boolean }
+        tmdb_api_key_hint:
+          type: string
+          description: The saved TMDB key with all but its first and last two characters masked; omitted when no key is saved.
+        api_key_hint:
+          type: string
+          description: The app API key with all but its first and last two characters masked.
     GeneralSettingsInput:
       type: object
       additionalProperties: false

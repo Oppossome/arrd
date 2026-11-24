@@ -49,11 +49,16 @@ func (s *Service) SearchEpisode(ctx context.Context, episodeID int64) (SearchRes
 	if err != nil {
 		return SearchResult{}, err
 	}
+	return s.searchEpisode(ctx, series, int(ep.Season), int(ep.Episode))
+}
+
+// searchEpisode searches for one episode of series, which need not be in the
+// library: only its titles, year and TVDB id are used.
+func (s *Service) searchEpisode(ctx context.Context, series db.Series, season, number int) (SearchResult, error) {
 	q, err := s.QualitySettings(ctx)
 	if err != nil {
 		return SearchResult{}, err
 	}
-	season, number := int(ep.Season), int(ep.Episode)
 	found, failures, err := s.searchIndexers(ctx, func(ix Indexer) (indexer.Query, bool) {
 		return tvQuery(series, ix, season, &number)
 	})

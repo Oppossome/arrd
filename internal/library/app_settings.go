@@ -30,9 +30,12 @@ func (s *Service) RegenerateAPIKey(ctx context.Context) (string, error) {
 	return key, nil
 }
 
-// GeneralSettings are app-wide settings. Secrets are write-only.
+// GeneralSettings are app-wide settings. Secrets are write-only; only a
+// masked hint of each is returned.
 type GeneralSettings struct {
-	TMDBAPIKeySet bool `json:"tmdb_api_key_set"`
+	TMDBAPIKeySet  bool   `json:"tmdb_api_key_set"`
+	TMDBAPIKeyHint string `json:"tmdb_api_key_hint,omitempty"`
+	APIKeyHint     string `json:"api_key_hint"`
 }
 
 // GeneralSettingsInput updates general settings; an empty key is kept.
@@ -46,7 +49,28 @@ func (s *Service) GeneralSettings(ctx context.Context) (GeneralSettings, error) 
 	if err != nil {
 		return GeneralSettings{}, fmt.Errorf("load settings: %w", err)
 	}
-	return GeneralSettings{TMDBAPIKeySet: app.TMDBAPIKey != ""}, nil
+	return GeneralSettings{
+		TMDBAPIKeySet:  app.TMDBAPIKey != "",
+		TMDBAPIKeyHint: maskSecret(app.TMDBAPIKey),
+		APIKeyHint:     maskSecret(app.APIKey),
+	}, nil
+}
+
+// secretHintMinLen is the shortest secret whose ends are shown; shorter ones
+// would give away too much of themselves.
+const secretHintMinLen = 16
+
+// maskSecret keeps a secret's first and last two characters and masks the
+// rest with a fixed run, so the hint does not reveal the length.
+func maskSecret(secret string) string {
+	const mask = "****************"
+	if secret == "" {
+		return ""
+	}
+	if len(secret) < secretHintMinLen {
+		return mask
+	}
+	return secret[:2] + mask + secret[len(secret)-2:]
 }
 
 // UpdateGeneralSettings validates a new TMDB key with TMDB and saves it.

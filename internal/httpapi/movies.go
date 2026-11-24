@@ -108,6 +108,7 @@ func toAPILookupMovie(m metadata.Movie) apigen.LookupMovie {
 		Year:          m.Year,
 		Overview:      m.Overview,
 		PosterPath:    optional(m.PosterPath),
+		BackdropPath:  optional(m.BackdropPath),
 	}
 }
 

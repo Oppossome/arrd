@@ -234,4 +234,11 @@ func TestGeneralSettingsValidateTMDBKey(t *testing.T) {
 	if app.TMDBAPIKey != "good" {
 		t.Errorf("stored key = %q", app.TMDBAPIKey)
 	}
+	gs, err := env.svc.GeneralSettings(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gs.TMDBAPIKeyHint != "****************" || gs.APIKeyHint != maskSecret(app.APIKey) || gs.APIKeyHint == app.APIKey {
+		t.Errorf("hints = %q, %q", gs.TMDBAPIKeyHint, gs.APIKeyHint)
+	}
 }

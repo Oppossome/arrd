@@ -46,7 +46,9 @@ func (h *handlers) DiscoverMovie(ctx context.Context, req apigen.DiscoverMovieRe
 	if err != nil {
 		return nil, err
 	}
-	return apigen.DiscoverMovie200JSONResponse(toAPIDiscoverMovie(out)), nil
+	movie := toAPIDiscoverMovie(out)
+	movie.Extras = toAPIMediaExtras(out.Extras, nil)
+	return apigen.DiscoverMovie200JSONResponse(movie), nil
 }
 
 func (h *handlers) DiscoverMovieReleases(ctx context.Context, req apigen.DiscoverMovieReleasesRequestObject) (apigen.DiscoverMovieReleasesResponseObject, error) {
@@ -103,7 +105,25 @@ func (h *handlers) DiscoverSeries(ctx context.Context, req apigen.DiscoverSeries
 	if err != nil {
 		return nil, err
 	}
-	return apigen.DiscoverSeries200JSONResponse(toAPIDiscoverSeries(out)), nil
+	series := toAPIDiscoverSeries(out)
+	series.Extras = toAPIMediaExtras(out.Extras, out.Networks)
+	return apigen.DiscoverSeries200JSONResponse(series), nil
+}
+
+func (h *handlers) DiscoverSeason(ctx context.Context, req apigen.DiscoverSeasonRequestObject) (apigen.DiscoverSeasonResponseObject, error) {
+	out, err := h.svc.DiscoveredSeason(ctx, req.TMDBID, req.Season)
+	if err != nil {
+		return nil, err
+	}
+	return apigen.DiscoverSeason200JSONResponse(toAPISeasonDetails(out)), nil
+}
+
+func (h *handlers) DiscoverEpisodeReleases(ctx context.Context, req apigen.DiscoverEpisodeReleasesRequestObject) (apigen.DiscoverEpisodeReleasesResponseObject, error) {
+	out, err := h.svc.SearchDiscoveredEpisode(ctx, req.TMDBID, req.Season, req.Episode)
+	if err != nil {
+		return nil, err
+	}
+	return apigen.DiscoverEpisodeReleases200JSONResponse(toAPISearchResult(out)), nil
 }
 
 func (h *handlers) DiscoverSeasonReleases(ctx context.Context, req apigen.DiscoverSeasonReleasesRequestObject) (apigen.DiscoverSeasonReleasesResponseObject, error) {
@@ -132,6 +152,42 @@ func toAPIDiscoverSeries(s library.DiscoverSeries) apigen.LookupSeries {
 	out := toAPILookupSeries(s.Series)
 	out.LibraryID = s.LibraryID
 	return out
+}
+
+func toAPIMediaExtras(e metadata.Extras, networks []string) *apigen.MediaExtras {
+	out := &apigen.MediaExtras{
+		Tagline:       optional(e.Tagline),
+		Runtime:       optional(e.Runtime),
+		VoteAverage:   optional(e.VoteAverage),
+		VoteCount:     optional(e.VoteCount),
+		Certification: optional(e.Certification),
+		Genres:        mapSlice(e.Genres, toAPIGenre),
+		Networks:      optSlice(networks, func(n string) string { return n }),
+		Cast: mapSlice(e.Cast, func(c metadata.CastMember) apigen.CastMember {
+			return apigen.CastMember{Name: c.Name, Character: optional(c.Character), ProfilePath: optional(c.ProfilePath)}
+		}),
+	}
+	if e.Trailer != nil {
+		out.Trailer = &apigen.Trailer{YoutubeKey: e.Trailer.Key, Name: e.Trailer.Name}
+	}
+	return out
+}
+
+func toAPISeasonDetails(s library.DiscoverSeason) apigen.SeasonDetails {
+	return apigen.SeasonDetails{
+		SeasonNumber: s.Number,
+		Name:         s.Name,
+		Overview:     s.Overview,
+		PosterPath:   optional(s.PosterPath),
+		AirDate:      optional(s.AirDate),
+		Episodes: mapSlice(s.Episodes, func(e metadata.Episode) apigen.LookupEpisode {
+			return apigen.LookupEpisode{
+				Season: e.Season, Episode: e.Number, Title: e.Title, Overview: e.Overview,
+				AirDate: optional(e.AirDate), Runtime: optional(e.Runtime),
+				StillPath: optional(e.StillPath), VoteAverage: optional(e.VoteAverage),
+			}
+		}),
+	}
 }
 
 func (h *handlers) MovieRecommendations(ctx context.Context, _ apigen.MovieRecommendationsRequestObject) (apigen.MovieRecommendationsResponseObject, error) {

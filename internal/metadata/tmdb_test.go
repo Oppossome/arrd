@@ -76,7 +76,7 @@ func TestSeries(t *testing.T) {
 			}
 			_, _ = w.Write([]byte(`{"results":[{"id":800001,"name":"Harbor Watch","first_air_date":"2019-09-01"}]}`))
 		case "/tv/800001":
-			if r.URL.Query().Get("append_to_response") != "external_ids" {
+			if r.URL.Query().Get("append_to_response") != "external_ids,videos,aggregate_credits,content_ratings" {
 				t.Errorf("external ids not requested: %s", r.URL)
 			}
 			_, _ = w.Write([]byte(`{"id":800001,"name":"Harbor Watch","original_name":"Harbor Watch","first_air_date":"2019-09-01","status":"Returning Series",

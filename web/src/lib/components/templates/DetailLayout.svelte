@@ -4,15 +4,17 @@
 	interface Props {
 		header: Snippet;
 		actions?: Snippet;
+		/** Run the header to the edges of the content area (for a backdrop hero). */
+		bleed?: boolean;
 		children: Snippet;
 	}
-	let { header, actions, children }: Props = $props();
+	let { header, actions, bleed = false, children }: Props = $props();
 </script>
 
 <div class="detail">
-	<header class="top">
+	<header class="top" class:bleed>
 		<div class="header">{@render header()}</div>
-		<div class="actions">{@render actions?.()}</div>
+		{#if actions}<div class="actions">{@render actions()}</div>{/if}
 	</header>
 	<div class="body">{@render children()}</div>
 </div>
@@ -26,6 +28,10 @@
 		display: grid;
 		gap: var(--space-4);
 	}
+	/* Cancels AppShell's content padding (space-6 / space-5). */
+	.bleed {
+		margin: calc(-1 * var(--space-6)) calc(-1 * var(--space-5)) 0;
+	}
 	.actions {
 		display: flex;
 		flex-wrap: wrap;
@@ -34,5 +40,6 @@
 	.body {
 		display: grid;
 		gap: var(--space-6);
+		min-width: 0;
 	}
 </style>

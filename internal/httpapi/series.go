@@ -203,8 +203,12 @@ func toAPILookupSeries(s metadata.Series) apigen.LookupSeries {
 		Overview:      s.Overview,
 		Status:        optional(s.Status),
 		PosterPath:    optional(s.PosterPath),
+		BackdropPath:  optional(s.BackdropPath),
 		Seasons: optSlice(s.Seasons, func(ss metadata.SeasonSummary) apigen.LookupSeason {
-			return apigen.LookupSeason{SeasonNumber: ss.Number, EpisodeCount: ss.EpisodeCount}
+			return apigen.LookupSeason{
+				SeasonNumber: ss.Number, EpisodeCount: ss.EpisodeCount,
+				Name: optional(ss.Name), PosterPath: optional(ss.PosterPath), AirDate: optional(ss.AirDate),
+			}
 		}),
 	}
 }

@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/svelte';
+import { fireEvent, screen, waitFor, within } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mockFetch, renderWithClient } from '../../../test/helpers';
 import type { ReleaseResult } from '#lib/types.js';
@@ -58,5 +58,28 @@ describe('ReleaseTable', () => {
 		await waitFor(() =>
 			expect(fetch).toHaveBeenCalledWith('/api/v1/discover/series/800001/grab', expect.objectContaining({ method: 'POST' }))
 		);
+	});
+
+	it('puts its heading, sort and search-again controls in one header', async () => {
+		let searches = 0;
+		mockFetch({
+			'GET /api/v1/discover/series/800001/seasons/1/episodes/2/releases': () => {
+				searches++;
+				return Response.json({ releases: [release({ title: 'Harbor.Watch.S01E02.1080p.WEB-DL-QUILL' })], indexer_failures: [] });
+			}
+		});
+		renderWithClient(ReleaseTable, {
+			source: { kind: 'discoverEpisode' as const, tmdbId: 800001, season: 1, episode: 2 },
+			heading: 'Sources · Harbor Watch · S01E02',
+			auto: true
+		});
+
+		const header = await screen.findByRole('heading', { name: 'Sources · Harbor Watch · S01E02' });
+		const toolbar = header.parentElement!;
+		const again = await within(toolbar).findByRole('button', { name: 'Search again' });
+		expect(within(toolbar).getByRole('combobox')).toBeInTheDocument();
+
+		await fireEvent.click(again);
+		await waitFor(() => expect(searches).toBe(2));
 	});
 });

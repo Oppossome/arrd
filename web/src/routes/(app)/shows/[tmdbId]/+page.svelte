@@ -1,23 +1,27 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { DiscoverHeader, MoreLikeThis, ReleaseTable } from '#lib/components/organisms/index.js';
-	import { DetailLayout, Section } from '#lib/components/templates/index.js';
+	import { DiscoverActions, MoreLikeThis, ReleaseTable, SeasonBrowser, TitleHero } from '#lib/components/organisms/index.js';
+	import { DetailLayout, SourcesDialog } from '#lib/components/templates/index.js';
+	import type { SourcesRequest } from '#lib/releases.js';
 
 	const tmdbId = $derived(Number(page.params.tmdbId));
-	let season = $state<number | undefined>();
+	let sources = $state<SourcesRequest | null>(null);
 </script>
 
 {#key tmdbId}
-	<DetailLayout>
-		{#snippet header()}<DiscoverHeader kind="series" {tmdbId} bind:season />{/snippet}
+	<DetailLayout bleed>
+		{#snippet header()}
+			<TitleHero kind="series" {tmdbId}>
+				{#snippet actions()}<DiscoverActions kind="series" {tmdbId} />{/snippet}
+			</TitleHero>
+		{/snippet}
+		<SeasonBrowser {tmdbId} ondownload={(r) => (sources = r)} />
 		<MoreLikeThis kind="series" {tmdbId} />
-		{#if season !== undefined}
-			<Section
-				title={season === 0 ? 'Specials sources' : `Season ${season} sources`}
-				description="Season packs and single episodes. The show is added to your library when you download one."
-			>
-				{#key season}<ReleaseTable source={{ kind: 'discoverSeason', tmdbId, season }} auto />{/key}
-			</Section>
-		{/if}
 	</DetailLayout>
 {/key}
+
+<SourcesDialog title={sources?.title} onclose={() => (sources = null)}>
+	{#snippet children(heading)}
+		{#if sources}<ReleaseTable source={sources.source} {heading} auto />{/if}
+	{/snippet}
+</SourcesDialog>

@@ -157,6 +157,14 @@ export const api = {
 					params: { path: { tmdbId, season } }
 				})
 			),
+		season: (tmdbId: number, season: number) =>
+			body(http().GET('/api/v1/discover/series/{tmdbId}/seasons/{season}', { params: { path: { tmdbId, season } } })),
+		episodeReleases: (tmdbId: number, season: number, episode: number) =>
+			body(
+				http().GET('/api/v1/discover/series/{tmdbId}/seasons/{season}/episodes/{episode}/releases', {
+					params: { path: { tmdbId, season, episode } }
+				})
+			),
 		grabSeries: (tmdbId: number, release: T.ReleaseResult) =>
 			body(http().POST('/api/v1/discover/series/{tmdbId}/grab', { ...tmdb(tmdbId), body: release }))
 	},
@@ -279,6 +287,17 @@ export function posterURL(posterPath: string | undefined, size: 'w185' | 'w342' 
 export function backdropURL(backdropPath: string | undefined, size: 'w780' | 'w1280' = 'w780'): string | undefined {
 	if (!backdropPath) return undefined;
 	return `/api/v1/posters/${size}/${backdropPath.replace(/^\//, '')}`;
+}
+
+/** URL of a cached TMDB episode still (16:9) served by arrd. */
+export function stillURL(stillPath: string | undefined): string | undefined {
+	if (!stillPath) return undefined;
+	return `/api/v1/posters/w300/${stillPath.replace(/^\//, '')}`;
+}
+
+/** URL of a cached TMDB cast photo served by arrd. */
+export function profileURL(profilePath: string | undefined): string | undefined {
+	return posterURL(profilePath, 'w185');
 }
 
 /** The message of an ApiError about `field`, if that is what err is. */
