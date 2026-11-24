@@ -202,7 +202,7 @@ func TestPrivateSiteEndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	res, err := svc.Acquire.SearchMovie(ctx, movie.ID)
+	res, err := svc.Acquire.SearchMovie(ctx, movie.ID, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -230,7 +230,7 @@ func TestPrivateSiteEndToEnd(t *testing.T) {
 	// A changed definition gets a fresh searcher (and session).
 	writeDefinition(t, env, site, "Example Bay v2")
 	svc.Indexers.ReloadIndexerDefinitions()
-	if _, err := svc.Acquire.SearchMovie(ctx, movie.ID); err != nil {
+	if _, err := svc.Acquire.SearchMovie(ctx, movie.ID, ""); err != nil {
 		t.Fatal(err)
 	}
 	if n := site.logins.Load(); n != 2 {

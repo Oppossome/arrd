@@ -193,24 +193,25 @@ export function releaseKey(source: ReleaseSource): QueryKey {
 	}
 }
 
-function searchReleases(source: ReleaseSource): Promise<T.SearchResult> {
+/** Searches for source; text, when given, replaces arrd's own query. */
+function searchReleases(source: ReleaseSource, text?: string): Promise<T.SearchResult> {
 	switch (source.kind) {
 		case 'movie':
-			return api.movies.releases(source.movieId);
+			return api.movies.releases(source.movieId, text);
 		case 'series':
-			return api.series.releases(source.seriesId);
+			return api.series.releases(source.seriesId, text);
 		case 'season':
-			return api.series.seasonReleases(source.seriesId, source.season);
+			return api.series.seasonReleases(source.seriesId, source.season, text);
 		case 'episode':
-			return api.episodes.releases(source.episodeId);
+			return api.episodes.releases(source.episodeId, text);
 		case 'discoverMovie':
-			return api.discover.movieReleases(source.tmdbId);
+			return api.discover.movieReleases(source.tmdbId, text);
 		case 'discoverSeries':
-			return api.discover.seriesReleases(source.tmdbId);
+			return api.discover.seriesReleases(source.tmdbId, text);
 		case 'discoverSeason':
-			return api.discover.seasonReleases(source.tmdbId, source.season);
+			return api.discover.seasonReleases(source.tmdbId, source.season, text);
 		case 'discoverEpisode':
-			return api.discover.episodeReleases(source.tmdbId, source.season, source.episode);
+			return api.discover.episodeReleases(source.tmdbId, source.season, source.episode, text);
 	}
 }
 
@@ -275,9 +276,10 @@ export const queries = {
 	}),
 
 	// Manual release search for any target; started explicitly with refetch().
-	releases: (source: ReleaseSource) => ({
-		queryKey: releaseKey(source),
-		queryFn: (): Promise<T.SearchResult> => searchReleases(source),
+	// text, when given, replaces arrd's own query and is cached on its own.
+	releases: (source: ReleaseSource, text = '') => ({
+		queryKey: [...releaseKey(source), text] as QueryKey,
+		queryFn: (): Promise<T.SearchResult> => searchReleases(source, text || undefined),
 		...SEARCH_CACHE
 	}),
 

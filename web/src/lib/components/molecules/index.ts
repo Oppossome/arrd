@@ -18,6 +18,7 @@ export { default as PeerSummary } from './PeerSummary.svelte';
 export { default as PosterCard } from './PosterCard.svelte';
 export { default as PosterRow } from './PosterRow.svelte';
 export { default as PosterWall } from './PosterWall.svelte';
+export { default as ReleaseRow } from './ReleaseRow.svelte';
 export { default as SearchBox } from './SearchBox.svelte';
 export { default as SecretField } from './SecretField.svelte';
 export { default as SettingFieldInput } from './SettingFieldInput.svelte';

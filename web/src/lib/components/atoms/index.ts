@@ -20,4 +20,5 @@ export { default as Sparkline } from './Sparkline.svelte';
 export { default as Spinner } from './Spinner.svelte';
 export { default as Textarea } from './Textarea.svelte';
 export { default as Text } from './Text.svelte';
+export { default as ToggleChip } from './ToggleChip.svelte';
 export { default as Toggle } from './Toggle.svelte';

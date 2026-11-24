@@ -60,3 +60,67 @@ export function releaseCoverage(r: ReleaseResult): string {
 	const e = (n: number) => `E${String(n).padStart(2, '0')}`;
 	return eps.length === 1 ? s + e(eps[0]) : `${s}${e(eps[0])}-${e(eps[eps.length - 1])}`;
 }
+
+/**
+ * Narrows search results on the client. An empty list places no limit on
+ * its field.
+ */
+export interface ReleaseFilter {
+	acceptedOnly: boolean;
+	qualities: string[];
+	indexers: string[];
+}
+
+export const emptyReleaseFilter = (): ReleaseFilter => ({ acceptedOnly: false, qualities: [], indexers: [] });
+
+export function isFilterEmpty(f: ReleaseFilter): boolean {
+	return !f.acceptedOnly && f.qualities.length === 0 && f.indexers.length === 0;
+}
+
+export function filterReleases(releases: ReleaseResult[], f: ReleaseFilter): ReleaseResult[] {
+	return releases.filter(
+		(r) =>
+			(!f.acceptedOnly || r.accepted) &&
+			(f.qualities.length === 0 || f.qualities.includes(r.quality)) &&
+			(f.indexers.length === 0 || f.indexers.includes(r.indexer))
+	);
+}
+
+/** A value to filter by and how many results have it. */
+export interface Facet {
+	value: string;
+	count: number;
+}
+
+/**
+ * The qualities (best first, by the highest score seen) and indexers (most
+ * results first) in a set of results.
+ */
+export function releaseFacets(releases: ReleaseResult[]): { qualities: Facet[]; indexers: Facet[] } {
+	const qualities = new Map<string, Facet & { best: number }>();
+	const indexers = new Map<string, Facet>();
+	for (const r of releases) {
+		const q = qualities.get(r.quality) ?? { value: r.quality, count: 0, best: r.score };
+		q.count++;
+		q.best = Math.max(q.best, r.score);
+		qualities.set(r.quality, q);
+		const ix = indexers.get(r.indexer) ?? { value: r.indexer, count: 0 };
+		ix.count++;
+		indexers.set(r.indexer, ix);
+	}
+	const byCount = (a: Facet, b: Facet) => b.count - a.count || a.value.localeCompare(b.value);
+	return {
+		qualities: [...qualities.values()].sort((a, b) => b.best - a.best || byCount(a, b)).map(({ value, count }) => ({ value, count })),
+		indexers: [...indexers.values()].sort(byCount)
+	};
+}
+
+/** Adds value to list, or takes it out if it is there. */
+export function toggleValue(list: string[], value: string): string[] {
+	return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
+}
+
+/** Why a release was rejected, on one line. */
+export function rejectionSummary(r: ReleaseResult): string {
+	return (r.rejections ?? []).join(' · ');
+}

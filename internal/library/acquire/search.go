@@ -3,6 +3,7 @@ package acquire
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"generic-arr-project/internal/indexer"
@@ -41,28 +42,37 @@ type ReleaseResult struct {
 
 // SearchResult is the outcome of searching all indexers for one item.
 type SearchResult struct {
+	// Query is the text searched for: the user's own, or the text form of
+	// the query arrd built.
+	Query    string                    `json:"query"`
 	Releases []ReleaseResult           `json:"releases"`
 	Failures []indexers.IndexerFailure `json:"indexer_failures"`
 }
 
 // SearchMovie queries all search-enabled indexers for a movie and ranks the
-// results, best acceptable release first.
-func (s *Service) SearchMovie(ctx context.Context, movieID int64) (SearchResult, error) {
+// results, best acceptable release first. text replaces arrd's own query
+// when not blank.
+func (s *Service) SearchMovie(ctx context.Context, movieID int64, text string) (SearchResult, error) {
 	movie, err := s.store.GetMovie(ctx, movieID)
 	if err != nil {
 		return SearchResult{}, apperr.NotFound(err, "movie", movieID)
 	}
-	return s.searchMovie(ctx, movie)
+	return s.searchMovie(ctx, movie, text)
 }
 
 // searchMovie searches for movie, which need not be in the library: only
-// its title, year and IMDb id are used.
-func (s *Service) searchMovie(ctx context.Context, movie db.Movie) (SearchResult, error) {
+// its title, year and IMDb id are used. text replaces arrd's own query
+// when not blank.
+func (s *Service) searchMovie(ctx context.Context, movie db.Movie, text string) (SearchResult, error) {
 	q, err := s.settings.QualitySettings(ctx)
 	if err != nil {
 		return SearchResult{}, err
 	}
+	text, custom := searchText(text, movieText(movie))
 	found, failures, err := s.indexers.Search(ctx, func(ix indexers.Indexer) (indexer.Query, bool) {
+		if custom {
+			return textQuery(text, ix, false)
+		}
 		return movieQuery(movie, ix)
 	})
 	if err != nil {
@@ -70,9 +80,40 @@ func (s *Service) searchMovie(ctx context.Context, movie db.Movie) (SearchResult
 	}
 	target := release.MovieTarget{Title: movie.Title, OriginalTitle: movie.OriginalTitle, Year: int(movie.Year)}
 	limits := q.Limits()
-	return rankReleases(found, failures, func(c release.Candidate) release.Decision {
+	res := rankReleases(found, failures, func(c release.Candidate) release.Decision {
 		return release.EvaluateMovie(c, target, limits)
-	}), nil
+	})
+	res.Query = text
+	return res, nil
+}
+
+// searchText is the text to search for: the user's own when not blank
+// (custom), else arrd's.
+func searchText(user, own string) (text string, custom bool) {
+	if user = strings.TrimSpace(user); user != "" {
+		return user, true
+	}
+	return own, false
+}
+
+// textQuery searches for text the user typed: a movie or TV search when the
+// indexer has one, else a generic search. No id, season or episode is sent,
+// since the text says what is wanted.
+func textQuery(text string, ix indexers.Indexer, tv bool) (indexer.Query, bool) {
+	q := indexer.Query{Type: indexer.SearchMovie, Categories: ix.MovieCategories, Q: text}
+	typed := ix.Caps != nil && ix.Caps.MovieSearch.Available
+	if tv {
+		q.Type, q.Categories = indexer.SearchTV, ix.TVCategories
+		typed = ix.Caps != nil && ix.Caps.TVSearch.Available
+	}
+	switch {
+	case typed:
+	case ix.Caps == nil || ix.Caps.Search.Available:
+		q.Type = indexer.SearchGeneric
+	default:
+		return indexer.Query{}, false
+	}
+	return q, true
 }
 
 // rankReleases de-duplicates, evaluates and ranks search results, best
@@ -148,10 +189,7 @@ func (s *Service) grabBest(ctx context.Context, res SearchResult, grab func(Rele
 // movieQuery builds the best query the indexer supports: an IMDb lookup if
 // possible, otherwise a title + year text search.
 func movieQuery(m db.Movie, ix indexers.Indexer) (indexer.Query, bool) {
-	text := m.Title
-	if m.Year > 0 {
-		text = fmt.Sprintf("%s %d", m.Title, m.Year)
-	}
+	text := movieText(m)
 	q := indexer.Query{Categories: ix.MovieCategories}
 	switch {
 	case ix.Caps == nil:
@@ -167,6 +205,14 @@ func movieQuery(m db.Movie, ix indexers.Indexer) (indexer.Query, bool) {
 		return indexer.Query{}, false
 	}
 	return q, true
+}
+
+// movieText is a text search for m: its title and year.
+func movieText(m db.Movie) string {
+	if m.Year > 0 {
+		return fmt.Sprintf("%s %d", m.Title, m.Year)
+	}
+	return m.Title
 }
 
 // AutoSearchResult reports what an automatic search did.
@@ -200,7 +246,7 @@ func (s *Service) SearchWantedMovies(ctx context.Context) error {
 // AutoSearchMovie searches for a movie and grabs the best acceptable
 // release, trying the next one if a grab fails.
 func (s *Service) AutoSearchMovie(ctx context.Context, movieID int64) (AutoSearchResult, error) {
-	res, err := s.SearchMovie(ctx, movieID)
+	res, err := s.SearchMovie(ctx, movieID, "")
 	if err != nil {
 		return AutoSearchResult{}, err
 	}

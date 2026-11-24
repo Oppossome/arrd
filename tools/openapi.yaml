@@ -713,7 +713,9 @@ paths:
     get:
       operationId: movieReleases
       tags: [movies]
-      parameters: [{ $ref: "#/components/parameters/ID" }]
+      parameters:
+        - { $ref: "#/components/parameters/ID" }
+        - { $ref: "#/components/parameters/ReleaseQuery" }
       responses:
         "200":
           description: Releases found by an interactive search.
@@ -872,7 +874,9 @@ paths:
       operationId: discoverMovieReleases
       tags: [discover]
       description: Searches the indexers for a movie, whether or not it is in the library.
-      parameters: [{ $ref: "#/components/parameters/TMDBID" }]
+      parameters:
+        - { $ref: "#/components/parameters/TMDBID" }
+        - { $ref: "#/components/parameters/ReleaseQuery" }
       responses:
         "200":
           description: Releases found.
@@ -1023,6 +1027,7 @@ paths:
         - { $ref: "#/components/parameters/TMDBID" }
         - { $ref: "#/components/parameters/Season" }
         - { $ref: "#/components/parameters/EpisodeNumber" }
+        - { $ref: "#/components/parameters/ReleaseQuery" }
       responses:
         "200":
           description: Releases found.
@@ -1039,6 +1044,7 @@ paths:
       parameters:
         - { $ref: "#/components/parameters/TMDBID" }
         - { $ref: "#/components/parameters/Season" }
+        - { $ref: "#/components/parameters/ReleaseQuery" }
       responses:
         "200":
           description: Releases found.
@@ -1052,7 +1058,9 @@ paths:
       operationId: discoverSeriesReleases
       tags: [discover]
       description: Searches the indexers for whole-series packs (multi-season or "Complete Series"; for a one-season series, its season pack), whether or not the series is in the library.
-      parameters: [{ $ref: "#/components/parameters/TMDBID" }]
+      parameters:
+        - { $ref: "#/components/parameters/TMDBID" }
+        - { $ref: "#/components/parameters/ReleaseQuery" }
       responses:
         "200":
           description: Releases found.
@@ -1205,7 +1213,9 @@ paths:
       operationId: seriesReleases
       tags: [series]
       description: Searches the indexers for whole-series packs (multi-season or "Complete Series"; for a one-season series, its season pack).
-      parameters: [{ $ref: "#/components/parameters/ID" }]
+      parameters:
+        - { $ref: "#/components/parameters/ID" }
+        - { $ref: "#/components/parameters/ReleaseQuery" }
       responses:
         "200":
           description: Releases found by an interactive search.
@@ -1256,6 +1266,7 @@ paths:
       parameters:
         - { $ref: "#/components/parameters/ID" }
         - { $ref: "#/components/parameters/Season" }
+        - { $ref: "#/components/parameters/ReleaseQuery" }
       responses:
         "200":
           description: Releases found by an interactive search.
@@ -1304,7 +1315,9 @@ paths:
     get:
       operationId: episodeReleases
       tags: [episodes]
-      parameters: [{ $ref: "#/components/parameters/ID" }]
+      parameters:
+        - { $ref: "#/components/parameters/ID" }
+        - { $ref: "#/components/parameters/ReleaseQuery" }
       responses:
         "200":
           description: Releases found by an interactive search.
@@ -1479,6 +1492,11 @@ components:
       in: query
       description: Title to search for.
       schema: { type: string }
+    ReleaseQuery:
+      name: q
+      in: query
+      description: Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for.
+      schema: { type: string, maxLength: 200 }
     LookupYear:
       name: year
       in: query
@@ -2020,8 +2038,9 @@ components:
     SearchResult:
       type: object
       additionalProperties: false
-      required: [releases, indexer_failures]
+      required: [query, releases, indexer_failures]
       properties:
+        query: { type: string, description: "The text searched for: the q given, or the text form of arrd's own query." }
         releases: { type: array, items: { $ref: "#/components/schemas/ReleaseResult" } }
         indexer_failures: { type: array, items: { $ref: "#/components/schemas/IndexerFailure" } }
     AutoSearchResult:

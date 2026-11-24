@@ -43,7 +43,7 @@ func TestMovieEndToEnd(t *testing.T) {
 	}
 
 	// Manual search shows the ranking and the broken indexer's failure.
-	res, err := svc.Acquire.SearchMovie(ctx, movie.ID)
+	res, err := svc.Acquire.SearchMovie(ctx, movie.ID, "")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -19,10 +19,7 @@ func seriesTarget(s db.Series) release.SeriesTarget {
 // tvQuery builds the best query the indexer supports for a season (episode
 // nil) or a single episode: a TVDB-id lookup when possible, else text.
 func tvQuery(s db.Series, ix indexers.Indexer, season int, episode *int) (indexer.Query, bool) {
-	text := fmt.Sprintf("%s S%02d", s.Title, season)
-	if episode != nil {
-		text = fmt.Sprintf("%s S%02dE%02d", s.Title, season, *episode)
-	}
+	text := tvText(s, season, episode)
 	q := indexer.Query{Categories: ix.TVCategories}
 	caps := ix.Caps
 	switch {
@@ -45,24 +42,39 @@ func tvQuery(s db.Series, ix indexers.Indexer, season int, episode *int) (indexe
 	return q, true
 }
 
+// tvText is a text search for a season of s (episode nil) or one episode,
+// such as "Title S01" or "Title S01E02".
+func tvText(s db.Series, season int, episode *int) string {
+	if episode != nil {
+		return fmt.Sprintf("%s S%02dE%02d", s.Title, season, *episode)
+	}
+	return fmt.Sprintf("%s S%02d", s.Title, season)
+}
+
 // SearchEpisode searches all indexers for one episode. Season packs are
-// rejected: use SearchSeason for those.
-func (s *Service) SearchEpisode(ctx context.Context, episodeID int64) (SearchResult, error) {
+// rejected: use SearchSeason for those. text replaces arrd's own query when
+// not blank.
+func (s *Service) SearchEpisode(ctx context.Context, episodeID int64, text string) (SearchResult, error) {
 	ep, series, err := s.episodeWithSeries(ctx, episodeID)
 	if err != nil {
 		return SearchResult{}, err
 	}
-	return s.searchEpisode(ctx, series, int(ep.Season), int(ep.Episode))
+	return s.searchEpisode(ctx, series, int(ep.Season), int(ep.Episode), text)
 }
 
 // searchEpisode searches for one episode of series, which need not be in the
-// library: only its titles, year and TVDB id are used.
-func (s *Service) searchEpisode(ctx context.Context, series db.Series, season, number int) (SearchResult, error) {
+// library: only its titles, year and TVDB id are used. text replaces arrd's
+// own query when not blank.
+func (s *Service) searchEpisode(ctx context.Context, series db.Series, season, number int, text string) (SearchResult, error) {
 	q, err := s.settings.QualitySettings(ctx)
 	if err != nil {
 		return SearchResult{}, err
 	}
+	text, custom := searchText(text, tvText(series, season, &number))
 	found, failures, err := s.indexers.Search(ctx, func(ix indexers.Indexer) (indexer.Query, bool) {
+		if custom {
+			return textQuery(text, ix, true)
+		}
 		return tvQuery(series, ix, season, &number)
 	})
 	if err != nil {
@@ -70,14 +82,17 @@ func (s *Service) searchEpisode(ctx context.Context, series db.Series, season, n
 	}
 	target, limits := seriesTarget(series), q.Limits()
 	want := release.EpisodeWant{Season: season, Episodes: []int{number}}
-	return rankReleases(found, failures, func(c release.Candidate) release.Decision {
+	res := rankReleases(found, failures, func(c release.Candidate) release.Decision {
 		return release.EvaluateEpisode(c, target, want, limits)
-	}), nil
+	})
+	res.Query = text
+	return res, nil
 }
 
 // SearchSeason searches all indexers for a season. Season packs and
-// releases containing any wanted episode of the season are accepted.
-func (s *Service) SearchSeason(ctx context.Context, seriesID int64, season int) (SearchResult, error) {
+// releases containing any wanted episode of the season are accepted. text
+// replaces arrd's own query when not blank.
+func (s *Service) SearchSeason(ctx context.Context, seriesID int64, season int, text string) (SearchResult, error) {
 	series, err := s.store.GetSeries(ctx, seriesID)
 	if err != nil {
 		return SearchResult{}, apperr.NotFound(err, "series", seriesID)
@@ -95,28 +110,34 @@ func (s *Service) SearchSeason(ctx context.Context, seriesID int64, season int) 
 			want.Episodes = append(want.Episodes, int(e.Episode))
 		}
 	}
-	return s.searchSeason(ctx, series, want)
+	return s.searchSeason(ctx, series, want, text)
 }
 
 // searchSeason searches for a season of series, which need not be in the
 // library: only its titles, year and TVDB id are used. want says which
-// episodes are wanted.
-func (s *Service) searchSeason(ctx context.Context, series db.Series, want release.EpisodeWant) (SearchResult, error) {
+// episodes are wanted; text replaces arrd's own query when not blank.
+func (s *Service) searchSeason(ctx context.Context, series db.Series, want release.EpisodeWant, text string) (SearchResult, error) {
 	q, err := s.settings.QualitySettings(ctx)
 	if err != nil {
 		return SearchResult{}, err
 	}
 	season := want.Season
+	text, custom := searchText(text, tvText(series, season, nil))
 	found, failures, err := s.indexers.Search(ctx, func(ix indexers.Indexer) (indexer.Query, bool) {
+		if custom {
+			return textQuery(text, ix, true)
+		}
 		return tvQuery(series, ix, season, nil)
 	})
 	if err != nil {
 		return SearchResult{}, err
 	}
 	target, limits := seriesTarget(series), q.Limits()
-	return rankReleases(found, failures, func(c release.Candidate) release.Decision {
+	res := rankReleases(found, failures, func(c release.Candidate) release.Decision {
 		return release.EvaluateEpisode(c, target, want, limits)
-	}), nil
+	})
+	res.Query = text
+	return res, nil
 }
 
 func (s *Service) episodeWithSeries(ctx context.Context, episodeID int64) (db.Episode, db.Series, error) {
@@ -183,7 +204,7 @@ func (s *Service) AutoSearchEpisode(ctx context.Context, episodeID int64) (AutoS
 	if err != nil {
 		return AutoSearchResult{}, err
 	}
-	res, err := s.SearchEpisode(ctx, episodeID)
+	res, err := s.SearchEpisode(ctx, episodeID, "")
 	if err != nil {
 		return AutoSearchResult{}, err
 	}
@@ -204,7 +225,7 @@ func (s *Service) AutoSearchSeason(ctx context.Context, seriesID int64, season i
 	}
 	var results []AutoSearchResult
 	if fullyAired && len(wanted) >= 2 {
-		res, err := s.SearchSeason(ctx, seriesID, season)
+		res, err := s.SearchSeason(ctx, seriesID, season, "")
 		if err != nil {
 			return nil, err
 		}

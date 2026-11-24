@@ -1770,6 +1770,8 @@ export interface components {
             error: string;
         };
         SearchResult: {
+            /** @description The text searched for: the q given, or the text form of arrd's own query. */
+            query: string;
             releases: components["schemas"]["ReleaseResult"][];
             indexer_failures: components["schemas"]["IndexerFailure"][];
         };
@@ -2047,6 +2049,8 @@ export interface components {
         EpisodeNumber: number;
         /** @description Title to search for. */
         LookupQuery: string;
+        /** @description Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for. */
+        ReleaseQuery: string;
         LookupYear: number;
         /** @description TMDB genre ids; a title matches when it has any of them. Every genre when absent. */
         BrowseGenre: number[];
@@ -3135,7 +3139,10 @@ export interface operations {
     };
     movieReleases: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for. */
+                q?: components["parameters"]["ReleaseQuery"];
+            };
             header?: never;
             path: {
                 id: components["parameters"]["ID"];
@@ -3369,7 +3376,10 @@ export interface operations {
     };
     discoverMovieReleases: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for. */
+                q?: components["parameters"]["ReleaseQuery"];
+            };
             header?: never;
             path: {
                 tmdbId: components["parameters"]["TMDBID"];
@@ -3583,7 +3593,10 @@ export interface operations {
     };
     discoverEpisodeReleases: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for. */
+                q?: components["parameters"]["ReleaseQuery"];
+            };
             header?: never;
             path: {
                 tmdbId: components["parameters"]["TMDBID"];
@@ -3608,7 +3621,10 @@ export interface operations {
     };
     discoverSeasonReleases: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for. */
+                q?: components["parameters"]["ReleaseQuery"];
+            };
             header?: never;
             path: {
                 tmdbId: components["parameters"]["TMDBID"];
@@ -3632,7 +3648,10 @@ export interface operations {
     };
     discoverSeriesReleases: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for. */
+                q?: components["parameters"]["ReleaseQuery"];
+            };
             header?: never;
             path: {
                 tmdbId: components["parameters"]["TMDBID"];
@@ -3895,7 +3914,10 @@ export interface operations {
     };
     seriesReleases: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for. */
+                q?: components["parameters"]["ReleaseQuery"];
+            };
             header?: never;
             path: {
                 id: components["parameters"]["ID"];
@@ -3971,7 +3993,10 @@ export interface operations {
     };
     seasonReleases: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for. */
+                q?: components["parameters"]["ReleaseQuery"];
+            };
             header?: never;
             path: {
                 id: components["parameters"]["ID"];
@@ -4046,7 +4071,10 @@ export interface operations {
     };
     episodeReleases: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for. */
+                q?: components["parameters"]["ReleaseQuery"];
+            };
             header?: never;
             path: {
                 id: components["parameters"]["ID"];

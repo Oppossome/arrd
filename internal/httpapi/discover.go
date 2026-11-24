@@ -52,7 +52,7 @@ func (h *handlers) DiscoverMovie(ctx context.Context, req apigen.DiscoverMovieRe
 }
 
 func (h *handlers) DiscoverMovieReleases(ctx context.Context, req apigen.DiscoverMovieReleasesRequestObject) (apigen.DiscoverMovieReleasesResponseObject, error) {
-	out, err := h.svc.Acquire.SearchDiscoveredMovie(ctx, req.TMDBID)
+	out, err := h.svc.Acquire.SearchDiscoveredMovie(ctx, req.TMDBID, deref(req.Params.Q))
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func (h *handlers) DiscoverSeason(ctx context.Context, req apigen.DiscoverSeason
 }
 
 func (h *handlers) DiscoverEpisodeReleases(ctx context.Context, req apigen.DiscoverEpisodeReleasesRequestObject) (apigen.DiscoverEpisodeReleasesResponseObject, error) {
-	out, err := h.svc.Acquire.SearchDiscoveredEpisode(ctx, req.TMDBID, req.Season, req.Episode)
+	out, err := h.svc.Acquire.SearchDiscoveredEpisode(ctx, req.TMDBID, req.Season, req.Episode, deref(req.Params.Q))
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func (h *handlers) DiscoverEpisodeReleases(ctx context.Context, req apigen.Disco
 }
 
 func (h *handlers) DiscoverSeasonReleases(ctx context.Context, req apigen.DiscoverSeasonReleasesRequestObject) (apigen.DiscoverSeasonReleasesResponseObject, error) {
-	out, err := h.svc.Acquire.SearchDiscoveredSeason(ctx, req.TMDBID, req.Season)
+	out, err := h.svc.Acquire.SearchDiscoveredSeason(ctx, req.TMDBID, req.Season, deref(req.Params.Q))
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +250,7 @@ func fromAPIBrowse(filter media.TitleFilter, sort *apigen.DiscoverSort, page *in
 }
 
 func (h *handlers) DiscoverSeriesReleases(ctx context.Context, req apigen.DiscoverSeriesReleasesRequestObject) (apigen.DiscoverSeriesReleasesResponseObject, error) {
-	out, err := h.svc.Acquire.SearchDiscoveredSeriesPacks(ctx, req.TMDBID)
+	out, err := h.svc.Acquire.SearchDiscoveredSeriesPacks(ctx, req.TMDBID, deref(req.Params.Q))
 	if err != nil {
 		return nil, err
 	}

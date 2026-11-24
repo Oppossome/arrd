@@ -85,6 +85,10 @@ func SeedTV(t *testing.T) (packMagnet, singleMagnet string) {
 	return seedPath(t, seeder, dir, PackName), seedPath(t, seeder, dir, SingleName)
 }
 
+// CustomTVQuery is text a user might search FakeTVIndexer for in place of
+// arrd's own query. It finds the complete-series pack, sent as plain text.
+const CustomTVQuery = "Harbor Watch complete"
+
 func FakeTVIndexer(t *testing.T, packMagnet, singleMagnet string) *httptest.Server {
 	t.Helper()
 	var srv *httptest.Server
@@ -105,6 +109,8 @@ func FakeTVIndexer(t *testing.T, packMagnet, singleMagnet string) *httptest.Serv
 				row(PackName, "/dl/pack", 80<<20),
 				row(SingleName, "/dl/single", 30<<20),
 			}
+		case q.Get("t") == "tvsearch" && q.Get("q") == CustomTVQuery && q.Get("tvdbid") == "" && q.Get("season") == "":
+			return []SiteRow{row("Harbor.Watch.Complete.Series.720p.HDTV.x264-PIKA", "/dl/none", 90<<20)}
 		case q.Get("t") == "tvsearch":
 			return nil // nothing for season 2 yet
 		case q.Get("t") == "search" && q.Get("q") == "": // RSS (and the test's query)

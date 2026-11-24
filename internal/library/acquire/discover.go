@@ -18,10 +18,11 @@ import (
 )
 
 // SearchDiscoveredMovie searches the indexers for a TMDB movie. A movie in
-// the library is searched as such.
-func (s *Service) SearchDiscoveredMovie(ctx context.Context, tmdbID int64) (SearchResult, error) {
+// the library is searched as such. text replaces arrd's own query when not
+// blank.
+func (s *Service) SearchDiscoveredMovie(ctx context.Context, tmdbID int64, text string) (SearchResult, error) {
 	if row, err := s.store.GetMovieByTMDBID(ctx, tmdbID); err == nil {
-		return s.searchMovie(ctx, row)
+		return s.searchMovie(ctx, row, text)
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return SearchResult{}, fmt.Errorf("check library: %w", err)
 	}
@@ -32,15 +33,15 @@ func (s *Service) SearchDiscoveredMovie(ctx context.Context, tmdbID int64) (Sear
 	return s.searchMovie(ctx, db.Movie{
 		TMDBID: meta.TMDBID, IMDBID: media.OptString(meta.IMDBID), Title: meta.Title,
 		OriginalTitle: meta.OriginalTitle, Year: int64(meta.Year),
-	})
+	}, text)
 }
 
 // SearchDiscoveredSeason searches the indexers for a season of a TMDB
 // series. A series in the library is searched as such (episodes that
 // already have a file are not wanted); otherwise every episode is.
-func (s *Service) SearchDiscoveredSeason(ctx context.Context, tmdbID int64, season int) (SearchResult, error) {
+func (s *Service) SearchDiscoveredSeason(ctx context.Context, tmdbID int64, season int, text string) (SearchResult, error) {
 	if row, err := s.store.GetSeriesByTMDBID(ctx, tmdbID); err == nil {
-		return s.SearchSeason(ctx, row.ID, season)
+		return s.SearchSeason(ctx, row.ID, season, text)
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return SearchResult{}, fmt.Errorf("check library: %w", err)
 	}
@@ -56,18 +57,18 @@ func (s *Service) SearchDiscoveredSeason(ctx context.Context, tmdbID int64, seas
 	for e := 1; e <= count; e++ {
 		want.Episodes = append(want.Episodes, e)
 	}
-	return s.searchSeason(ctx, discoveredSeriesRow(meta), want)
+	return s.searchSeason(ctx, discoveredSeriesRow(meta), want, text)
 }
 
 // SearchDiscoveredEpisode searches the indexers for one episode of a TMDB
 // series. Season packs are rejected. A series in the library is searched as
 // such.
-func (s *Service) SearchDiscoveredEpisode(ctx context.Context, tmdbID int64, season, episode int) (SearchResult, error) {
+func (s *Service) SearchDiscoveredEpisode(ctx context.Context, tmdbID int64, season, episode int, text string) (SearchResult, error) {
 	if season < 0 || episode < 1 {
 		return SearchResult{}, apperr.Invalid("episode", "season must be >= 0 and episode >= 1")
 	}
 	if row, err := s.store.GetSeriesByTMDBID(ctx, tmdbID); err == nil {
-		return s.searchEpisode(ctx, row, season, episode)
+		return s.searchEpisode(ctx, row, season, episode, text)
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return SearchResult{}, fmt.Errorf("check library: %w", err)
 	}
@@ -78,7 +79,7 @@ func (s *Service) SearchDiscoveredEpisode(ctx context.Context, tmdbID int64, sea
 	if episode > seasonEpisodeCount(meta, season) {
 		return SearchResult{}, fmt.Errorf("series %d S%02dE%02d: %w", tmdbID, season, episode, apperr.ErrNotFound)
 	}
-	return s.searchEpisode(ctx, discoveredSeriesRow(meta), season, episode)
+	return s.searchEpisode(ctx, discoveredSeriesRow(meta), season, episode, text)
 }
 
 // GrabDiscoveredMovie downloads r for a TMDB movie, first adding the movie
@@ -128,9 +129,9 @@ func discoveredSeriesRow(meta *metadata.Series) db.Series {
 
 // SearchDiscoveredSeriesPacks searches the indexers for whole-series packs
 // of a TMDB series. A series in the library is searched as such.
-func (s *Service) SearchDiscoveredSeriesPacks(ctx context.Context, tmdbID int64) (SearchResult, error) {
+func (s *Service) SearchDiscoveredSeriesPacks(ctx context.Context, tmdbID int64, text string) (SearchResult, error) {
 	if row, err := s.store.GetSeriesByTMDBID(ctx, tmdbID); err == nil {
-		return s.SearchSeriesPacks(ctx, row.ID)
+		return s.SearchSeriesPacks(ctx, row.ID, text)
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return SearchResult{}, fmt.Errorf("check library: %w", err)
 	}
@@ -144,5 +145,5 @@ func (s *Service) SearchDiscoveredSeriesPacks(ctx context.Context, tmdbID int64)
 			counts[ss.Number] = ss.EpisodeCount
 		}
 	}
-	return s.searchSeriesPacks(ctx, discoveredSeriesRow(meta), release.SeriesPackWant{SeasonEpisodes: counts})
+	return s.searchSeriesPacks(ctx, discoveredSeriesRow(meta), release.SeriesPackWant{SeasonEpisodes: counts}, text)
 }

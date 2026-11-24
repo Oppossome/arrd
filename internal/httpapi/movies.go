@@ -56,7 +56,7 @@ func (h *handlers) DeleteMovie(ctx context.Context, req apigen.DeleteMovieReques
 }
 
 func (h *handlers) MovieReleases(ctx context.Context, req apigen.MovieReleasesRequestObject) (apigen.MovieReleasesResponseObject, error) {
-	out, err := h.svc.Acquire.SearchMovie(ctx, req.ID)
+	out, err := h.svc.Acquire.SearchMovie(ctx, req.ID, deref(req.Params.Q))
 	if err != nil {
 		return nil, err
 	}

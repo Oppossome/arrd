@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { releaseCoverage, sortReleases } from './releases';
+import {
+	emptyReleaseFilter,
+	filterReleases,
+	isFilterEmpty,
+	rejectionSummary,
+	releaseCoverage,
+	releaseFacets,
+	sortReleases,
+	toggleValue
+} from './releases';
 import type { ReleaseResult } from '../api/types';
 
 const rel = (title: string, o: Partial<ReleaseResult>): ReleaseResult => ({
@@ -43,5 +52,61 @@ describe('releaseCoverage', () => {
 		expect(releaseCoverage(rel('x', { season: 2, episodes: [3, 4, 5] }))).toBe('S02E03-E05');
 		expect(releaseCoverage(rel('x', { season: 1, last_season: 3, season_pack: true }))).toBe('S01-S03 pack');
 		expect(releaseCoverage(rel('x', { season: 0, complete_series: true, season_pack: true }))).toBe('Complete series');
+	});
+});
+
+describe('filterReleases', () => {
+	const list = [
+		rel('a', { accepted: true, quality: 'WEBDL-1080p', indexer: 'one' }),
+		rel('b', { accepted: false, quality: 'HDTV-720p', indexer: 'one' }),
+		rel('c', { accepted: true, quality: 'HDTV-720p', indexer: 'two' })
+	];
+	const titles = (f: Partial<ReturnType<typeof emptyReleaseFilter>>) =>
+		filterReleases(list, { ...emptyReleaseFilter(), ...f }).map((r) => r.title);
+
+	it('keeps everything with an empty filter', () => {
+		expect(titles({})).toEqual(['a', 'b', 'c']);
+		expect(isFilterEmpty(emptyReleaseFilter())).toBe(true);
+	});
+	it('narrows by acceptance, quality and indexer together', () => {
+		expect(titles({ acceptedOnly: true })).toEqual(['a', 'c']);
+		expect(titles({ qualities: ['HDTV-720p'] })).toEqual(['b', 'c']);
+		expect(titles({ qualities: ['HDTV-720p'], indexers: ['one'] })).toEqual(['b']);
+		expect(titles({ acceptedOnly: true, indexers: ['one', 'two'] })).toEqual(['a', 'c']);
+		expect(isFilterEmpty({ ...emptyReleaseFilter(), indexers: ['one'] })).toBe(false);
+	});
+});
+
+describe('releaseFacets', () => {
+	it('orders qualities by best score and indexers by count', () => {
+		const f = releaseFacets([
+			rel('a', { quality: 'HDTV-720p', score: 300, indexer: 'beta' }),
+			rel('b', { quality: 'WEBDL-1080p', score: 900, indexer: 'alpha' }),
+			rel('c', { quality: 'HDTV-720p', score: 100, indexer: 'beta' })
+		]);
+		expect(f.qualities).toEqual([
+			{ value: 'WEBDL-1080p', count: 1 },
+			{ value: 'HDTV-720p', count: 2 }
+		]);
+		expect(f.indexers).toEqual([
+			{ value: 'beta', count: 2 },
+			{ value: 'alpha', count: 1 }
+		]);
+	});
+});
+
+describe('toggleValue', () => {
+	it('adds a missing value and removes a present one', () => {
+		expect(toggleValue(['a'], 'b')).toEqual(['a', 'b']);
+		expect(toggleValue(['a', 'b'], 'a')).toEqual(['b']);
+	});
+});
+
+describe('rejectionSummary', () => {
+	it('puts every reason on one line', () => {
+		expect(rejectionSummary(rel('a', { rejections: ['not a TV release', 'unknown resolution'] }))).toBe(
+			'not a TV release · unknown resolution'
+		);
+		expect(rejectionSummary(rel('a', {}))).toBe('');
 	});
 });

@@ -136,6 +136,7 @@ func toAPIIndexerFailure(f indexers.IndexerFailure) apigen.IndexerFailure {
 
 func toAPISearchResult(r acquire.SearchResult) apigen.SearchResult {
 	return apigen.SearchResult{
+		Query:           r.Query,
 		Releases:        mapSlice(r.Releases, toAPIRelease),
 		IndexerFailures: mapSlice(r.Failures, toAPIIndexerFailure),
 	}

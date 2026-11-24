@@ -98,7 +98,7 @@ func (h *handlers) UpdateSeason(ctx context.Context, req apigen.UpdateSeasonRequ
 }
 
 func (h *handlers) SeasonReleases(ctx context.Context, req apigen.SeasonReleasesRequestObject) (apigen.SeasonReleasesResponseObject, error) {
-	out, err := h.svc.Acquire.SearchSeason(ctx, req.ID, req.Season)
+	out, err := h.svc.Acquire.SearchSeason(ctx, req.ID, req.Season, deref(req.Params.Q))
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func (h *handlers) UpdateEpisode(ctx context.Context, req apigen.UpdateEpisodeRe
 }
 
 func (h *handlers) EpisodeReleases(ctx context.Context, req apigen.EpisodeReleasesRequestObject) (apigen.EpisodeReleasesResponseObject, error) {
-	out, err := h.svc.Acquire.SearchEpisode(ctx, req.ID)
+	out, err := h.svc.Acquire.SearchEpisode(ctx, req.ID, deref(req.Params.Q))
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +227,7 @@ func fromAPIUpdateSeries(in apigen.UpdateSeriesRequest) media.UpdateSeriesInput 
 }
 
 func (h *handlers) SeriesReleases(ctx context.Context, req apigen.SeriesReleasesRequestObject) (apigen.SeriesReleasesResponseObject, error) {
-	out, err := h.svc.Acquire.SearchSeriesPacks(ctx, req.ID)
+	out, err := h.svc.Acquire.SearchSeriesPacks(ctx, req.ID, deref(req.Params.Q))
 	if err != nil {
 		return nil, err
 	}
