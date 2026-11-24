@@ -13,7 +13,7 @@ import {
 	type CreateMutationResult,
 	type QueryKey
 } from '@tanstack/svelte-query';
-import { ApiError, api } from './api';
+import { ApiError, api, filterQuery } from './api';
 import type * as T from './types';
 import type { DiscoverList } from './discover';
 import type { MediaKind } from './links';
@@ -77,6 +77,10 @@ export interface QueueFilter {
 	seriesId?: number;
 }
 
+const NO_FILTER: T.TitleFilter = { genres: [] };
+/** A title filter as query key parts: sorted genres, so their order does not matter. */
+const filterKey = (f: T.TitleFilter) => [[...f.genres].sort((a, b) => a - b), f.language ?? null] as const;
+
 export const keys = {
 	session: ['session'] as const,
 	status: ['status'] as const,
@@ -94,8 +98,9 @@ export const keys = {
 		allLike: ['discover', 'like'] as const,
 		list: (kind: MediaKind, list: DiscoverList) => ['discover', 'list', kind, list] as const,
 		genres: (kind: MediaKind) => ['discover', 'genres', kind] as const,
-		browse: (kind: MediaKind, genre: number | undefined, sort: T.DiscoverSort) =>
-			['discover', 'browse', kind, genre ?? null, sort] as const,
+		languages: ['discover', 'languages'] as const,
+		browse: (kind: MediaKind, filter: T.TitleFilter, sort: T.DiscoverSort) =>
+			['discover', 'browse', kind, ...filterKey(filter), sort] as const,
 		like: (kind: MediaKind, tmdbId: number) => ['discover', 'like', kind, tmdbId] as const,
 		recommendations: (kind: 'movies' | 'series') => ['discover', 'recommendations', kind] as const,
 		allRecommendations: ['discover', 'recommendations'] as const,
@@ -112,7 +117,7 @@ export const keys = {
 		list: ['movies', 'list'] as const,
 		detail: (id: number) => ['movies', 'detail', id] as const,
 		releases: (id: number) => ['movies', 'releases', id] as const,
-		lookup: (q: string) => ['movies', 'lookup', q] as const
+		lookup: (q: string, filter: T.TitleFilter = NO_FILTER) => ['movies', 'lookup', q, ...filterKey(filter)] as const
 	},
 	series: {
 		all: ['series'] as const,
@@ -120,7 +125,7 @@ export const keys = {
 		detail: (id: number) => ['series', 'detail', id] as const,
 		episodes: (id: number) => ['series', 'episodes', id] as const,
 		seasonReleases: (id: number, season: number) => ['series', 'seasonReleases', id, season] as const,
-		lookup: (q: string) => ['series', 'lookup', q] as const
+		lookup: (q: string, filter: T.TitleFilter = NO_FILTER) => ['series', 'lookup', q, ...filterKey(filter)] as const
 	},
 	episodes: {
 		releases: (id: number) => ['episodes', 'releases', id] as const
@@ -227,11 +232,13 @@ export const queries = {
 		staleTime: 5 * 60_000
 	}),
 
-	// One builder for both kinds of TMDB lookup (same keys as above).
-	lookup: (kind: 'movies' | 'series', q: string) => ({
-		queryKey: (kind === 'movies' ? keys.movies.lookup(q) : keys.series.lookup(q)) as QueryKey,
-		queryFn: (): Promise<T.LookupMovie[]> => (kind === 'movies' ? api.movies.lookup(q) : api.series.lookup(q)),
-		enabled: q.trim().length >= 2,
+	// One builder for both kinds of TMDB lookup (same keys as above), narrowed by
+	// a filter. The search bar submits whole titles, so any length goes.
+	lookup: (kind: 'movies' | 'series', q: string, filter: T.TitleFilter = NO_FILTER) => ({
+		queryKey: (kind === 'movies' ? keys.movies.lookup(q, filter) : keys.series.lookup(q, filter)) as QueryKey,
+		queryFn: (): Promise<T.LookupMovie[]> =>
+			kind === 'movies' ? api.movies.lookup(q, undefined, filter) : api.series.lookup(q, undefined, filter),
+		enabled: q.trim() !== '',
 		staleTime: 5 * 60_000
 	}),
 
@@ -276,11 +283,12 @@ export const queries = {
 		queryFn: (): Promise<T.Genre[]> => (kind === 'movies' ? api.discover.movieGenres() : api.discover.seriesGenres()),
 		staleTime: Infinity
 	}),
+	languages: () => ({ queryKey: keys.discover.languages, queryFn: api.discover.languages, staleTime: Infinity }),
 	/** For createInfiniteQuery: one TMDB page per page, until total_pages. */
-	browse: (kind: MediaKind, genre: number | undefined, sort: T.DiscoverSort) => ({
-		queryKey: keys.discover.browse(kind, genre, sort) as QueryKey,
+	browse: (kind: MediaKind, filter: T.TitleFilter, sort: T.DiscoverSort) => ({
+		queryKey: keys.discover.browse(kind, filter, sort) as QueryKey,
 		queryFn: ({ pageParam }: { pageParam: number }): Promise<T.MovieBrowsePage | T.SeriesBrowsePage> => {
-			const query = { genre, sort, page: pageParam };
+			const query = { ...filterQuery(filter), sort, page: pageParam };
 			return kind === 'movies' ? api.discover.browseMovies(query) : api.discover.browseSeries(query);
 		},
 		initialPageParam: 1,

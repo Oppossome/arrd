@@ -39,10 +39,10 @@
 	<ErrorMessage error={settings.error} />
 {:else}
 	<form class="form" onsubmit={save}>
-		<FormField id="incomplete" label="Incomplete downloads" hint="Torrents download here" error={fieldErr('incomplete_dir')}>
+		<FormField id="incomplete" label="Incomplete downloads" hint="Sources download here" error={fieldErr('incomplete_dir')}>
 			{#snippet children(a)}<DirInput id={a.id} bind:value={draft!.incomplete_dir} {listDirs} invalid={a.invalid} />{/snippet}
 		</FormField>
-		<FormField id="complete" label="Completed downloads" hint="Finished torrents are moved here and keep seeding" error={fieldErr('complete_dir')}>
+		<FormField id="complete" label="Completed downloads" hint="Finished sources are moved here and keep seeding" error={fieldErr('complete_dir')}>
 			{#snippet children(a)}<DirInput id={a.id} bind:value={draft!.complete_dir} {listDirs} invalid={a.invalid} />{/snippet}
 		</FormField>
 		<div class="network">

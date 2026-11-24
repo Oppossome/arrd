@@ -9,7 +9,7 @@ import (
 )
 
 func (h *handlers) LookupSeries(ctx context.Context, req apigen.LookupSeriesRequestObject) (apigen.LookupSeriesResponseObject, error) {
-	out, err := h.svc.LookupSeries(ctx, deref(req.Params.Q), deref(req.Params.Year))
+	out, err := h.svc.LookupSeries(ctx, deref(req.Params.Q), deref(req.Params.Year), fromAPITitleFilter(req.Params.Genre, req.Params.Lang))
 	if err != nil {
 		return nil, err
 	}

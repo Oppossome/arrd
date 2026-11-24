@@ -19,6 +19,10 @@ type Series struct {
 	PosterPath    string          `json:"poster_path,omitempty"`
 	BackdropPath  string          `json:"backdrop_path,omitempty"`
 	Seasons       []SeasonSummary `json:"seasons,omitempty"` // only from GetSeries
+	// GenreIDs and OriginalLanguage (ISO 639-1) come with search, list and
+	// discover results, not with GetSeries.
+	GenreIDs         []int64 `json:"genre_ids,omitempty"`
+	OriginalLanguage string  `json:"original_language,omitempty"`
 }
 
 // SeasonSummary lists a season without its episodes.
@@ -37,15 +41,17 @@ type Episode struct {
 }
 
 type tmdbSeries struct {
-	ID           int64  `json:"id"`
-	Name         string `json:"name"`
-	OriginalName string `json:"original_name"`
-	FirstAirDate string `json:"first_air_date"`
-	Overview     string `json:"overview"`
-	Status       string `json:"status"`
-	PosterPath   string `json:"poster_path"`
-	BackdropPath string `json:"backdrop_path"`
-	Seasons      []struct {
+	ID               int64   `json:"id"`
+	Name             string  `json:"name"`
+	OriginalName     string  `json:"original_name"`
+	FirstAirDate     string  `json:"first_air_date"`
+	Overview         string  `json:"overview"`
+	Status           string  `json:"status"`
+	PosterPath       string  `json:"poster_path"`
+	BackdropPath     string  `json:"backdrop_path"`
+	GenreIDs         []int64 `json:"genre_ids"`
+	OriginalLanguage string  `json:"original_language"`
+	Seasons          []struct {
 		SeasonNumber int `json:"season_number"`
 		EpisodeCount int `json:"episode_count"`
 	} `json:"seasons"`
@@ -60,6 +66,7 @@ func (s tmdbSeries) toSeries() Series {
 		TMDBID: s.ID, TVDBID: s.ExternalIDs.TVDBID, IMDBID: s.ExternalIDs.IMDBID,
 		Title: s.Name, OriginalTitle: s.OriginalName, Year: yearOf(s.FirstAirDate),
 		Overview: s.Overview, Status: s.Status, PosterPath: s.PosterPath, BackdropPath: s.BackdropPath,
+		GenreIDs: s.GenreIDs, OriginalLanguage: s.OriginalLanguage,
 	}
 	for _, season := range s.Seasons {
 		out.Seasons = append(out.Seasons, SeasonSummary{Number: season.SeasonNumber, EpisodeCount: season.EpisodeCount})

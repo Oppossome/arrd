@@ -16,9 +16,8 @@
 {:else if genres.data}
 	<nav class="genres" aria-label="Browse by genre">
 		<Text size="sm" tone="muted" as="span">Browse</Text>
-		<Chip href={browseHref(kind)}>All</Chip>
 		{#each genres.data as genre (genre.id)}
-			<Chip href={browseHref(kind, { genre: genre.id })}>{genre.name}</Chip>
+			<Chip href={browseHref(kind, { genres: [genre.id] })}>{genre.name}</Chip>
 		{/each}
 	</nav>
 {/if}

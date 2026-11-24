@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"generic-arr-project/internal/metadata"
 )
 
-// Browsing TMDB's catalogue by genre, and titles like a given one. Results
+// Browsing TMDB's catalogue by genre and language, and titles like a given one. Results
 // carry the library id of titles already in the library.
 
 // BrowsePage is one page of a browse.
@@ -18,11 +19,29 @@ type BrowsePage[T any] struct {
 	TotalPages int
 }
 
-// BrowseQuery picks the genre (0 for all), sort order and page of a browse.
+// TitleFilter narrows titles by genre and original language. Its zero value
+// lets every title through.
+type TitleFilter struct {
+	// GenreIDs keeps titles with any of these TMDB genres; empty for every genre.
+	GenreIDs []int64
+	// OriginalLanguage keeps titles first made in this ISO 639-1 language; empty for every language.
+	OriginalLanguage string
+}
+
+// Matches reports whether a title with these genres and original language
+// passes the filter.
+func (f TitleFilter) Matches(genreIDs []int64, originalLanguage string) bool {
+	if f.OriginalLanguage != "" && f.OriginalLanguage != originalLanguage {
+		return false
+	}
+	return len(f.GenreIDs) == 0 || slices.ContainsFunc(genreIDs, func(id int64) bool { return slices.Contains(f.GenreIDs, id) })
+}
+
+// BrowseQuery picks the filter, sort order and page of a browse.
 type BrowseQuery struct {
-	GenreID int64
-	Sort    metadata.DiscoverSort
-	Page    int
+	TitleFilter
+	Sort metadata.DiscoverSort
+	Page int
 }
 
 // MovieGenres lists TMDB's movie genres.
@@ -41,6 +60,15 @@ func (s *Service) SeriesGenres(ctx context.Context) ([]metadata.Genre, error) {
 		return nil, err
 	}
 	return tm.SeriesGenres(ctx)
+}
+
+// Languages lists the original languages TMDB knows, by English name.
+func (s *Service) Languages(ctx context.Context) ([]metadata.Language, error) {
+	tm, err := s.tmdb(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return tm.Languages(ctx)
 }
 
 // BrowseMovies returns a page of TMDB movies by genre and sort order.
@@ -72,7 +100,10 @@ func (s *Service) BrowseSeries(ctx context.Context, q BrowseQuery) (BrowsePage[D
 }
 
 func (s *Service) discoverQuery(q BrowseQuery) metadata.DiscoverQuery {
-	return metadata.DiscoverQuery{GenreID: q.GenreID, Sort: q.Sort, Page: q.Page, Today: s.now()}
+	return metadata.DiscoverQuery{
+		GenreIDs: q.GenreIDs, OriginalLanguage: q.OriginalLanguage,
+		Sort: q.Sort, Page: q.Page, Today: s.now(),
+	}
 }
 
 // MoviesLike returns the movies TMDB recommends to people who liked a movie.

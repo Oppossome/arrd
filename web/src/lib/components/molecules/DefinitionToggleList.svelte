@@ -12,6 +12,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { Badge, Button, Checkbox, IconButton, Text, Toggle } from '#lib/components/atoms/index.js';
+	import { wordMatcher } from '#lib/search.js';
 	import type { IndexerDefinition } from '#lib/types.js';
 	import SearchBox from './SearchBox.svelte';
 
@@ -39,18 +40,16 @@
 
 	const onCount = $derived(definitions.filter((d) => states[d.id]?.enabled).length);
 	const shown = $derived.by(() => {
-		const q = filter.trim().toLowerCase();
+		const matches = wordMatcher(filter);
 		return definitions.filter(
-			(d) =>
-				(!onlyOn || states[d.id]?.enabled || d.id === editing) &&
-				(!q || d.name.toLowerCase().includes(q) || d.id.toLowerCase().includes(q))
+			(d) => (!onlyOn || states[d.id]?.enabled || d.id === editing) && matches([d.name, d.id, d.description])
 		);
 	});
 </script>
 
 <div class="wrap">
 	<div class="tools">
-		<SearchBox bind:value={filter} label="Filter sites" placeholder="Filter by name or id" />
+		<SearchBox bind:value={filter} label="Filter sites" placeholder="Filter by name, id or description" />
 		<Checkbox bind:checked={onlyOn} label="Only switched on ({onCount})" />
 	</div>
 	{#if shown.length === 0}

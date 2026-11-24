@@ -18,11 +18,20 @@ export const discoverHref = (kind: MediaKind, tmdbId: number) => `/${segment(kin
 /** A title's page in the library. */
 export const libraryHref = (kind: MediaKind, id: number) => `${LIBRARY}/${segment(kind)}/${id}`;
 
-/** Browsing TMDB's catalogue, by genre (every genre when absent) and order. */
-export function browseHref(kind: MediaKind, opts: { genre?: number; sort?: DiscoverSort } = {}): string {
+/**
+ * A discover page, searching or browsing TMDB's catalogue: by title, genres
+ * (any of them), original language and order. Each is left out when absent,
+ * and with none the page shows its curated lists.
+ */
+export function browseHref(
+	kind: MediaKind,
+	opts: { title?: string; genres?: number[]; language?: string; sort?: DiscoverSort } = {}
+): string {
 	const params = new URLSearchParams();
-	if (opts.genre !== undefined) params.set('genre', String(opts.genre));
+	if (opts.title !== undefined) params.set('q', opts.title);
+	for (const genre of opts.genres ?? []) params.append('genre', String(genre));
+	if (opts.language !== undefined) params.set('lang', opts.language);
 	if (opts.sort !== undefined) params.set('sort', opts.sort);
 	const query = params.toString();
-	return `/${segment(kind)}/browse${query ? `?${query}` : ''}`;
+	return `/${segment(kind)}${query ? `?${query}` : ''}`;
 }

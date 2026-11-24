@@ -26,7 +26,7 @@ func (h *handlers) MovieGenres(ctx context.Context, _ apigen.MovieGenresRequestO
 
 func (h *handlers) BrowseMovies(ctx context.Context, req apigen.BrowseMoviesRequestObject) (apigen.BrowseMoviesResponseObject, error) {
 	p := req.Params
-	out, err := h.svc.BrowseMovies(ctx, fromAPIBrowse(p.Genre, p.Sort, p.Page))
+	out, err := h.svc.BrowseMovies(ctx, fromAPIBrowse(fromAPITitleFilter(p.Genre, p.Lang), p.Sort, p.Page))
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func (h *handlers) SeriesGenres(ctx context.Context, _ apigen.SeriesGenresReques
 
 func (h *handlers) BrowseSeries(ctx context.Context, req apigen.BrowseSeriesRequestObject) (apigen.BrowseSeriesResponseObject, error) {
 	p := req.Params
-	out, err := h.svc.BrowseSeries(ctx, fromAPIBrowse(p.Genre, p.Sort, p.Page))
+	out, err := h.svc.BrowseSeries(ctx, fromAPIBrowse(fromAPITitleFilter(p.Genre, p.Lang), p.Sort, p.Page))
 	if err != nil {
 		return nil, err
 	}
@@ -162,10 +162,28 @@ func toAPIGenre(g metadata.Genre) apigen.Genre {
 	return apigen.Genre{ID: g.ID, Name: g.Name}
 }
 
-// fromAPIBrowse applies the spec's defaults (every genre, popular, page 1),
-// which the generated server leaves unset.
-func fromAPIBrowse(genre *int64, sort *apigen.DiscoverSort, page *int) library.BrowseQuery {
-	q := library.BrowseQuery{GenreID: deref(genre), Sort: metadata.SortPopular, Page: 1}
+func (h *handlers) DiscoverLanguages(ctx context.Context, _ apigen.DiscoverLanguagesRequestObject) (apigen.DiscoverLanguagesResponseObject, error) {
+	out, err := h.svc.Languages(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return apigen.DiscoverLanguages200JSONResponse(mapSlice(out, toAPILanguage)), nil
+}
+
+func toAPILanguage(l metadata.Language) apigen.Language {
+	return apigen.Language{Code: l.Code, Name: l.Name}
+}
+
+// fromAPITitleFilter maps the genre and lang query parameters, which the
+// spec has already checked.
+func fromAPITitleFilter(genres *apigen.BrowseGenre, lang *apigen.BrowseLanguage) library.TitleFilter {
+	return library.TitleFilter{GenreIDs: derefSlice(genres), OriginalLanguage: deref(lang)}
+}
+
+// fromAPIBrowse applies the spec's defaults (popular, page 1), which the
+// generated server leaves unset.
+func fromAPIBrowse(filter library.TitleFilter, sort *apigen.DiscoverSort, page *int) library.BrowseQuery {
+	q := library.BrowseQuery{TitleFilter: filter, Sort: metadata.SortPopular, Page: 1}
 	if sort != nil {
 		q.Sort = metadata.DiscoverSort(*sort)
 	}

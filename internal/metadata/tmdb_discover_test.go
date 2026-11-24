@@ -67,6 +67,21 @@ func TestGenres(t *testing.T) {
 	}
 }
 
+func TestLanguages(t *testing.T) {
+	c := newTMDB(t, "v3key", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/configuration/languages" {
+			http.NotFound(w, r)
+			return
+		}
+		fmt.Fprint(w, `[{"iso_639_1":"zz","english_name":"Zedish","name":""},{"iso_639_1":"xx","english_name":"No Language","name":""},`+
+			`{"iso_639_1":"qq","english_name":"Quenish","name":"Q"},{"iso_639_1":"","english_name":"Blank"}]`)
+	})
+	got, err := c.Languages(context.Background())
+	if err != nil || fmt.Sprint(got) != "[{qq Quenish} {zz Zedish}]" {
+		t.Errorf("languages = %v, %v", got, err)
+	}
+}
+
 func TestDiscover(t *testing.T) {
 	ctx := context.Background()
 	var last url.Values
@@ -81,7 +96,7 @@ func TestDiscover(t *testing.T) {
 	})
 	today := time.Date(2026, 11, 23, 15, 0, 0, 0, time.UTC)
 
-	p, err := c.DiscoverMovies(ctx, DiscoverQuery{GenreID: 101, Sort: SortPopular, Page: 2})
+	p, err := c.DiscoverMovies(ctx, DiscoverQuery{GenreIDs: []int64{101}, Sort: SortPopular, Page: 2})
 	if err != nil || len(p.Results) != 2 || p.Page != 2 || p.TotalPages != MaxDiscoverPage {
 		t.Fatalf("page = %+v, %v", p, err)
 	}
@@ -92,7 +107,7 @@ func TestDiscover(t *testing.T) {
 	if _, err := c.DiscoverMovies(ctx, DiscoverQuery{Sort: SortTopRated, Page: 1}); err != nil {
 		t.Fatal(err)
 	}
-	if last.Has("with_genres") || last.Get("sort_by") != "vote_average.desc" || last.Get("vote_count.gte") != "200" {
+	if last.Has("with_genres") || last.Has("with_original_language") || last.Get("sort_by") != "vote_average.desc" || last.Get("vote_count.gte") != "200" {
 		t.Errorf("top rated params = %v", last)
 	}
 
@@ -103,12 +118,15 @@ func TestDiscover(t *testing.T) {
 		t.Errorf("newest movie params = %v", last)
 	}
 
-	s, err := c.DiscoverSeries(ctx, DiscoverQuery{GenreID: 201, Sort: SortNewest, Page: 2, Today: today})
+	s, err := c.DiscoverSeries(ctx, DiscoverQuery{GenreIDs: []int64{201, 202}, OriginalLanguage: "xx", Sort: SortNewest, Page: 2, Today: today})
 	if err != nil || len(s.Results) != 1 || s.Results[0].Title != "Harbor Watch" || s.TotalPages != 9 {
 		t.Fatalf("series page = %+v, %v", s, err)
 	}
 	if lastPath != "/discover/tv" || last.Get("sort_by") != "first_air_date.desc" || last.Get("first_air_date.lte") != "2026-11-23" {
 		t.Errorf("newest series params = %s %v", lastPath, last)
+	}
+	if last.Get("with_genres") != "201|202" || last.Get("with_original_language") != "xx" {
+		t.Errorf("series filter params = %v", last)
 	}
 
 	for _, bad := range []DiscoverQuery{

@@ -63,7 +63,7 @@
 			{:else}
 				<div class="add">
 					<Button loading={adding} onclick={addToLibrary}>Add to library (monitored)</Button>
-					<Text size="xs" tone="muted">Or pick a torrent below. Monitored titles are downloaded automatically when a good release appears.</Text>
+					<Text size="xs" tone="muted">Or pick a source below. Monitored titles are downloaded automatically when a good release appears.</Text>
 				</div>
 				{#if addError}<ErrorMessage error={addError} />{/if}
 			{/if}

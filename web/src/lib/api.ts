@@ -103,6 +103,11 @@ async function done(result: Promise<unknown>): Promise<void> {
 const id = (id: number) => ({ params: { path: { id } } });
 const season = (id: number, season: number) => ({ params: { path: { id, season } } });
 const tmdb = (tmdbId: number) => ({ params: { path: { tmdbId } } });
+/** The genre and lang query parameters of a title filter, left out when unset. */
+export const filterQuery = (f?: T.TitleFilter) => ({
+	genre: f?.genres.length ? f.genres : undefined,
+	lang: f?.language
+});
 
 export const api = {
 	session: () => body(http().GET('/api/v1/auth/session')),
@@ -130,6 +135,7 @@ export const api = {
 	discover: {
 		movieList: (list: T.MovieList) =>
 			body(http().GET('/api/v1/discover/lists/movies/{list}', { params: { path: { list } } })),
+		languages: () => body(http().GET('/api/v1/discover/languages')),
 		movieGenres: () => body(http().GET('/api/v1/discover/movies/genres')),
 		browseMovies: (query: T.BrowseQuery) => body(http().GET('/api/v1/discover/movies/browse', { params: { query } })),
 		moviesLike: (tmdbId: number) => body(http().GET('/api/v1/discover/movies/{tmdbId}/recommendations', tmdb(tmdbId))),
@@ -158,8 +164,8 @@ export const api = {
 	movies: {
 		list: () => body(http().GET('/api/v1/movies')),
 		get: (movieId: number) => body(http().GET('/api/v1/movies/{id}', id(movieId))),
-		lookup: (q: string, year?: number) =>
-			body(http().GET('/api/v1/movies/lookup', { params: { query: { q: q || undefined, year } } })),
+		lookup: (q: string, year?: number, filter?: T.TitleFilter) =>
+			body(http().GET('/api/v1/movies/lookup', { params: { query: { q: q || undefined, year, ...filterQuery(filter) } } })),
 		add: (input: T.AddMovieRequest) => body(http().POST('/api/v1/movies', { body: input })),
 		update: (movieId: number, input: T.UpdateMovieRequest) =>
 			body(http().PUT('/api/v1/movies/{id}', { ...id(movieId), body: input })),
@@ -174,8 +180,8 @@ export const api = {
 		list: () => body(http().GET('/api/v1/series')),
 		get: (seriesId: number) => body(http().GET('/api/v1/series/{id}', id(seriesId))),
 		episodes: (seriesId: number) => body(http().GET('/api/v1/series/{id}/episodes', id(seriesId))),
-		lookup: (q: string, year?: number) =>
-			body(http().GET('/api/v1/series/lookup', { params: { query: { q: q || undefined, year } } })),
+		lookup: (q: string, year?: number, filter?: T.TitleFilter) =>
+			body(http().GET('/api/v1/series/lookup', { params: { query: { q: q || undefined, year, ...filterQuery(filter) } } })),
 		add: (input: T.AddSeriesRequest) => body(http().POST('/api/v1/series', { body: input })),
 		update: (seriesId: number, input: T.UpdateSeriesRequest) =>
 			body(http().PUT('/api/v1/series/{id}', { ...id(seriesId), body: input })),

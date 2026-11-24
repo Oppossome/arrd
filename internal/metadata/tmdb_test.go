@@ -3,6 +3,7 @@ package metadata
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -21,7 +22,7 @@ func TestSearchMovies(t *testing.T) {
 		if r.URL.Path != "/search/movie" || q.Get("query") != "orchard" || q.Get("year") != "1999" || q.Get("api_key") != "v3key" {
 			t.Errorf("unexpected request %s", r.URL)
 		}
-		_, _ = w.Write([]byte(`{"results":[{"id":900001,"title":"The Glass Orchard","original_title":"The Glass Orchard","release_date":"1999-03-31"},{"id":1,"title":"Untitled","release_date":""}]}`))
+		_, _ = w.Write([]byte(`{"results":[{"id":900001,"title":"The Glass Orchard","original_title":"The Glass Orchard","release_date":"1999-03-31","genre_ids":[101,102],"original_language":"qq"},{"id":1,"title":"Untitled","release_date":""}]}`))
 	})
 	got, err := c.SearchMovies(context.Background(), "orchard", 1999)
 	if err != nil {
@@ -29,6 +30,9 @@ func TestSearchMovies(t *testing.T) {
 	}
 	if len(got) != 2 || got[0].TMDBID != 900001 || got[0].Year != 1999 || got[1].Year != 0 {
 		t.Errorf("got %+v", got)
+	}
+	if fmt.Sprint(got[0].GenreIDs) != "[101 102]" || got[0].OriginalLanguage != "qq" {
+		t.Errorf("genres/language = %v %q", got[0].GenreIDs, got[0].OriginalLanguage)
 	}
 }
 

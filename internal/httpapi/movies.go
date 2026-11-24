@@ -9,7 +9,7 @@ import (
 )
 
 func (h *handlers) LookupMovies(ctx context.Context, req apigen.LookupMoviesRequestObject) (apigen.LookupMoviesResponseObject, error) {
-	out, err := h.svc.LookupMovies(ctx, deref(req.Params.Q), deref(req.Params.Year))
+	out, err := h.svc.LookupMovies(ctx, deref(req.Params.Q), deref(req.Params.Year), fromAPITitleFilter(req.Params.Genre, req.Params.Lang))
 	if err != nil {
 		return nil, err
 	}

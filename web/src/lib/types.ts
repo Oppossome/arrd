@@ -29,9 +29,10 @@ export type MovieList = Schemas['MovieList'];
 export type SeriesList = Schemas['SeriesList'];
 export type DiscoverSort = Schemas['DiscoverSort'];
 export type Genre = Schemas['Genre'];
+export type Language = Schemas['Language'];
 export type MovieBrowsePage = Schemas['MovieBrowsePage'];
 export type SeriesBrowsePage = Schemas['SeriesBrowsePage'];
-/** A browse of TMDB's catalogue: every genre when genre is absent. */
+/** A browse of TMDB's catalogue: every genre and language when absent. */
 export type BrowseQuery = NonNullable<operations['browseMovies']['parameters']['query']>;
 export type AddMovieRequest = Schemas['AddMovieRequest'];
 export type UpdateMovieRequest = Schemas['UpdateMovieRequest'];
@@ -86,3 +87,11 @@ export type SetupResult = Schemas['SetupResult'];
 export type PathsInput = Schemas['PathsInput'];
 export type PathsCheck = Schemas['PathsCheck'];
 export type DirListing = Schemas['DirListing'];
+
+/** Narrows TMDB titles by genre (any of them) and original language. */
+export interface TitleFilter {
+	/** TMDB genre ids; every genre when empty. */
+	genres: number[];
+	/** ISO 639-1 code; every language when absent. */
+	language?: string;
+}

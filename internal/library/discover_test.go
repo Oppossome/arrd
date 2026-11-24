@@ -21,7 +21,7 @@ func withPopular(t *testing.T, next *httptest.Server) *httptest.Server {
 			fmt.Fprint(w, `{"page":1,"results":[{"id":900001,"title":"The Glass Orchard","original_title":"The Glass Orchard","release_date":"1999-03-31"},
 				{"id":900002,"title":"Paper Lanterns","original_title":"Paper Lanterns","release_date":"2031-01-01"}]}`)
 		case "/search/movie":
-			fmt.Fprint(w, `{"page":1,"results":[{"id":900001,"title":"The Glass Orchard","original_title":"The Glass Orchard","release_date":"1999-03-31"}]}`)
+			fmt.Fprint(w, `{"page":1,"results":[{"id":900001,"title":"The Glass Orchard","original_title":"The Glass Orchard","release_date":"1999-03-31","genre_ids":[101],"original_language":"qq"}]}`)
 		case "/tv/popular":
 			fmt.Fprint(w, `{"page":1,"results":[{"id":800001,"name":"Harbor Watch","first_air_date":"2019-09-01"}]}`)
 		default:
@@ -78,8 +78,14 @@ func TestDiscoverMovie(t *testing.T) {
 	if popular, _ := svc.TMDBMovieList(ctx, metadata.MoviePopular); popular[0].LibraryID == nil || popular[1].LibraryID != nil {
 		t.Errorf("popular after grab = %+v", popular)
 	}
-	if found, err := svc.LookupMovies(ctx, "glass orchard", 0); err != nil || len(found) != 1 || found[0].LibraryID == nil || *found[0].LibraryID != movies[0].ID {
+	if found, err := svc.LookupMovies(ctx, "glass orchard", 0, TitleFilter{}); err != nil || len(found) != 1 || found[0].LibraryID == nil || *found[0].LibraryID != movies[0].ID {
 		t.Errorf("lookup after grab = %+v, %v", found, err)
+	}
+	if found, err := svc.LookupMovies(ctx, "glass orchard", 0, TitleFilter{GenreIDs: []int64{101}, OriginalLanguage: "qq"}); err != nil || len(found) != 1 {
+		t.Errorf("lookup with matching filter = %+v, %v", found, err)
+	}
+	if found, err := svc.LookupMovies(ctx, "glass orchard", 0, TitleFilter{OriginalLanguage: "zz"}); err != nil || len(found) != 0 {
+		t.Errorf("lookup with other language = %+v, %v", found, err)
 	}
 	// A second grab of the same torrent reuses the library movie and is refused as a duplicate.
 	if _, err := svc.GrabDiscoveredMovie(ctx, 900001, res.Releases[0]); err == nil {

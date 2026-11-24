@@ -59,7 +59,7 @@ func TestBrowseMovies(t *testing.T) {
 		t.Errorf("genres = %+v, %v", g, err)
 	}
 
-	page, err := svc.BrowseMovies(ctx, BrowseQuery{GenreID: 101, Sort: metadata.SortNewest, Page: 3})
+	page, err := svc.BrowseMovies(ctx, BrowseQuery{TitleFilter: TitleFilter{GenreIDs: []int64{101, 102}, OriginalLanguage: "qq"}, Sort: metadata.SortNewest, Page: 3})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func TestBrowseMovies(t *testing.T) {
 	if page.Items[0].LibraryID == nil || *page.Items[0].LibraryID != movie.ID || page.Items[1].LibraryID != nil {
 		t.Errorf("library ids = %v, %v", page.Items[0].LibraryID, page.Items[1].LibraryID)
 	}
-	if query.Get("with_genres") != "101" || query.Get("page") != "3" || query.Get("primary_release_date.lte") != "2026-11-23" {
+	if query.Get("with_genres") != "101|102" || query.Get("with_original_language") != "qq" || query.Get("page") != "3" || query.Get("primary_release_date.lte") != "2026-11-23" {
 		t.Errorf("discover query = %v", query)
 	}
 
@@ -96,7 +96,7 @@ func TestBrowseSeries(t *testing.T) {
 	if err != nil || len(page.Items) != 1 || page.Items[0].Title != "Lantern Coast" || page.TotalPages != 1 {
 		t.Fatalf("page = %+v, %v", page, err)
 	}
-	if query.Has("with_genres") || query.Get("sort_by") != "vote_average.desc" {
+	if query.Has("with_genres") || query.Has("with_original_language") || query.Get("sort_by") != "vote_average.desc" {
 		t.Errorf("discover query = %v", query)
 	}
 	like, err := svc.SeriesLike(ctx, 800002)
@@ -105,5 +105,28 @@ func TestBrowseSeries(t *testing.T) {
 	}
 	if _, err := svc.SeriesLike(ctx, 123); !errors.Is(err, ErrNotFound) {
 		t.Errorf("like unknown = %v", err)
+	}
+}
+
+func TestTitleFilterMatches(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		filter TitleFilter
+		genres []int64
+		lang   string
+		want   bool
+	}{
+		{"zero filter", TitleFilter{}, nil, "", true},
+		{"any genre matches", TitleFilter{GenreIDs: []int64{101, 102}}, []int64{103, 102}, "qq", true},
+		{"no genre matches", TitleFilter{GenreIDs: []int64{101}}, []int64{103}, "qq", false},
+		{"no genres on title", TitleFilter{GenreIDs: []int64{101}}, nil, "qq", false},
+		{"language matches", TitleFilter{OriginalLanguage: "qq"}, nil, "qq", true},
+		{"language differs", TitleFilter{OriginalLanguage: "qq"}, nil, "zz", false},
+		{"both match", TitleFilter{GenreIDs: []int64{101}, OriginalLanguage: "qq"}, []int64{101}, "qq", true},
+		{"genre matches, language differs", TitleFilter{GenreIDs: []int64{101}, OriginalLanguage: "qq"}, []int64{101}, "zz", false},
+	} {
+		if got := tc.filter.Matches(tc.genres, tc.lang); got != tc.want {
+			t.Errorf("%s: Matches = %v, want %v", tc.name, got, tc.want)
+		}
 	}
 }

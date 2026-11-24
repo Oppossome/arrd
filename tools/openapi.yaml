@@ -634,6 +634,8 @@ paths:
       parameters:
         - { $ref: "#/components/parameters/LookupQuery" }
         - { $ref: "#/components/parameters/LookupYear" }
+        - { $ref: "#/components/parameters/BrowseGenre" }
+        - { $ref: "#/components/parameters/BrowseLanguage" }
       responses:
         "200":
           description: TMDB matches.
@@ -772,6 +774,20 @@ paths:
                 items: { $ref: "#/components/schemas/LookupMovie" }
         default: { $ref: "#/components/responses/Error" }
 
+  /api/v1/discover/languages:
+    get:
+      operationId: discoverLanguages
+      tags: [discover]
+      responses:
+        "200":
+          description: The original languages TMDB knows, by English name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Language" }
+        default: { $ref: "#/components/responses/Error" }
+
   /api/v1/discover/movies/genres:
     get:
       operationId: movieGenres
@@ -790,9 +806,10 @@ paths:
     get:
       operationId: browseMovies
       tags: [discover]
-      description: A page of TMDB movies, optionally of one genre, in the chosen order.
+      description: A page of TMDB movies, optionally narrowed by genre and original language, in the chosen order.
       parameters:
         - { $ref: "#/components/parameters/BrowseGenre" }
+        - { $ref: "#/components/parameters/BrowseLanguage" }
         - { $ref: "#/components/parameters/BrowseSort" }
         - { $ref: "#/components/parameters/BrowsePage" }
       responses:
@@ -921,9 +938,10 @@ paths:
     get:
       operationId: browseSeries
       tags: [discover]
-      description: A page of TMDB series, optionally of one genre, in the chosen order.
+      description: A page of TMDB series, optionally narrowed by genre and original language, in the chosen order.
       parameters:
         - { $ref: "#/components/parameters/BrowseGenre" }
+        - { $ref: "#/components/parameters/BrowseLanguage" }
         - { $ref: "#/components/parameters/BrowseSort" }
         - { $ref: "#/components/parameters/BrowsePage" }
       responses:
@@ -1024,6 +1042,8 @@ paths:
       parameters:
         - { $ref: "#/components/parameters/LookupQuery" }
         - { $ref: "#/components/parameters/LookupYear" }
+        - { $ref: "#/components/parameters/BrowseGenre" }
+        - { $ref: "#/components/parameters/BrowseLanguage" }
       responses:
         "200":
           description: TMDB matches.
@@ -1400,8 +1420,18 @@ components:
     BrowseGenre:
       name: genre
       in: query
-      description: A TMDB genre id; every genre when absent.
-      schema: { type: integer, format: int64, minimum: 1 }
+      description: TMDB genre ids; a title matches when it has any of them. Every genre when absent.
+      style: form
+      explode: true
+      schema:
+        type: array
+        maxItems: 20
+        items: { type: integer, format: int64, minimum: 1 }
+    BrowseLanguage:
+      name: lang
+      in: query
+      description: An ISO 639-1 original language, such as "ja"; every language when absent.
+      schema: { type: string, pattern: "^[a-z]{2}$" }
     BrowseSort:
       name: sort
       in: query
@@ -1654,6 +1684,13 @@ components:
       properties:
         id: { type: integer, format: int64 }
         name: { type: string }
+    Language:
+      type: object
+      additionalProperties: false
+      required: [code, name]
+      properties:
+        code: { type: string, description: ISO 639-1 code. }
+        name: { type: string, description: English name. }
     MovieBrowsePage:
       type: object
       additionalProperties: false

@@ -6,6 +6,7 @@ export { default as DownloadCard } from './DownloadCard.svelte';
 export { default as DownloadProgress } from './DownloadProgress.svelte';
 export { default as EmptyState } from './EmptyState.svelte';
 export { default as ErrorMessage } from './ErrorMessage.svelte';
+export { default as FacetSearchBar, type FacetItem } from './FacetSearchBar.svelte';
 export { default as FormField } from './FormField.svelte';
 export { default as IndexerForm } from './IndexerForm.svelte';
 export { default as MonitorToggle } from './MonitorToggle.svelte';

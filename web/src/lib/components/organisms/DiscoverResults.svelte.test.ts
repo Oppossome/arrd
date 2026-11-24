@@ -19,6 +19,14 @@ describe('DiscoverResults', () => {
 		expect(String(fetch.mock.calls[0][0])).toContain('q=glass');
 	});
 
+	it('sends the filter with the query', async () => {
+		const fetch = mockFetch({ 'GET /api/v1/series/lookup': () => Response.json([]) });
+		renderWithClient(DiscoverResults, { kind: 'series' as const, query: 'harbor', filter: { genres: [201, 202], language: 'qq' } });
+
+		await screen.findByText('No shows match that search.');
+		expect(String(fetch.mock.calls[0][0])).toBe('/api/v1/series/lookup?q=harbor&genre=201&genre=202&lang=qq');
+	});
+
 	it('says when nothing matches', async () => {
 		mockFetch({ 'GET /api/v1/series/lookup': () => Response.json([]) });
 		renderWithClient(DiscoverResults, { kind: 'series' as const, query: 'nothing' });

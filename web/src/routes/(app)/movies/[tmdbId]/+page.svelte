@@ -9,9 +9,9 @@
 {#key tmdbId}
 	<DetailLayout>
 		{#snippet header()}<DiscoverHeader kind="movies" {tmdbId} />{/snippet}
-		<Section title="Torrents" description="Choose one to download. The movie is added to your library when you do.">
+		<MoreLikeThis kind="movies" {tmdbId} />
+		<Section title="Sources" description="Choose one to download. The movie is added to your library when you do.">
 			<ReleaseTable source={{ kind: 'discoverMovie', tmdbId }} auto />
 		</Section>
-		<MoreLikeThis kind="movies" {tmdbId} />
 	</DetailLayout>
 {/key}

@@ -5,15 +5,18 @@
 	import { posterCardProps } from '#lib/discover.js';
 	import type { MediaKind } from '#lib/links.js';
 	import { queries } from '#lib/query.js';
+	import type { TitleFilter } from '#lib/types.js';
 
 	interface Props {
 		kind: MediaKind;
 		/** What to search TMDB for. */
 		query: string;
+		/** Keeps only results with these genres and language; every result when unset. */
+		filter?: TitleFilter;
 	}
-	let { kind, query }: Props = $props();
+	let { kind, query, filter }: Props = $props();
 
-	const results = createQuery(() => queries.lookup(kind, query));
+	const results = createQuery(() => queries.lookup(kind, query, filter));
 </script>
 
 <section class="results">

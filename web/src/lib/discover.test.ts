@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { discoverRows, parseGenre, parseSort, posterCardProps } from './discover';
+import { discoverRows, parseSort, posterCardProps } from './discover';
 import { browseHref } from './links';
 
 describe('discoverRows', () => {
@@ -15,18 +15,6 @@ describe('parseSort', () => {
 		expect(parseSort('top_rated')).toBe('top_rated');
 		expect(parseSort(null)).toBe('popular');
 		expect(parseSort('random')).toBe('popular');
-	});
-});
-
-describe('parseGenre', () => {
-	it('accepts positive integer ids only', () => {
-		expect(parseGenre('101')).toBe(101);
-		expect(parseGenre(null)).toBeUndefined();
-		expect(parseGenre('0')).toBeUndefined();
-		expect(parseGenre('-3')).toBeUndefined();
-		expect(parseGenre('1.5')).toBeUndefined();
-		expect(parseGenre('drama')).toBeUndefined();
-		expect(parseGenre('99999999999999999999')).toBeUndefined();
 	});
 });
 
@@ -46,8 +34,11 @@ describe('posterCardProps', () => {
 
 describe('browseHref', () => {
 	it('adds only the options given', () => {
-		expect(browseHref('movies')).toBe('/movies/browse');
-		expect(browseHref('series', { genre: 201 })).toBe('/shows/browse?genre=201');
-		expect(browseHref('movies', { genre: 101, sort: 'newest' })).toBe('/movies/browse?genre=101&sort=newest');
+		expect(browseHref('movies')).toBe('/movies');
+		expect(browseHref('series', { genres: [201] })).toBe('/shows?genre=201');
+		expect(browseHref('movies', { genres: [101, 102], language: 'qq', sort: 'newest' })).toBe(
+			'/movies?genre=101&genre=102&lang=qq&sort=newest'
+		);
+		expect(browseHref('series', { title: 'harbor watch', genres: [] })).toBe('/shows?q=harbor+watch');
 	});
 });

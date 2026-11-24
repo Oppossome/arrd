@@ -1,30 +1,23 @@
 <script lang="ts">
-	import { createInfiniteQuery, createQuery } from '@tanstack/svelte-query';
+	import { createInfiniteQuery } from '@tanstack/svelte-query';
 	import { Button, Label, Select, Skeleton, Spinner } from '#lib/components/atoms/index.js';
 	import { EmptyState, ErrorMessage, PosterCard, PosterWall } from '#lib/components/molecules/index.js';
 	import { posterCardProps, sortOptions } from '#lib/discover.js';
 	import type { MediaKind } from '#lib/links.js';
 	import { queries } from '#lib/query.js';
-	import type { DiscoverSort, LookupMovie, LookupSeries } from '#lib/types.js';
+	import type { DiscoverSort, LookupMovie, LookupSeries, TitleFilter } from '#lib/types.js';
 
 	interface Props {
 		kind: MediaKind;
-		/** TMDB genre id; every genre when undefined. */
-		genre?: number;
+		/** The genres and language to browse. */
+		filter: TitleFilter;
 		sort: DiscoverSort;
-		/** The user picked another genre or order. */
-		onchange: (next: { genre?: number; sort: DiscoverSort }) => void;
+		/** The user picked another order. */
+		onsortchange: (sort: DiscoverSort) => void;
 	}
-	let { kind, genre, sort, onchange }: Props = $props();
+	let { kind, filter, sort, onsortchange }: Props = $props();
 
-	const ALL = 0;
-	const genres = createQuery(() => queries.genres(kind));
-	const genreOptions = $derived([
-		{ value: ALL, label: 'All genres' },
-		...(genres.data ?? []).map((g) => ({ value: g.id, label: g.name }))
-	]);
-
-	const pages = createInfiniteQuery(() => queries.browse(kind, genre, sort));
+	const pages = createInfiniteQuery(() => queries.browse(kind, filter, sort));
 	// Popularity shifts between page loads, so a title can reappear on a later page.
 	const items = $derived(
 		(pages.data?.pages ?? [])
@@ -55,21 +48,12 @@
 <div class="browse">
 	<div class="controls">
 		<div class="control">
-			<Label for="browse-genre">Genre</Label>
-			<Select
-				id="browse-genre"
-				value={genre ?? ALL}
-				options={genreOptions}
-				onchange={(e) => onchange({ genre: Number(e.currentTarget.value) || undefined, sort })}
-			/>
-		</div>
-		<div class="control">
 			<Label for="browse-sort">Order</Label>
 			<Select
 				id="browse-sort"
 				value={sort}
 				options={sortOptions}
-				onchange={(e) => onchange({ genre, sort: e.currentTarget.value as DiscoverSort })}
+				onchange={(e) => onsortchange(e.currentTarget.value as DiscoverSort)}
 			/>
 		</div>
 	</div>

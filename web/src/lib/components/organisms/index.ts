@@ -1,9 +1,9 @@
 export { default as ActiveDownloads } from './ActiveDownloads.svelte';
 export { default as BrowseGrid } from './BrowseGrid.svelte';
+export { default as DiscoverFilterBar } from './DiscoverFilterBar.svelte';
 export { default as DiscoverHeader } from './DiscoverHeader.svelte';
 export { default as DiscoverListRow } from './DiscoverListRow.svelte';
 export { default as DiscoverResults } from './DiscoverResults.svelte';
-export { default as DiscoverSearch } from './DiscoverSearch.svelte';
 export { default as DownloadSettingsForm } from './DownloadSettingsForm.svelte';
 export { default as EpisodeTable } from './EpisodeTable.svelte';
 export { default as GeneralSettingsForm } from './GeneralSettingsForm.svelte';

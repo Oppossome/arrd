@@ -610,6 +610,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/discover/languages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["discoverLanguages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/discover/movies/genres": {
         parameters: {
             query?: never;
@@ -633,7 +649,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description A page of TMDB movies, optionally of one genre, in the chosen order. */
+        /** @description A page of TMDB movies, optionally narrowed by genre and original language, in the chosen order. */
         get: operations["browseMovies"];
         put?: never;
         post?: never;
@@ -767,7 +783,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description A page of TMDB series, optionally of one genre, in the chosen order. */
+        /** @description A page of TMDB series, optionally narrowed by genre and original language, in the chosen order. */
         get: operations["browseSeries"];
         put?: never;
         post?: never;
@@ -1408,6 +1424,12 @@ export interface components {
             id: number;
             name: string;
         };
+        Language: {
+            /** @description ISO 639-1 code. */
+            code: string;
+            /** @description English name. */
+            name: string;
+        };
         MovieBrowsePage: {
             page: number;
             total_pages: number;
@@ -1883,8 +1905,10 @@ export interface components {
         /** @description Title to search for. */
         LookupQuery: string;
         LookupYear: number;
-        /** @description A TMDB genre id; every genre when absent. */
-        BrowseGenre: number;
+        /** @description TMDB genre ids; a title matches when it has any of them. Every genre when absent. */
+        BrowseGenre: number[];
+        /** @description An ISO 639-1 original language, such as "ja"; every language when absent. */
+        BrowseLanguage: string;
         BrowseSort: components["schemas"]["DiscoverSort"];
         /** @description TMDB serves at most 500 pages. */
         BrowsePage: number;
@@ -2826,6 +2850,10 @@ export interface operations {
                 /** @description Title to search for. */
                 q?: components["parameters"]["LookupQuery"];
                 year?: components["parameters"]["LookupYear"];
+                /** @description TMDB genre ids; a title matches when it has any of them. Every genre when absent. */
+                genre?: components["parameters"]["BrowseGenre"];
+                /** @description An ISO 639-1 original language, such as "ja"; every language when absent. */
+                lang?: components["parameters"]["BrowseLanguage"];
             };
             header?: never;
             path?: never;
@@ -3058,6 +3086,27 @@ export interface operations {
             default: components["responses"]["Error"];
         };
     };
+    discoverLanguages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The original languages TMDB knows, by English name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Language"][];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
     movieGenres: {
         parameters: {
             query?: never;
@@ -3082,8 +3131,10 @@ export interface operations {
     browseMovies: {
         parameters: {
             query?: {
-                /** @description A TMDB genre id; every genre when absent. */
+                /** @description TMDB genre ids; a title matches when it has any of them. Every genre when absent. */
                 genre?: components["parameters"]["BrowseGenre"];
+                /** @description An ISO 639-1 original language, such as "ja"; every language when absent. */
+                lang?: components["parameters"]["BrowseLanguage"];
                 sort?: components["parameters"]["BrowseSort"];
                 /** @description TMDB serves at most 500 pages. */
                 page?: components["parameters"]["BrowsePage"];
@@ -3270,8 +3321,10 @@ export interface operations {
     browseSeries: {
         parameters: {
             query?: {
-                /** @description A TMDB genre id; every genre when absent. */
+                /** @description TMDB genre ids; a title matches when it has any of them. Every genre when absent. */
                 genre?: components["parameters"]["BrowseGenre"];
+                /** @description An ISO 639-1 original language, such as "ja"; every language when absent. */
+                lang?: components["parameters"]["BrowseLanguage"];
                 sort?: components["parameters"]["BrowseSort"];
                 /** @description TMDB serves at most 500 pages. */
                 page?: components["parameters"]["BrowsePage"];
@@ -3418,6 +3471,10 @@ export interface operations {
                 /** @description Title to search for. */
                 q?: components["parameters"]["LookupQuery"];
                 year?: components["parameters"]["LookupYear"];
+                /** @description TMDB genre ids; a title matches when it has any of them. Every genre when absent. */
+                genre?: components["parameters"]["BrowseGenre"];
+                /** @description An ISO 639-1 original language, such as "ja"; every language when absent. */
+                lang?: components["parameters"]["BrowseLanguage"];
             };
             header?: never;
             path?: never;

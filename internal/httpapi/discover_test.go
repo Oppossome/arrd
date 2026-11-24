@@ -15,6 +15,7 @@ func TestDiscoverRoutes(t *testing.T) {
 		t.Fatal(err)
 	}
 	for path, want := range map[string]string{
+		"/api/v1/discover/languages":                     "discoverLanguages",
 		"/api/v1/discover/lists/movies/popular":          "movieList",
 		"/api/v1/discover/movies/genres":                 "movieGenres",
 		"/api/v1/discover/movies/browse":                 "browseMovies",
@@ -47,6 +48,11 @@ func TestDiscoverRejectsBadParams(t *testing.T) {
 		"/api/v1/discover/movies/browse?page=0",
 		"/api/v1/discover/series/browse?page=501",
 		"/api/v1/discover/series/browse?genre=0",
+		"/api/v1/discover/series/browse?genre=16&genre=0",
+		"/api/v1/discover/movies/browse?lang=JA",
+		"/api/v1/discover/movies/browse?lang=jpn",
+		"/api/v1/movies/lookup?q=orchard&lang=j",
+		"/api/v1/series/lookup?q=harbor&genre=zero",
 	} {
 		if code, body := do(t, srv, "GET", path, "", true); code != http.StatusBadRequest {
 			t.Errorf("%s = %d %v, want 400", path, code, body)

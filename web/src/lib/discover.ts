@@ -44,13 +44,6 @@ export function parseSort(value: string | null): T.DiscoverSort {
 	return sortOptions.find((o) => o.value === value)?.value ?? DEFAULT_SORT;
 }
 
-/** A browse's genre id from the URL; undefined (every genre) unless a positive integer. */
-export function parseGenre(value: string | null): number | undefined {
-	if (value === null || !/^\d+$/.test(value)) return undefined;
-	const id = Number(value);
-	return id > 0 && Number.isSafeInteger(id) ? id : undefined;
-}
-
 /** PosterCard props for a TMDB title, linking to its discover page. */
 export function posterCardProps(kind: MediaKind, item: T.LookupMovie | T.LookupSeries) {
 	return {

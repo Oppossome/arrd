@@ -6,7 +6,7 @@ import GenreChips from './GenreChips.svelte';
 afterEach(() => vi.unstubAllGlobals());
 
 describe('GenreChips', () => {
-	it('links each genre to its browse page', async () => {
+	it('links each genre to the shows filtered by it', async () => {
 		mockFetch({
 			'GET /api/v1/discover/series/genres': () =>
 				Response.json([
@@ -18,9 +18,8 @@ describe('GenreChips', () => {
 
 		const nav = await screen.findByRole('navigation', { name: 'Browse by genre' });
 		expect(within(nav).getAllByRole('link').map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
-			['All', '/shows/browse'],
-			['Harbor Mysteries', '/shows/browse?genre=201'],
-			['Quiet Comedies', '/shows/browse?genre=202']
+			['Harbor Mysteries', '/shows?genre=201'],
+			['Quiet Comedies', '/shows?genre=202']
 		]);
 	});
 });

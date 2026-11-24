@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"generic-arr-project/internal/metadata"
@@ -104,8 +105,10 @@ func aired(e db.Episode, today string) bool {
 
 func (s *Service) today() string { return s.now().UTC().Format("2006-01-02") }
 
-// LookupSeries searches TMDB for TV series, marking those in the library.
-func (s *Service) LookupSeries(ctx context.Context, query string, year int) ([]DiscoverSeries, error) {
+// LookupSeries searches TMDB for TV series, keeping those that pass filter and
+// marking those in the library. TMDB search takes no genre or language, so
+// the filter is applied to its results.
+func (s *Service) LookupSeries(ctx context.Context, query string, year int, filter TitleFilter) ([]DiscoverSeries, error) {
 	query = strings.TrimSpace(query)
 	if query == "" {
 		return nil, invalid("q", "is required")
@@ -118,6 +121,7 @@ func (s *Service) LookupSeries(ctx context.Context, query string, year int) ([]D
 	if err != nil {
 		return nil, err
 	}
+	series = slices.DeleteFunc(series, func(m metadata.Series) bool { return !filter.Matches(m.GenreIDs, m.OriginalLanguage) })
 	return s.annotateSeries(ctx, series)
 }
 

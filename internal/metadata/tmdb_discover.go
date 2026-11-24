@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"slices"
 	"strconv"
+	"strings"
 	"time"
 )
 
 // Discovery: TMDB's curated lists (trending, popular, ...), its genres, and
-// its /discover endpoint for browsing by genre.
+// languages, and its /discover endpoint for browsing by genre and language.
 
 // MovieList names one of TMDB's curated movie lists.
 type MovieList string
@@ -93,6 +95,33 @@ func (c *TMDB) genres(ctx context.Context, path string) ([]Genre, error) {
 	return resp.Genres, nil
 }
 
+// Language is an original language TMDB knows.
+type Language struct {
+	Code string // ISO 639-1
+	Name string // English name
+}
+
+// Languages lists the languages TMDB knows, sorted by English name. Entries
+// without an English name (TMDB has a few placeholders) are left out.
+func (c *TMDB) Languages(ctx context.Context) ([]Language, error) {
+	var resp []struct {
+		Code        string `json:"iso_639_1"`
+		EnglishName string `json:"english_name"`
+	}
+	if err := c.get(ctx, "/configuration/languages", nil, &resp); err != nil {
+		return nil, err
+	}
+	out := make([]Language, 0, len(resp))
+	for _, l := range resp {
+		if l.Code == "" || l.EnglishName == "" || l.EnglishName == "No Language" {
+			continue
+		}
+		out = append(out, Language{Code: l.Code, Name: l.EnglishName})
+	}
+	slices.SortFunc(out, func(a, b Language) int { return strings.Compare(a.Name, b.Name) })
+	return out, nil
+}
+
 // DiscoverSort orders a browse.
 type DiscoverSort string
 
@@ -110,9 +139,12 @@ const MaxDiscoverPage = 500
 
 // DiscoverQuery is a browse of TMDB's catalogue.
 type DiscoverQuery struct {
-	GenreID int64 // 0 for every genre
-	Sort    DiscoverSort
-	Page    int // from 1
+	// GenreIDs narrows to titles with any of these genres; empty for every genre.
+	GenreIDs []int64
+	// OriginalLanguage narrows to one ISO 639-1 original language; empty for every language.
+	OriginalLanguage string
+	Sort             DiscoverSort
+	Page             int // from 1
 	// Today bounds "newest", so titles not yet released are left out.
 	Today time.Time
 }
@@ -149,8 +181,16 @@ func (q DiscoverQuery) params(dateField string) (url.Values, error) {
 		return nil, fmt.Errorf("tmdb: discover page %d is outside 1-%d", q.Page, MaxDiscoverPage)
 	}
 	p := url.Values{"page": {strconv.Itoa(q.Page)}}
-	if q.GenreID > 0 {
-		p.Set("with_genres", strconv.FormatInt(q.GenreID, 10))
+	if len(q.GenreIDs) > 0 {
+		ids := make([]string, len(q.GenreIDs))
+		for i, id := range q.GenreIDs {
+			ids[i] = strconv.FormatInt(id, 10)
+		}
+		// TMDB reads "|" as OR and "," as AND.
+		p.Set("with_genres", strings.Join(ids, "|"))
+	}
+	if q.OriginalLanguage != "" {
+		p.Set("with_original_language", q.OriginalLanguage)
 	}
 	switch q.Sort {
 	case SortPopular:

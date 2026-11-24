@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"generic-arr-project/internal/metadata"
@@ -59,8 +60,10 @@ func movieFromRow(r db.Movie, activeDownload bool) Movie {
 	return m
 }
 
-// LookupMovies searches TMDB, marking movies that are in the library.
-func (s *Service) LookupMovies(ctx context.Context, query string, year int) ([]DiscoverMovie, error) {
+// LookupMovies searches TMDB, keeping the movies that pass filter and marking
+// those in the library. TMDB search takes no genre or language, so the filter
+// is applied to its results.
+func (s *Service) LookupMovies(ctx context.Context, query string, year int, filter TitleFilter) ([]DiscoverMovie, error) {
 	query = strings.TrimSpace(query)
 	if query == "" {
 		return nil, invalid("q", "is required")
@@ -73,6 +76,7 @@ func (s *Service) LookupMovies(ctx context.Context, query string, year int) ([]D
 	if err != nil {
 		return nil, err
 	}
+	movies = slices.DeleteFunc(movies, func(m metadata.Movie) bool { return !filter.Matches(m.GenreIDs, m.OriginalLanguage) })
 	return s.annotateMovies(ctx, movies)
 }
 

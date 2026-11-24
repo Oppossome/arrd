@@ -37,6 +37,10 @@ type Movie struct {
 	Overview      string `json:"overview"`
 	PosterPath    string `json:"poster_path,omitempty"`
 	BackdropPath  string `json:"backdrop_path,omitempty"`
+	// GenreIDs and OriginalLanguage (ISO 639-1) come with search, list and
+	// discover results, not with GetMovie.
+	GenreIDs         []int64 `json:"genre_ids,omitempty"`
+	OriginalLanguage string  `json:"original_language,omitempty"`
 }
 
 // SearchMovies searches by title, optionally narrowed by year (0 = any).
@@ -69,14 +73,16 @@ func (c *TMDB) GetMovie(ctx context.Context, tmdbID int64) (*Movie, error) {
 }
 
 type tmdbMovie struct {
-	ID            int64  `json:"id"`
-	IMDBID        string `json:"imdb_id"`
-	Title         string `json:"title"`
-	OriginalTitle string `json:"original_title"`
-	ReleaseDate   string `json:"release_date"`
-	Overview      string `json:"overview"`
-	PosterPath    string `json:"poster_path"`
-	BackdropPath  string `json:"backdrop_path"`
+	ID               int64   `json:"id"`
+	IMDBID           string  `json:"imdb_id"`
+	Title            string  `json:"title"`
+	OriginalTitle    string  `json:"original_title"`
+	ReleaseDate      string  `json:"release_date"`
+	Overview         string  `json:"overview"`
+	PosterPath       string  `json:"poster_path"`
+	BackdropPath     string  `json:"backdrop_path"`
+	GenreIDs         []int64 `json:"genre_ids"`
+	OriginalLanguage string  `json:"original_language"`
 }
 
 func (m tmdbMovie) toMovie() Movie {
@@ -87,6 +93,7 @@ func (m tmdbMovie) toMovie() Movie {
 	return Movie{
 		TMDBID: m.ID, IMDBID: m.IMDBID, Title: m.Title, OriginalTitle: m.OriginalTitle,
 		Year: year, Overview: m.Overview, PosterPath: m.PosterPath, BackdropPath: m.BackdropPath,
+		GenreIDs: m.GenreIDs, OriginalLanguage: m.OriginalLanguage,
 	}
 }
 
