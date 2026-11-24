@@ -1,11 +1,9 @@
 package importer
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"syscall"
 )
 
 // CheckWritableDir verifies that path is an absolute, existing, writable
@@ -42,16 +40,4 @@ func SameFilesystem(a, b string) (bool, error) {
 		return false, err
 	}
 	return da == db, nil
-}
-
-func device(path string) (uint64, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return 0, err
-	}
-	st, ok := info.Sys().(*syscall.Stat_t)
-	if !ok {
-		return 0, errors.New("filesystem device ids are not available on this platform")
-	}
-	return uint64(st.Dev), nil //nolint:unconvert // Dev's width varies by platform
 }

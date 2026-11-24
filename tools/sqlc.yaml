@@ -23,3 +23,4 @@ sql:
           tvdb_id: TVDBID
           max_size_mb: MaxSizeMB
           tmdb_api_key: TMDBAPIKey
+          expose_lan: ExposeLAN

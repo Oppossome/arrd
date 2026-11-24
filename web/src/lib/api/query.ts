@@ -145,6 +145,7 @@ export const keys = {
 	settings: {
 		all: ['settings'] as const,
 		general: ['settings', 'general'] as const,
+		network: ['settings', 'network'] as const,
 		downloads: ['settings', 'downloads'] as const,
 		quality: ['settings', 'quality'] as const,
 		vpn: ['settings', 'vpn'] as const
@@ -353,6 +354,7 @@ export const queries = {
 	}),
 
 	generalSettings: () => ({ queryKey: keys.settings.general, queryFn: api.settings.general }),
+	networkSettings: () => ({ queryKey: keys.settings.network, queryFn: api.settings.network }),
 	downloadSettings: () => ({ queryKey: keys.settings.downloads, queryFn: api.settings.downloads }),
 	qualitySettings: () => ({ queryKey: keys.settings.quality, queryFn: api.settings.quality }),
 	vpnSettings: (poll: boolean) => ({
@@ -550,6 +552,10 @@ export const mutations = {
 	updateGeneral: (qc: QueryClient) => ({
 		mutationFn: (tmdbKey: string) => api.settings.updateGeneral(tmdbKey),
 		onSuccess: () => invalidate(qc, keys.settings.general)
+	}),
+	updateNetwork: (qc: QueryClient) => ({
+		mutationFn: (exposeLAN: boolean) => api.settings.updateNetwork(exposeLAN),
+		onSuccess: () => invalidate(qc, keys.settings.network)
 	}),
 	regenerateAPIKey: (qc: QueryClient) => ({
 		mutationFn: () => api.settings.regenerateAPIKey(),

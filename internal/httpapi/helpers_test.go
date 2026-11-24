@@ -33,6 +33,7 @@ type testServer struct {
 	*httptest.Server
 	base   string
 	apiKey string
+	svc    *library.Services
 }
 
 // newUnconfiguredServer starts arrd's API before onboarding.
@@ -85,7 +86,7 @@ func newUnconfiguredServerUI(t *testing.T, ui fs.FS) *testServer {
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 	checkContract(t, srv.Client())
-	return &testServer{Server: srv, base: base}
+	return &testServer{Server: srv, base: base, svc: svc}
 }
 
 func setupBody(base string) string {

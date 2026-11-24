@@ -10,6 +10,7 @@ type AppSetting struct {
 	APIKey           string
 	TMDBAPIKey       string
 	PasswordHash     string
+	ExposeLAN        bool
 }
 
 type Download struct {

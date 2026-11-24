@@ -6,6 +6,7 @@
 		GeneralSettingsForm,
 		IndexerDefinitionsPanel,
 		IndexersPanel,
+		NetworkSettingsForm,
 		QualitySettingsForm,
 		RootFoldersPanel,
 		VPNPanel
@@ -14,6 +15,7 @@
 
 	const tabs = [
 		{ key: 'general', label: 'General' },
+		{ key: 'network', label: 'Network' },
 		{ key: 'downloads', label: 'Downloads' },
 		{ key: 'quality', label: 'Quality' },
 		{ key: 'folders', label: 'Folders' },
@@ -30,6 +32,7 @@
 
 <SettingsLayout tabs={[...tabs]} {active} onselect={(k) => goto(`?tab=${k}`, { replace: true })}>
 	{#if active === 'general'}<GeneralSettingsForm />
+	{:else if active === 'network'}<NetworkSettingsForm />
 	{:else if active === 'downloads'}<DownloadSettingsForm />
 	{:else if active === 'quality'}<QualitySettingsForm />
 	{:else if active === 'folders'}<RootFoldersPanel />

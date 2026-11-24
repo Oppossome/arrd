@@ -63,6 +63,7 @@ export type DownloadSettings = Schemas['DownloadSettings'];
 export type SettingsUpdate = Schemas['SettingsUpdate'];
 export type QualitySettings = Schemas['QualitySettings'];
 export type GeneralSettings = Schemas['GeneralSettings'];
+export type NetworkSettings = Schemas['NetworkSettings'];
 export type RootFolder = Schemas['RootFolder'];
 
 export type SearchCap = Schemas['SearchCap'];

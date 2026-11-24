@@ -5,7 +5,9 @@ package app
 import (
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -17,6 +19,7 @@ import (
 	"generic-arr-project/internal/httpapi"
 	"generic-arr-project/internal/library"
 	"generic-arr-project/internal/store"
+	"generic-arr-project/internal/tray"
 	"generic-arr-project/web"
 )
 
@@ -56,6 +59,12 @@ func openStore(ctx context.Context, dataDir string) (*store.Store, error) {
 
 // Run starts arrd and blocks until ctx is cancelled or the HTTP server fails.
 func Run(ctx context.Context, opts Options, log *slog.Logger) error {
+	release, err := lockDataDir(opts.DataDir)
+	if err != nil {
+		return err
+	}
+	defer release()
+
 	st, err := openStore(ctx, opts.DataDir)
 	if err != nil {
 		return err
@@ -78,12 +87,14 @@ func Run(ctx context.Context, opts Options, log *slog.Logger) error {
 	defer svc.Stop()
 
 	setupToken := ""
+	openURL := tray.BrowseURL(opts.Listen)
 	if !svc.Auth.SetupComplete() {
 		if setupToken, err = newSetupToken(); err != nil {
 			return err
 		}
+		openURL = fmt.Sprintf("%s/setup?token=%s", openURL, setupToken)
 		log.Warn("setup required: complete onboarding with this one-time token",
-			"url", fmt.Sprintf("http://%s/setup?token=%s", opts.Listen, setupToken),
+			"url", openURL,
 			"api", "POST /api/v1/setup with header X-Setup-Token")
 	}
 
@@ -91,7 +102,13 @@ func Run(ctx context.Context, opts Options, log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
-	srv := &http.Server{Addr: opts.Listen, Handler: api, ReadHeaderTimeout: 10 * time.Second}
+	srv := &http.Server{Handler: api, ReadHeaderTimeout: 10 * time.Second}
+	listener := newExposer(srv, opts.Listen, startMDNSResponder(log), log)
+	defer listener.Close()
+	if err := startListener(ctx, st, listener, log); err != nil {
+		return err
+	}
+	svc.Settings.SetNetworkApplier(listener)
 
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -102,17 +119,17 @@ func Run(ctx context.Context, opts Options, log *slog.Logger) error {
 		svc.RunScheduler(runCtx, library.DefaultSchedule)
 	}()
 
-	serveErr := make(chan error, 1)
+	wg.Add(1)
 	go func() {
-		log.Info("http server listening", "addr", opts.Listen, "data_dir", opts.DataDir)
-		serveErr <- srv.ListenAndServe()
+		defer wg.Done()
+		tray.Run(runCtx, tray.Options{URL: openURL, Quit: cancel, Log: log})
 	}()
 
 	var runErr error
 	select {
-	case err := <-serveErr:
+	case err := <-listener.Failed():
 		runErr = fmt.Errorf("http server: %w", err)
-	case <-ctx.Done():
+	case <-runCtx.Done(): // signal, or Quit from the tray
 		log.Info("shutting down")
 	}
 	cancel()
@@ -123,6 +140,36 @@ func Run(ctx context.Context, opts Options, log *slog.Logger) error {
 	}
 	wg.Wait()
 	return runErr
+}
+
+// startListener binds the HTTP listener per the saved LAN setting. If LAN
+// access cannot start (port taken, no multicast) arrd still starts on
+// -listen, so a network problem cannot lock the user out.
+func startListener(ctx context.Context, st *store.Store, listener *exposer, log *slog.Logger) error {
+	exposeLAN, err := savedExposeLAN(ctx, st)
+	if err != nil {
+		return err
+	}
+	if exposeLAN {
+		err := listener.ApplyLAN(true)
+		if err == nil {
+			return nil
+		}
+		log.Warn("LAN access unavailable; serving on the listen address only", "err", err)
+	}
+	return listener.ApplyLAN(false)
+}
+
+// savedExposeLAN is the saved LAN setting; off before onboarding.
+func savedExposeLAN(ctx context.Context, st *store.Store) (bool, error) {
+	app, err := st.GetAppSettings(ctx)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("load settings: %w", err)
+	}
+	return app.ExposeLAN, nil
 }
 
 func newSetupToken() (string, error) {

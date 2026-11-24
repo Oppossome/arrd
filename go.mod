@@ -3,6 +3,7 @@ module generic-arr-project
 go 1.27.3
 
 require (
+	fyne.io/systray v1.12.2
 	github.com/Kcchouette/cardigann-go v0.8.0
 	github.com/anacrolix/dht/v2 v2.23.1-0.20260525063928-ec3a9bd99456
 	github.com/anacrolix/torrent v1.63.0
@@ -10,7 +11,11 @@ require (
 	github.com/maxmind/mmdbwriter v1.2.0
 	github.com/oapi-codegen/runtime v1.9.1
 	github.com/oschwald/maxminddb-golang/v2 v2.9.1
+	github.com/pion/logging v0.2.4
+	github.com/pion/mdns/v2 v2.0.7
 	golang.org/x/crypto v0.59.0
+	golang.org/x/net v0.63.0
+	golang.org/x/sys v0.50.0
 	golang.zx2c4.com/wireguard v0.0.0-20261024220952-b3bc704ef0ee
 	modernc.org/sqlite v1.63.0
 )
@@ -58,6 +63,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/jsonpointer v1.0.2 // indirect
 	github.com/go-sql-driver/mysql v1.9.3 // indirect
+	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/google/btree v1.1.2 // indirect
 	github.com/google/cel-go v0.28.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
@@ -92,8 +98,6 @@ require (
 	github.com/pion/dtls/v3 v3.0.11 // indirect
 	github.com/pion/ice/v4 v4.0.2 // indirect
 	github.com/pion/interceptor v0.1.40 // indirect
-	github.com/pion/logging v0.2.4 // indirect
-	github.com/pion/mdns/v2 v2.0.7 // indirect
 	github.com/pion/randutil v0.1.0 // indirect
 	github.com/pion/rtcp v1.2.15 // indirect
 	github.com/pion/rtp v1.8.18 // indirect
@@ -137,9 +141,7 @@ require (
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
 	golang.org/x/exp v0.0.0-20251113190631-e25ba8c21ef6 // indirect
 	golang.org/x/mod v0.43.0 // indirect
-	golang.org/x/net v0.63.0 // indirect
 	golang.org/x/sync v0.25.0 // indirect
-	golang.org/x/sys v0.50.0 // indirect
 	golang.org/x/text v0.44.0 // indirect
 	golang.org/x/time v0.16.0 // indirect
 	golang.org/x/tools v0.53.0 // indirect

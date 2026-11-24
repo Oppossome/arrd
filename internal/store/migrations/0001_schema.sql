@@ -8,7 +8,9 @@ CREATE TABLE app_settings (
     setup_completed_at TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     api_key            TEXT    NOT NULL,
     tmdb_api_key       TEXT    NOT NULL DEFAULT '',
-    password_hash      TEXT    NOT NULL  -- argon2id PHC string for the admin login
+    password_hash      TEXT    NOT NULL, -- argon2id PHC string for the admin login
+    -- Serve the web UI on all interfaces and announce it over mDNS.
+    expose_lan         BOOLEAN NOT NULL DEFAULT 0 CHECK (expose_lan IN (0, 1))
 );
 
 -- The VPN, for any provider. settings is a JSON object of the provider's

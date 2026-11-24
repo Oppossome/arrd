@@ -5,6 +5,8 @@ ARGS ?=
 
 .PHONY: run web
 
+# Headless/container builds (no tray icon): go build -tags notray ./cmd/arrd
+
 # Build the web UI (embedded into the binary via web/embed.go), then run arrd.
 run: web
 	go run ./cmd/arrd $(ARGS)

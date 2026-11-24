@@ -264,6 +264,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/settings/network": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getNetworkSettings"];
+        /** @description Applies immediately. While expose_lan is on, the web UI is served on all interfaces at the configured port and announced over mDNS. Nothing is saved if the listener or the mDNS responder cannot start. */
+        put: operations["putNetworkSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/settings/api-key/regenerate": {
         parameters: {
             query?: never;
@@ -1828,6 +1845,16 @@ export interface components {
         GeneralSettingsInput: {
             tmdb_api_key: string;
         };
+        NetworkSettings: {
+            expose_lan: boolean;
+            /** @description The mDNS hostname announced while expose_lan is on. */
+            hostname: string;
+            /** @description The web UI's address on the local network; omitted while expose_lan is off. */
+            lan_url?: string;
+        };
+        NetworkSettingsInput: {
+            expose_lan: boolean;
+        };
         RootFolder: {
             /** Format: int64 */
             id: number;
@@ -2455,6 +2482,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GeneralSettings"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getNetworkSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Network settings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NetworkSettings"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    putNetworkSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NetworkSettingsInput"];
+            };
+        };
+        responses: {
+            /** @description The saved settings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NetworkSettings"];
                 };
             };
             default: components["responses"]["Error"];

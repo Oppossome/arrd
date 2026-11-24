@@ -14,3 +14,6 @@ UPDATE app_settings SET api_key = @api_key WHERE id = 1;
 
 -- name: SetPasswordHash :exec
 UPDATE app_settings SET password_hash = @password_hash WHERE id = 1;
+
+-- name: SetExposeLAN :exec
+UPDATE app_settings SET expose_lan = @expose_lan WHERE id = 1;

@@ -244,6 +244,8 @@ export const api = {
 	settings: {
 		general: () => body(http().GET('/api/v1/settings/general')),
 		updateGeneral: (tmdb_api_key: string) => body(http().PUT('/api/v1/settings/general', { body: { tmdb_api_key } })),
+		network: () => body(http().GET('/api/v1/settings/network')),
+		updateNetwork: (expose_lan: boolean) => body(http().PUT('/api/v1/settings/network', { body: { expose_lan } })),
 		regenerateAPIKey: () => body(http().POST('/api/v1/settings/api-key/regenerate')),
 		changePassword: (current_password: string, new_password: string) =>
 			done(http().PUT('/api/v1/settings/password', { body: { current_password, new_password } })),

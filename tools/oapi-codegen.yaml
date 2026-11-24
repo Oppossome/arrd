@@ -10,4 +10,4 @@ output-options:
   # Served by hand for range and caching support.
   exclude-operation-ids: [getPoster]
   name-normalizer: ToCamelCaseWithInitialisms
-  additional-initialisms: [TMDB, IMDB, TVDB, RSS, VPN, DNS, TV, MB]
+  additional-initialisms: [TMDB, IMDB, TVDB, RSS, VPN, DNS, TV, MB, LAN]

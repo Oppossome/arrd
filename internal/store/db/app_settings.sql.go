@@ -12,7 +12,7 @@ import (
 const createAppSettings = `-- name: CreateAppSettings :one
 INSERT INTO app_settings (id, api_key, tmdb_api_key, password_hash)
 VALUES (1, ?1, ?2, ?3)
-RETURNING id, setup_completed_at, api_key, tmdb_api_key, password_hash
+RETURNING id, setup_completed_at, api_key, tmdb_api_key, password_hash, expose_lan
 `
 
 type CreateAppSettingsParams struct {
@@ -30,12 +30,13 @@ func (q *Queries) CreateAppSettings(ctx context.Context, arg CreateAppSettingsPa
 		&i.APIKey,
 		&i.TMDBAPIKey,
 		&i.PasswordHash,
+		&i.ExposeLAN,
 	)
 	return i, err
 }
 
 const getAppSettings = `-- name: GetAppSettings :one
-SELECT id, setup_completed_at, api_key, tmdb_api_key, password_hash FROM app_settings WHERE id = 1
+SELECT id, setup_completed_at, api_key, tmdb_api_key, password_hash, expose_lan FROM app_settings WHERE id = 1
 `
 
 func (q *Queries) GetAppSettings(ctx context.Context) (AppSetting, error) {
@@ -47,6 +48,7 @@ func (q *Queries) GetAppSettings(ctx context.Context) (AppSetting, error) {
 		&i.APIKey,
 		&i.TMDBAPIKey,
 		&i.PasswordHash,
+		&i.ExposeLAN,
 	)
 	return i, err
 }
@@ -57,6 +59,15 @@ UPDATE app_settings SET api_key = ?1 WHERE id = 1
 
 func (q *Queries) SetAPIKey(ctx context.Context, apiKey string) error {
 	_, err := q.db.ExecContext(ctx, setAPIKey, apiKey)
+	return err
+}
+
+const setExposeLAN = `-- name: SetExposeLAN :exec
+UPDATE app_settings SET expose_lan = ?1 WHERE id = 1
+`
+
+func (q *Queries) SetExposeLAN(ctx context.Context, exposeLan bool) error {
+	_, err := q.db.ExecContext(ctx, setExposeLAN, exposeLan)
 	return err
 }
 

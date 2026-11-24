@@ -10,6 +10,13 @@
 //	arrd fetch   [-data-dir DIR] [-out DIR] [-ip-echo URL] <magnet>
 //
 // Environment: ARRD_DATA_DIR, ARRD_LISTEN, ARRD_DEFINITIONS_DIR, ARRD_LOG_LEVEL.
+//
+// Settings → Network can serve the web UI on all interfaces at the -listen
+// port and announce it over mDNS as arrd.local.
+//
+// Only one server may use a data directory at a time (DATA-DIR/arrd.lock).
+// On Linux and Windows desktops serve shows a tray icon to open the web UI or
+// quit; build with -tags notray for containers and other headless installs.
 package main
 
 import (

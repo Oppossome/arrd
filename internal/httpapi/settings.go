@@ -24,6 +24,22 @@ func (h *handlers) PutGeneralSettings(ctx context.Context, req apigen.PutGeneral
 	return apigen.PutGeneralSettings200JSONResponse(toAPIGeneralSettings(out)), nil
 }
 
+func (h *handlers) GetNetworkSettings(ctx context.Context, _ apigen.GetNetworkSettingsRequestObject) (apigen.GetNetworkSettingsResponseObject, error) {
+	out, err := h.svc.Settings.NetworkSettings(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return apigen.GetNetworkSettings200JSONResponse(toAPINetworkSettings(out)), nil
+}
+
+func (h *handlers) PutNetworkSettings(ctx context.Context, req apigen.PutNetworkSettingsRequestObject) (apigen.PutNetworkSettingsResponseObject, error) {
+	out, err := h.svc.Settings.UpdateNetworkSettings(ctx, settings.NetworkSettingsInput{ExposeLAN: req.Body.ExposeLAN})
+	if err != nil {
+		return nil, err
+	}
+	return apigen.PutNetworkSettings200JSONResponse(toAPINetworkSettings(out)), nil
+}
+
 func (h *handlers) RegenerateAPIKey(ctx context.Context, _ apigen.RegenerateAPIKeyRequestObject) (apigen.RegenerateAPIKeyResponseObject, error) {
 	key, err := h.svc.Auth.RegenerateAPIKey(ctx)
 	if err != nil {
@@ -152,4 +168,12 @@ func fromAPIQualitySettings(in apigen.QualitySettingsInput) settings.QualitySett
 
 func toAPIRootFolder(f settings.RootFolder) apigen.RootFolder {
 	return apigen.RootFolder{ID: f.ID, MediaType: apigen.MediaType(f.MediaType), Path: f.Path, IsDefault: f.IsDefault}
+}
+
+func toAPINetworkSettings(s settings.NetworkSettings) apigen.NetworkSettings {
+	out := apigen.NetworkSettings{ExposeLAN: s.ExposeLAN, Hostname: s.Hostname}
+	if s.LANURL != "" {
+		out.LANURL = &s.LANURL
+	}
+	return out
 }

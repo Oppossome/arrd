@@ -199,3 +199,28 @@ func TestOneIndexerPerDefinition(t *testing.T) {
 		t.Errorf("second indexer for one definition = %v, want unique violation on indexers.definition", err)
 	}
 }
+
+func TestExposeLAN(t *testing.T) {
+	ctx := context.Background()
+	st := openTestStore(t)
+	created, err := st.CreateAppSettings(ctx, db.CreateAppSettingsParams{APIKey: "fictional-api-key", PasswordHash: "fictional-hash"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created.ExposeLAN {
+		t.Error("expose_lan defaults to on")
+	}
+	if err := st.SetExposeLAN(ctx, true); err != nil {
+		t.Fatal(err)
+	}
+	got, err := st.GetAppSettings(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.ExposeLAN {
+		t.Error("expose_lan not saved")
+	}
+	if _, err := st.DB.ExecContext(ctx, `UPDATE app_settings SET expose_lan = 2`); err == nil {
+		t.Error("expose_lan accepted 2")
+	}
+}

@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 )
 
 // Mode is how files get from the download dir into the library.
@@ -122,7 +121,7 @@ func Transfer(src, dst string, mode Mode) (Result, error) {
 		if err == nil {
 			return Result{Method: ModeHardlink}, nil
 		}
-		if !errors.Is(err, syscall.EXDEV) {
+		if !isCrossDevice(err) {
 			return Result{}, fmt.Errorf("hardlink: %w", err)
 		}
 		if err := copyFile(src, dst); err != nil {
@@ -134,7 +133,7 @@ func Transfer(src, dst string, mode Mode) (Result, error) {
 		if err == nil {
 			return Result{Method: ModeMove}, nil
 		}
-		if !errors.Is(err, syscall.EXDEV) {
+		if !isCrossDevice(err) {
 			return Result{}, fmt.Errorf("move: %w", err)
 		}
 		if err := copyFile(src, dst); err != nil {
