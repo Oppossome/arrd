@@ -248,3 +248,11 @@ func fromAPIBrowse(filter media.TitleFilter, sort *apigen.DiscoverSort, page *in
 	}
 	return q
 }
+
+func (h *handlers) DiscoverSeriesReleases(ctx context.Context, req apigen.DiscoverSeriesReleasesRequestObject) (apigen.DiscoverSeriesReleasesResponseObject, error) {
+	out, err := h.svc.Acquire.SearchDiscoveredSeriesPacks(ctx, req.TMDBID)
+	if err != nil {
+		return nil, err
+	}
+	return apigen.DiscoverSeriesReleases200JSONResponse(toAPISearchResult(out)), nil
+}

@@ -893,6 +893,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/discover/series/{tmdbId}/releases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Searches the indexers for whole-series packs (multi-season or "Complete Series"; for a one-season series, its season pack), whether or not the series is in the library. */
+        get: operations["discoverSeriesReleases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/discover/series/{tmdbId}/grab": {
         parameters: {
             query?: never;
@@ -902,7 +919,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Downloads a single-season TV release, first adding the series to the library (unmonitored, default root folder) if it is not there. */
+        /** @description Downloads a TV release (episodes, a season pack or a multi-season pack), first adding the series to the library (unmonitored, default root folder) if it is not there. */
         post: operations["discoverGrabSeries"];
         delete?: never;
         options?: never;
@@ -1008,6 +1025,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/series/{id}/releases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Searches the indexers for whole-series packs (multi-season or "Complete Series"; for a one-season series, its season pack). */
+        get: operations["seriesReleases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/series/{id}/grab": {
         parameters: {
             query?: never;
@@ -1017,6 +1051,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Downloads a TV release (episodes, a season pack or a multi-season pack) for the series. */
         post: operations["grabSeries"];
         delete?: never;
         options?: never;
@@ -1696,6 +1731,10 @@ export interface components {
             season?: number;
             episodes?: number[];
             season_pack?: boolean;
+            /** @description The last season of a multi-season pack; season is the first. */
+            last_season?: number;
+            /** @description A pack of every season that names none ("Complete Series"). */
+            complete_series?: boolean;
         };
         /** @description A release to grab, as returned by a search. Only title and indexer_id are needed. */
         ReleaseInput: {
@@ -1719,6 +1758,10 @@ export interface components {
             season?: number;
             episodes?: number[];
             season_pack?: boolean;
+            /** @description The last season of a multi-season pack; season is the first. */
+            last_season?: number;
+            /** @description A pack of every season that names none ("Complete Series"). */
+            complete_series?: boolean;
         };
         IndexerFailure: {
             /** Format: int64 */
@@ -3587,6 +3630,29 @@ export interface operations {
             default: components["responses"]["Error"];
         };
     };
+    discoverSeriesReleases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tmdbId: components["parameters"]["TMDBID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Releases found. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchResult"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
     discoverGrabSeries: {
         parameters: {
             query?: never;
@@ -3823,6 +3889,29 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    seriesReleases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Releases found by an interactive search. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchResult"];
+                };
             };
             default: components["responses"]["Error"];
         };

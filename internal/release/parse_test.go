@@ -19,6 +19,8 @@ func TestParse(t *testing.T) {
 		{"2031.2009.1080p.BluRay.x264-MOSS", Info{Title: "2031", Year: 2009, Resolution: 1080, Source: SourceBluRay, Codec: "x264", Group: "MOSS"}},
 		{"Movie Without Year 1080p WEB-DL", Info{Title: "Movie Without Year", Resolution: 1080, Source: SourceWEBDL}},
 		{"The.Movie.2020.1080p.WEB-DL.DDP5.1.H.264-FERN.mkv", Info{Title: "The Movie", Year: 2020, Resolution: 1080, Source: SourceWEBDL, Codec: "x264", Group: "FERN"}},
+		{"[lanternsubs] Hollow Tide Season 2 (S02) REPACK (BD 1080p x265 Opus - AAC) [Dual-Audio]", Info{Title: "Hollow Tide", Resolution: 1080, Source: SourceBluRay, Codec: "x265", Proper: true, Group: "lanternsubs", IsTV: true, Season: 2, SeasonPack: true}},
+		{"[Moss Fansubs] Paper Kites S01E07 [1080p WEB-DL]", Info{Title: "Paper Kites", Resolution: 1080, Source: SourceWEBDL, Group: "Moss Fansubs", IsTV: true, Season: 1, Episodes: []int{7}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

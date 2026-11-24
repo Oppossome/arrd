@@ -20,6 +20,9 @@ import (
 const (
 	PackName   = "Harbor.Watch.S01.1080p.WEB-DL.x264-QUILL"
 	SingleName = "Harbor.Watch.S02E01.1080p.WEB-DL.x264-QUILL.mkv"
+	// MultiSeasonName is offered by a whole-series search. It downloads the
+	// season 1 pack: tests only check what a grab expects from it.
+	MultiSeasonName = "Harbor.Watch.S01-S02.1080p.WEB-DL.x264-QUILL"
 )
 
 // seedPath seeds the file or folder at dir/name and returns a magnet that
@@ -94,6 +97,13 @@ func FakeTVIndexer(t *testing.T, packMagnet, singleMagnet string) *httptest.Serv
 			return []SiteRow{
 				row(PackName, "/dl/pack", 80<<20),
 				row("Harbor.Watch.S01E02.720p.HDTV.x264-PIKA", "/dl/none", 20<<20),
+			}
+		case q.Get("t") == "tvsearch" && q.Get("season") == "" && q.Get("q") == "Harbor Watch": // whole-series packs
+			return []SiteRow{
+				row(MultiSeasonName, "/dl/pack", 150<<20),
+				row("Harbor.Watch.Complete.Series.720p.HDTV.x264-PIKA", "/dl/none", 90<<20),
+				row(PackName, "/dl/pack", 80<<20),
+				row(SingleName, "/dl/single", 30<<20),
 			}
 		case q.Get("t") == "tvsearch":
 			return nil // nothing for season 2 yet

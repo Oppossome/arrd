@@ -10,7 +10,7 @@
 	interface Props {
 		kind: 'movies' | 'series';
 		tmdbId: number;
-		/** Movies: show the sources to download from. (Series pick a season or episode instead.) */
+		/** Show the sources to download from: the movie, or whole-series packs of a series. */
 		ondownload?: (request: SourcesRequest) => void;
 	}
 	let { kind, tmdbId, ondownload }: Props = $props();
@@ -36,6 +36,13 @@
 	{#if kind === 'movies' && ondownload}
 		<Button variant="primary" onclick={() => ondownload({ title: item.title, source: { kind: 'discoverMovie', tmdbId } })}>
 			<Icon name="download" />Download
+		</Button>
+	{:else if kind === 'series' && ondownload}
+		<Button
+			variant="primary"
+			onclick={() => ondownload({ title: `${item.title} · Whole series`, source: { kind: 'discoverSeries', tmdbId } })}
+		>
+			<Icon name="download" />Download series
 		</Button>
 	{/if}
 	{#if inLibrary}

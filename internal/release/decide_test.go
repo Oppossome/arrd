@@ -117,3 +117,39 @@ func TestEvaluateMovieRejectsTV(t *testing.T) {
 		t.Error("TV release accepted for a movie")
 	}
 }
+
+func TestEvaluateSeriesPack(t *testing.T) {
+	series := SeriesTarget{Title: "Harbor Watch", Year: 2019}
+	lim := Limits{MinResolution: 720, MaxResolution: 1080, MaxSizeBytes: 4 << 30}
+	threeSeasons := SeriesPackWant{SeasonEpisodes: map[int]int{1: 10, 2: 10, 3: 10}}
+	oneSeason := SeriesPackWant{SeasonEpisodes: map[int]int{1: 10}}
+	tests := []struct {
+		release    string
+		size       int64
+		want       SeriesPackWant
+		wantReject string
+	}{
+		{"Harbor.Watch.S01-S03.1080p.WEB-DL-G", 60 << 30, threeSeasons, ""}, // 2 GiB per episode
+		{"Harbor.Watch.S01-S02.1080p.WEB-DL-G", 40 << 30, threeSeasons, ""}, // partial packs are offered too
+		{"Harbor.Watch.Complete.Series.1080p.WEB-DL-G", 60 << 30, threeSeasons, ""},
+		{"Harbor.Watch.S01-S03.1080p.WEB-DL-G", 150 << 30, threeSeasons, "exceeds"},
+		{"Harbor.Watch.S04-S05.1080p.WEB-DL-G", 40 << 30, threeSeasons, "covers no season"},
+		{"Harbor.Watch.S01.1080p.WEB-DL-G", 20 << 30, threeSeasons, "only season 1"},
+		{"Harbor.Watch.S01.1080p.WEB-DL-G", 20 << 30, oneSeason, ""}, // a one-season show's pack is the whole series
+		{"Harbor.Watch.S01E01.1080p.WEB-DL-G", 2 << 30, threeSeasons, "individual episodes"},
+		{"Harbor.Watch.Live.S01-S03.1080p.WEB-DL-G", 60 << 30, threeSeasons, "title"},
+		{"Harbor.Watch.2019.1080p.WEB-DL-G", 2 << 30, threeSeasons, "not a TV release"},
+	}
+	for _, tt := range tests {
+		d := EvaluateSeriesPack(Candidate{Info: Parse(tt.release), Size: tt.size, Seeders: 5}, series, tt.want, lim)
+		if tt.wantReject == "" {
+			if !d.Accepted {
+				t.Errorf("%s: rejected %v", tt.release, d.Rejects)
+			}
+			continue
+		}
+		if d.Accepted || !strings.Contains(strings.Join(d.Rejects, "; "), tt.wantReject) {
+			t.Errorf("%s: rejects %v, want one containing %q", tt.release, d.Rejects, tt.wantReject)
+		}
+	}
+}

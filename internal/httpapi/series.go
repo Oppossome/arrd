@@ -225,3 +225,11 @@ func fromAPIAddSeries(in apigen.AddSeriesRequest) media.AddSeriesInput {
 func fromAPIUpdateSeries(in apigen.UpdateSeriesRequest) media.UpdateSeriesInput {
 	return media.UpdateSeriesInput{Monitored: in.Monitored, RootFolderID: in.RootFolderID}
 }
+
+func (h *handlers) SeriesReleases(ctx context.Context, req apigen.SeriesReleasesRequestObject) (apigen.SeriesReleasesResponseObject, error) {
+	out, err := h.svc.Acquire.SearchSeriesPacks(ctx, req.ID)
+	if err != nil {
+		return nil, err
+	}
+	return apigen.SeriesReleases200JSONResponse(toAPISearchResult(out)), nil
+}

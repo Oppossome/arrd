@@ -151,6 +151,7 @@ export const api = {
 		seriesLike: (tmdbId: number) => body(http().GET('/api/v1/discover/series/{tmdbId}/recommendations', tmdb(tmdbId))),
 		seriesRecommendations: () => body(http().GET('/api/v1/discover/series/recommendations')),
 		show: (tmdbId: number) => body(http().GET('/api/v1/discover/series/{tmdbId}', tmdb(tmdbId))),
+		seriesReleases: (tmdbId: number) => body(http().GET('/api/v1/discover/series/{tmdbId}/releases', tmdb(tmdbId))),
 		seasonReleases: (tmdbId: number, season: number) =>
 			body(
 				http().GET('/api/v1/discover/series/{tmdbId}/seasons/{season}/releases', {
@@ -196,6 +197,7 @@ export const api = {
 		remove: (seriesId: number) => done(http().DELETE('/api/v1/series/{id}', id(seriesId))),
 		refresh: (seriesId: number) => body(http().POST('/api/v1/series/{id}/refresh', id(seriesId))),
 		searchWanted: (seriesId: number) => done(http().POST('/api/v1/series/{id}/search', id(seriesId))),
+		releases: (seriesId: number) => body(http().GET('/api/v1/series/{id}/releases', id(seriesId))),
 		grab: (seriesId: number, release: T.ReleaseResult) =>
 			body(http().POST('/api/v1/series/{id}/grab', { ...id(seriesId), body: release })),
 		setSeasonMonitored: (seriesId: number, n: number, monitored: boolean) =>

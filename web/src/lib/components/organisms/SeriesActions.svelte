@@ -7,8 +7,14 @@
 	import { timeAgo } from '#lib/utils/format.js';
 	import { queries, useMutation } from '#lib/api/query.js';
 	import { toasts } from '#lib/stores/toast.svelte.js';
+	import type { SourcesRequest } from '#lib/domain/releases.js';
 
-	let { id }: { id: number } = $props();
+	interface Props {
+		id: number;
+		/** Show the sources to download whole-series packs from. */
+		ondownload?: (request: SourcesRequest) => void;
+	}
+	let { id, ondownload }: Props = $props();
 
 	const series = createQuery(() => queries.series(id));
 	const monitor = useMutation('setSeriesMonitored');
@@ -30,6 +36,11 @@
 				onclick={() => search.mutate(id, { onSuccess: () => toasts.push('info', 'Search finished; see Activity for grabs') })}
 				><Icon name="search" />Search wanted episodes</Button
 			>
+			{#if ondownload}
+				<Button onclick={() => ondownload({ title: `${s.title} · Whole series`, source: { kind: 'series', seriesId: id } })}>
+					<Icon name="download" />Download series
+				</Button>
+			{/if}
 			<MonitorToggle
 				showLabel
 				monitored={s.monitored}

@@ -47,7 +47,7 @@ describe('DiscoverActions for a movie not in the library', () => {
 });
 
 describe('DiscoverActions for a series in the library', () => {
-	it('links to the library copy and leaves downloads to the season list', async () => {
+	it('links to the library copy and offers whole-series packs', async () => {
 		mockFetch({
 			'GET /api/v1/discover/series/800001': () =>
 				Response.json({
@@ -59,9 +59,16 @@ describe('DiscoverActions for a series in the library', () => {
 					library_id: 4
 				})
 		});
-		renderWithClient(DiscoverActions, { kind: 'series' as const, tmdbId: 800001, ondownload: vi.fn() });
+		const ondownload = vi.fn();
+		renderWithClient(DiscoverActions, { kind: 'series' as const, tmdbId: 800001, ondownload });
 
 		expect(await screen.findByRole('link', { name: 'Open in library' })).toHaveAttribute('href', '/library/shows/4');
 		expect(screen.queryByRole('button', { name: 'Download' })).not.toBeInTheDocument();
+
+		await fireEvent.click(screen.getByRole('button', { name: 'Download series' }));
+		expect(ondownload).toHaveBeenCalledWith({
+			title: 'Harbor Watch · Whole series',
+			source: { kind: 'discoverSeries', tmdbId: 800001 }
+		});
 	});
 });

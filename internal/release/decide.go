@@ -173,7 +173,7 @@ func EvaluateEpisode(c Candidate, s SeriesTarget, want EpisodeWant, lim Limits) 
 	case !info.IsTV:
 		reject.add("not a TV release")
 	case info.MultiSeason:
-		reject.add("multi-season packs are not supported")
+		reject.add("multi-season pack; download it from the whole series instead")
 	case info.Season != want.Season:
 		reject.add("season %d, wanted season %d", info.Season, want.Season)
 	case info.SeasonPack:
@@ -195,6 +195,49 @@ func EvaluateEpisode(c Candidate, s SeriesTarget, want EpisodeWant, lim Limits) 
 		items = int64(max(len(info.Episodes), 1))
 	}
 	checkQuality(c, lim, c.Size/items, reject)
+
+	d.Accepted = len(d.Rejects) == 0
+	d.Score = qualityScore(info)
+	return d
+}
+
+// SeriesPackWant describes a search for a whole series in one release.
+type SeriesPackWant struct {
+	// SeasonEpisodes is the number of episodes in each regular season
+	// (specials excluded), used to judge size per episode.
+	SeasonEpisodes map[int]int
+}
+
+// EvaluateSeriesPack checks a release offered as the whole series: a
+// multi-season or "Complete Series" pack covering at least one season, or,
+// for a series with a single season, that season's pack.
+func EvaluateSeriesPack(c Candidate, s SeriesTarget, want SeriesPackWant, lim Limits) Decision {
+	var d Decision
+	reject := rejecter{&d}
+	info := c.Info
+
+	if ok, why := MatchesSeries(info, s); !ok {
+		reject.add("%s", why)
+	}
+	episodes := 0
+	switch {
+	case !info.IsTV:
+		reject.add("not a TV release")
+	case !info.SeasonPack:
+		reject.add("individual episodes, wanted a series pack")
+	case !info.MultiSeason && len(want.SeasonEpisodes) > 1:
+		reject.add("only season %d; download it from the season instead", info.Season)
+	default:
+		for season, count := range want.SeasonEpisodes {
+			if info.CoversSeason(season) {
+				episodes += count
+			}
+		}
+		if episodes == 0 {
+			reject.add("covers no season of the series")
+		}
+	}
+	checkQuality(c, lim, c.Size/int64(max(episodes, 1)), reject)
 
 	d.Accepted = len(d.Rejects) == 0
 	d.Score = qualityScore(info)

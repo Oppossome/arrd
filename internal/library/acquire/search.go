@@ -33,6 +33,10 @@ type ReleaseResult struct {
 	Season     *int  `json:"season,omitempty"`
 	Episodes   []int `json:"episodes,omitempty"`
 	SeasonPack bool  `json:"season_pack,omitempty"`
+	// LastSeason is the last season of a multi-season pack (Season is the
+	// first); CompleteSeries is a pack of every season that names none.
+	LastSeason     *int `json:"last_season,omitempty"`
+	CompleteSeries bool `json:"complete_series,omitempty"`
 }
 
 // SearchResult is the outcome of searching all indexers for one item.
@@ -100,6 +104,11 @@ func rankReleases(found []indexers.FoundRelease, failures []indexers.IndexerFail
 		if info.IsTV {
 			season := info.Season
 			item.Season, item.Episodes, item.SeasonPack = &season, info.Episodes, info.SeasonPack
+			item.CompleteSeries = info.CompleteSeries
+			if info.MultiSeason && !info.CompleteSeries {
+				last := info.LastSeason
+				item.LastSeason = &last
+			}
 		}
 		ranked = append(ranked, release.Ranked[ReleaseResult]{Decision: d, Seeders: f.Seeders, Item: item})
 	}

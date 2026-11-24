@@ -125,3 +125,24 @@ func discoveredSeriesRow(meta *metadata.Series) db.Series {
 		OriginalTitle: meta.OriginalTitle, Year: int64(meta.Year),
 	}
 }
+
+// SearchDiscoveredSeriesPacks searches the indexers for whole-series packs
+// of a TMDB series. A series in the library is searched as such.
+func (s *Service) SearchDiscoveredSeriesPacks(ctx context.Context, tmdbID int64) (SearchResult, error) {
+	if row, err := s.store.GetSeriesByTMDBID(ctx, tmdbID); err == nil {
+		return s.SearchSeriesPacks(ctx, row.ID)
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		return SearchResult{}, fmt.Errorf("check library: %w", err)
+	}
+	meta, err := s.media.TMDBSeries(ctx, tmdbID)
+	if err != nil {
+		return SearchResult{}, err
+	}
+	counts := map[int]int{}
+	for _, ss := range meta.Seasons {
+		if ss.Number > 0 && ss.EpisodeCount > 0 {
+			counts[ss.Number] = ss.EpisodeCount
+		}
+	}
+	return s.searchSeriesPacks(ctx, discoveredSeriesRow(meta), release.SeriesPackWant{SeasonEpisodes: counts})
+}

@@ -111,6 +111,7 @@ export const keys = {
 		movie: (tmdbId: number) => ['discover', 'movie', tmdbId] as const,
 		show: (tmdbId: number) => ['discover', 'show', tmdbId] as const,
 		movieReleases: (tmdbId: number) => ['discover', 'movieReleases', tmdbId] as const,
+		seriesReleases: (tmdbId: number) => ['discover', 'seriesReleases', tmdbId] as const,
 		seasonReleases: (tmdbId: number, season: number) => ['discover', 'seasonReleases', tmdbId, season] as const,
 		episodeReleases: (tmdbId: number, season: number, episode: number) =>
 			['discover', 'episodeReleases', tmdbId, season, episode] as const,
@@ -128,6 +129,7 @@ export const keys = {
 		list: ['series', 'list'] as const,
 		detail: (id: number) => ['series', 'detail', id] as const,
 		episodes: (id: number) => ['series', 'episodes', id] as const,
+		releases: (id: number) => ['series', 'releases', id] as const,
 		seasonReleases: (id: number, season: number) => ['series', 'seasonReleases', id, season] as const,
 		lookup: (q: string, filter: T.TitleFilter = NO_FILTER) => ['series', 'lookup', q, ...filterKey(filter)] as const
 	},
@@ -174,12 +176,16 @@ export function releaseKey(source: ReleaseSource): QueryKey {
 	switch (source.kind) {
 		case 'movie':
 			return keys.movies.releases(source.movieId);
+		case 'series':
+			return keys.series.releases(source.seriesId);
 		case 'season':
 			return keys.series.seasonReleases(source.seriesId, source.season);
 		case 'episode':
 			return keys.episodes.releases(source.episodeId);
 		case 'discoverMovie':
 			return keys.discover.movieReleases(source.tmdbId);
+		case 'discoverSeries':
+			return keys.discover.seriesReleases(source.tmdbId);
 		case 'discoverSeason':
 			return keys.discover.seasonReleases(source.tmdbId, source.season);
 		case 'discoverEpisode':
@@ -191,12 +197,16 @@ function searchReleases(source: ReleaseSource): Promise<T.SearchResult> {
 	switch (source.kind) {
 		case 'movie':
 			return api.movies.releases(source.movieId);
+		case 'series':
+			return api.series.releases(source.seriesId);
 		case 'season':
 			return api.series.seasonReleases(source.seriesId, source.season);
 		case 'episode':
 			return api.episodes.releases(source.episodeId);
 		case 'discoverMovie':
 			return api.discover.movieReleases(source.tmdbId);
+		case 'discoverSeries':
+			return api.discover.seriesReleases(source.tmdbId);
 		case 'discoverSeason':
 			return api.discover.seasonReleases(source.tmdbId, source.season);
 		case 'discoverEpisode':

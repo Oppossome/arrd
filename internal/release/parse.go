@@ -45,8 +45,13 @@ type Info struct {
 	IsTV        bool
 	Season      int   // first season covered
 	Episodes    []int // empty for season packs
-	SeasonPack  bool  // a whole season ("S01", "Season 1")
+	SeasonPack  bool  // whole seasons ("S01", "Season 1", "S01-S03")
 	MultiSeason bool  // several seasons ("S01-S03"); Season is the first
+	LastSeason  int   // the last season of a multi-season pack; 0 otherwise
+
+	// CompleteSeries is a pack of every season that names no seasons
+	// ("Complete Series"). It is also a MultiSeason pack.
+	CompleteSeries bool
 }
 
 // Quality is a short human label such as "Bluray-1080p".
@@ -63,6 +68,7 @@ var (
 	bracketed    = regexp.MustCompile(`[\[\](){}]`)
 	yearToken    = regexp.MustCompile(`^(19\d{2}|20\d{2})$`)
 	groupSuffix  = regexp.MustCompile(`-([A-Za-z0-9]+)(?:\[[^\]]*\])?$`)
+	groupPrefix  = regexp.MustCompile(`^\[([^\]]+)\]\s*`) // fansub style: "[Group] Title ..."
 	videoExt     = regexp.MustCompile(`(?i)\.(mkv|mp4|avi|m4v|ts|wmv)$`)
 	resolutionRe = map[string]int{
 		"2160p": 2160, "4k": 2160, "uhd": 2160,
@@ -72,7 +78,7 @@ var (
 	}
 	sourceTokens = map[string]Source{
 		"remux":  SourceRemux,
-		"bluray": SourceBluRay, "blu-ray": SourceBluRay, "bdrip": SourceBluRay, "brrip": SourceBluRay, "bdremux": SourceRemux,
+		"bluray": SourceBluRay, "blu-ray": SourceBluRay, "bdrip": SourceBluRay, "brrip": SourceBluRay, "bd": SourceBluRay, "bdremux": SourceRemux,
 		"web-dl": SourceWEBDL, "webdl": SourceWEBDL, "web": SourceWEBDL, "amzn": SourceWEBDL, "nf": SourceWEBDL,
 		"webrip": SourceWEBRip, "web-rip": SourceWEBRip,
 		"hdtv": SourceHDTV, "pdtv": SourceHDTV,
@@ -99,8 +105,14 @@ func Parse(name string) Info {
 	info := Info{Raw: name}
 	trimmed := videoExt.ReplaceAllString(strings.TrimSpace(name), "")
 
+	if m := groupPrefix.FindStringSubmatch(trimmed); m != nil {
+		info.Group = strings.TrimSpace(m[1])
+		trimmed = strings.TrimPrefix(trimmed, m[0])
+	}
 	if m := groupSuffix.FindStringSubmatch(trimmed); m != nil && !isHyphenatedTag(trimmed, m[0]) {
-		info.Group = m[1]
+		if info.Group == "" {
+			info.Group = m[1]
+		}
 		trimmed = strings.TrimSuffix(trimmed, m[0])
 	}
 	cleaned := bracketed.ReplaceAllString(trimmed, " ")
@@ -153,6 +165,7 @@ func Parse(name string) Info {
 			titleEnd = i
 		}
 	}
+	parseCompleteSeries(&info, tokens)
 	// Remux implies a Blu-ray source even when "BluRay" is listed after it.
 	if info.Source == SourceBluRay && containsFold(tokens, "remux") {
 		info.Source = SourceRemux

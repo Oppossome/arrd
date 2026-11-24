@@ -3,9 +3,11 @@ import type { ReleaseResult } from '../api/types';
 /** What a manual release search is for. */
 export type ReleaseSource =
 	| { kind: 'movie'; movieId: number }
+	| { kind: 'series'; seriesId: number }
 	| { kind: 'season'; seriesId: number; season: number }
 	| { kind: 'episode'; seriesId: number; episodeId: number }
 	| { kind: 'discoverMovie'; tmdbId: number }
+	| { kind: 'discoverSeries'; tmdbId: number }
 	| { kind: 'discoverSeason'; tmdbId: number; season: number }
 	| { kind: 'discoverEpisode'; tmdbId: number; season: number; episode: number };
 
@@ -43,11 +45,16 @@ export function sortReleases(releases: ReleaseResult[], key: ReleaseSortKey): Re
 	});
 }
 
-/** "Pack", "S01E02-E03", "S01E02" or "" for a release's TV coverage. */
+/**
+ * "Complete series", "S01-S03 pack", "S01 pack", "S01E02-E03", "S01E02" or
+ * "" for a release's TV coverage.
+ */
 export function releaseCoverage(r: ReleaseResult): string {
+	if (r.complete_series) return 'Complete series';
 	if (r.season === undefined) return '';
-	const s = `S${String(r.season).padStart(2, '0')}`;
-	if (r.season_pack) return `${s} pack`;
+	const code = (n: number) => `S${String(n).padStart(2, '0')}`;
+	const s = code(r.season);
+	if (r.season_pack) return r.last_season !== undefined ? `${s}-${code(r.last_season)} pack` : `${s} pack`;
 	const eps = r.episodes ?? [];
 	if (eps.length === 0) return s;
 	const e = (n: number) => `E${String(n).padStart(2, '0')}`;

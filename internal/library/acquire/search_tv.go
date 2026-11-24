@@ -142,22 +142,32 @@ func (s *Service) GrabEpisodeRelease(ctx context.Context, episodeID int64, r Rel
 
 // GrabSeriesRelease downloads a TV release for a series. The episodes it is
 // expected to contain come from its name: listed episodes, or every episode
-// without a file for a season pack.
+// without a file in the seasons a pack covers. Multi-season packs are not
+// expected to contain specials.
 func (s *Service) GrabSeriesRelease(ctx context.Context, seriesID int64, r ReleaseResult) (Download, error) {
 	if _, err := s.store.GetSeries(ctx, seriesID); err != nil {
 		return Download{}, apperr.NotFound(err, "series", seriesID)
 	}
 	info := release.Parse(r.Title)
-	if !info.IsTV || info.MultiSeason {
-		return Download{}, apperr.Invalid("title", "%q is not a single-season TV release", r.Title)
+	if !info.IsTV {
+		return Download{}, apperr.Invalid("title", "%q is not a TV release", r.Title)
 	}
-	eps, err := s.store.ListSeasonEpisodes(ctx, db.ListSeasonEpisodesParams{SeriesID: seriesID, Season: int64(info.Season)})
+	var eps []db.Episode
+	var err error
+	if info.MultiSeason {
+		eps, err = s.store.ListEpisodes(ctx, seriesID)
+	} else {
+		eps, err = s.store.ListSeasonEpisodes(ctx, db.ListSeasonEpisodesParams{SeriesID: seriesID, Season: int64(info.Season)})
+	}
 	if err != nil {
 		return Download{}, fmt.Errorf("list episodes: %w", err)
 	}
 	var ids []int64
 	for _, e := range eps {
-		if info.SeasonPack && e.FilePath == nil || !info.SeasonPack && info.Covers(int(e.Season), int(e.Episode)) {
+		if info.MultiSeason && e.Season == 0 || !info.Covers(int(e.Season), int(e.Episode)) {
+			continue
+		}
+		if !info.SeasonPack || e.FilePath == nil {
 			ids = append(ids, e.ID)
 		}
 	}

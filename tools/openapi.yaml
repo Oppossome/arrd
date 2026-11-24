@@ -1047,11 +1047,25 @@ paths:
               schema: { $ref: "#/components/schemas/SearchResult" }
         default: { $ref: "#/components/responses/Error" }
 
+  /api/v1/discover/series/{tmdbId}/releases:
+    get:
+      operationId: discoverSeriesReleases
+      tags: [discover]
+      description: Searches the indexers for whole-series packs (multi-season or "Complete Series"; for a one-season series, its season pack), whether or not the series is in the library.
+      parameters: [{ $ref: "#/components/parameters/TMDBID" }]
+      responses:
+        "200":
+          description: Releases found.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SearchResult" }
+        default: { $ref: "#/components/responses/Error" }
+
   /api/v1/discover/series/{tmdbId}/grab:
     post:
       operationId: discoverGrabSeries
       tags: [discover]
-      description: Downloads a single-season TV release, first adding the series to the library (unmonitored, default root folder) if it is not there.
+      description: Downloads a TV release (episodes, a season pack or a multi-season pack), first adding the series to the library (unmonitored, default root folder) if it is not there.
       parameters: [{ $ref: "#/components/parameters/TMDBID" }]
       requestBody:
         required: true
@@ -1186,10 +1200,25 @@ paths:
         "204": { description: Searched for every wanted episode. }
         default: { $ref: "#/components/responses/Error" }
 
+  /api/v1/series/{id}/releases:
+    get:
+      operationId: seriesReleases
+      tags: [series]
+      description: Searches the indexers for whole-series packs (multi-season or "Complete Series"; for a one-season series, its season pack).
+      parameters: [{ $ref: "#/components/parameters/ID" }]
+      responses:
+        "200":
+          description: Releases found by an interactive search.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SearchResult" }
+        default: { $ref: "#/components/responses/Error" }
+
   /api/v1/series/{id}/grab:
     post:
       operationId: grabSeries
       tags: [series]
+      description: Downloads a TV release (episodes, a season pack or a multi-season pack) for the series.
       parameters: [{ $ref: "#/components/parameters/ID" }]
       requestBody:
         required: true
@@ -1972,6 +2001,8 @@ components:
         season: { type: integer }
         episodes: { type: array, items: { type: integer } }
         season_pack: { type: boolean }
+        last_season: { type: integer, description: "The last season of a multi-season pack; season is the first." }
+        complete_series: { type: boolean, description: A pack of every season that names none ("Complete Series"). }
     ReleaseInput:
       type: object
       additionalProperties: false

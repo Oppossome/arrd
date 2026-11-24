@@ -13,10 +13,12 @@ var (
 	crossTag = regexp.MustCompile(`^(\d{1,2})x(\d{2,3})$`)
 	// S01
 	seasonTag = regexp.MustCompile(`^s(\d{1,2})$`)
-	// S01-S03
-	multiSeasonTag = regexp.MustCompile(`^s(\d{1,2})-s(\d{1,2})$`)
+	// S01-S03, S01-03
+	multiSeasonTag = regexp.MustCompile(`^s(\d{1,2})-s?(\d{1,2})$`)
 	// a bare number following "Season"
 	seasonNumber = regexp.MustCompile(`^\d{1,2}$`)
+	// a range following "Season" or "Seasons": "1-3"
+	seasonRange = regexp.MustCompile(`^(\d{1,2})-(\d{1,2})$`)
 	// "-E03" at the end of a name is part of an episode tag, not a group.
 	episodeSuffix = regexp.MustCompile(`(?i)^-e?\d{1,3}$`)
 )
@@ -53,14 +55,19 @@ func parseTVToken(info *Info, tok, next string) bool {
 		return true
 	}
 	if m := multiSeasonTag.FindStringSubmatch(tok); m != nil {
-		info.IsTV, info.SeasonPack, info.MultiSeason = true, true, true
-		info.Season = atoi(m[1])
+		setSeasonRange(info, atoi(m[1]), atoi(m[2]))
 		return true
 	}
 	if m := seasonTag.FindStringSubmatch(tok); m != nil {
 		info.IsTV, info.SeasonPack = true, true
 		info.Season = atoi(m[1])
 		return true
+	}
+	if tok == "season" || tok == "seasons" {
+		if m := seasonRange.FindStringSubmatch(next); m != nil {
+			setSeasonRange(info, atoi(m[1]), atoi(m[2]))
+			return true
+		}
 	}
 	if tok == "season" && seasonNumber.MatchString(next) {
 		info.IsTV, info.SeasonPack = true, true
@@ -70,18 +77,58 @@ func parseTVToken(info *Info, tok, next string) bool {
 	return false
 }
 
+// setSeasonRange records a pack of seasons first to last. A range of one
+// season ("S02-S02") is an ordinary season pack.
+func setSeasonRange(info *Info, first, last int) {
+	info.IsTV, info.SeasonPack = true, true
+	info.Season = min(first, last)
+	if first != last {
+		info.MultiSeason = true
+		info.LastSeason = max(first, last)
+	}
+}
+
+// parseCompleteSeries marks a release with no season tag that calls itself
+// a "Complete Series" as a pack of every season.
+func parseCompleteSeries(info *Info, tokens []string) {
+	if info.IsTV {
+		return
+	}
+	for i := 0; i+1 < len(tokens); i++ {
+		if containsFold(tokens[i:i+1], "complete") && containsFold(tokens[i+1:i+2], "series") {
+			info.IsTV, info.SeasonPack, info.MultiSeason, info.CompleteSeries = true, true, true, true
+			return
+		}
+	}
+}
+
 func atoi(s string) int {
 	n, _ := strconv.Atoi(s)
 	return n
 }
 
+// CoversSeason reports whether the release is a pack containing all of the
+// given season.
+func (i Info) CoversSeason(season int) bool {
+	switch {
+	case !i.IsTV || !i.SeasonPack:
+		return false
+	case i.CompleteSeries:
+		return true
+	case i.MultiSeason:
+		return season >= i.Season && season <= i.LastSeason
+	default:
+		return season == i.Season
+	}
+}
+
 // Covers reports whether the release contains the given episode.
 func (i Info) Covers(season, episode int) bool {
-	if !i.IsTV || i.MultiSeason || i.Season != season {
-		return false
-	}
 	if i.SeasonPack {
-		return true
+		return i.CoversSeason(season)
+	}
+	if !i.IsTV || i.Season != season {
+		return false
 	}
 	for _, e := range i.Episodes {
 		if e == episode {

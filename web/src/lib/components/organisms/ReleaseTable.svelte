@@ -41,11 +41,13 @@
 		switch (source.kind) {
 			case 'movie':
 				return grabMovie.mutate({ id: source.movieId, release: r }, opts);
+			case 'series':
 			case 'season':
 			case 'episode':
 				return grabSeries.mutate({ id: source.seriesId, release: r }, opts);
 			case 'discoverMovie':
 				return grabDiscoverMovie.mutate({ tmdbId: source.tmdbId, release: r }, opts);
+			case 'discoverSeries':
 			case 'discoverSeason':
 			case 'discoverEpisode':
 				return grabDiscoverSeries.mutate({ tmdbId: source.tmdbId, release: r }, opts);

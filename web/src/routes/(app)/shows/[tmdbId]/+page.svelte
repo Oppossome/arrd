@@ -12,7 +12,7 @@
 	<DetailLayout bleed>
 		{#snippet header()}
 			<TitleHero kind="series" {tmdbId}>
-				{#snippet actions()}<DiscoverActions kind="series" {tmdbId} />{/snippet}
+				{#snippet actions()}<DiscoverActions kind="series" {tmdbId} ondownload={(r) => (sources = r)} />{/snippet}
 			</TitleHero>
 		{/snippet}
 		<SeasonBrowser {tmdbId} ondownload={(r) => (sources = r)} />
