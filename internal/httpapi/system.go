@@ -19,7 +19,7 @@ func (h *handlers) Health(context.Context, apigen.HealthRequestObject) (apigen.H
 // Status reports whether downloads are running, and why not.
 func (h *handlers) Status(context.Context, apigen.StatusRequestObject) (apigen.StatusResponseObject, error) {
 	out := apigen.Status200JSONResponse{DownloadsAvailable: true}
-	if err := h.svc.RuntimeError(); err != nil {
+	if err := h.svc.Engine.RuntimeError(); err != nil {
 		out.DownloadsAvailable = false
 		msg := err.Error()
 		out.DownloadsError = &msg
@@ -67,7 +67,7 @@ func (h *handlers) ListDirs(_ context.Context, req apigen.ListDirsRequestObject)
 
 // poster serves a cached TMDB poster.
 func (h *handlers) poster(w http.ResponseWriter, r *http.Request) {
-	path, err := h.svc.Poster(r.Context(), r.PathValue("size"), r.PathValue("file"))
+	path, err := h.svc.Media.Poster(r.Context(), r.PathValue("size"), r.PathValue("file"))
 	if err != nil {
 		h.writeErr(w, r, err)
 		return

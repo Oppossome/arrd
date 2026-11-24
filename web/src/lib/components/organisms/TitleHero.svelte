@@ -3,9 +3,9 @@
 	import { createQuery } from '@tanstack/svelte-query';
 	import { Heading, Skeleton, Text } from '#lib/components/atoms/index.js';
 	import { CastRow, ErrorMessage, MediaHero } from '#lib/components/molecules/index.js';
-	import { backdropURL, profileURL } from '#lib/api.js';
-	import { queries } from '#lib/query.js';
-	import type { MediaExtras } from '#lib/types.js';
+	import { backdropURL, profileURL } from '#lib/api/client.js';
+	import { queries } from '#lib/api/query.js';
+	import type { MediaExtras } from '#lib/api/types.js';
 
 	interface Props {
 		kind: 'movies' | 'series';

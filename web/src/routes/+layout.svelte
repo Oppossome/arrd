@@ -1,7 +1,7 @@
 <script lang="ts">
 	import '#lib/styles/global.css';
 	import { QueryClientProvider } from '@tanstack/svelte-query';
-	import { queryClient } from '#lib/app-client.js';
+	import { queryClient } from '#lib/api/app-client.js';
 	import { ToastHost } from '#lib/components/organisms/index.js';
 	import type { LayoutProps } from './$types';
 

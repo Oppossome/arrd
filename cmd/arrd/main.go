@@ -24,7 +24,7 @@ import (
 	"syscall"
 
 	"generic-arr-project/internal/app"
-	"generic-arr-project/internal/library"
+	"generic-arr-project/internal/library/vpnconfig"
 )
 
 func main() {
@@ -52,7 +52,7 @@ func run(args []string) error {
 	switch cmd {
 	case "fetch":
 		fs.StringVar(&fetchOpts.OutDir, "out", "", "download directory (default: the saved complete directory)")
-		fs.StringVar(&fetchOpts.IPEchoURL, "ip-echo", library.DefaultIPEchoURL, "plain-text IP echo URL queried through the download network; empty to skip")
+		fs.StringVar(&fetchOpts.IPEchoURL, "ip-echo", vpnconfig.DefaultIPEchoURL, "plain-text IP echo URL queried through the download network; empty to skip")
 	default:
 		listen = fs.String("listen", envOr("ARRD_LISTEN", "127.0.0.1:8484"), "HTTP listen address (env ARRD_LISTEN)")
 		definitionsDir = fs.String("definitions-dir", os.Getenv("ARRD_DEFINITIONS_DIR"), "directory of Cardigann indexer definitions (*.yml), e.g. a checkout of Prowlarr's definitions/v11 (default DATA-DIR/definitions; env ARRD_DEFINITIONS_DIR)")

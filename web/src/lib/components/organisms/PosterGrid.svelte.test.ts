@@ -2,7 +2,7 @@ import { fireEvent, screen } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { download, progress } from '../../../test/fixtures';
 import { mockFetch, renderWithClient } from '../../../test/helpers';
-import type { Movie } from '#lib/types.js';
+import type { Movie } from '#lib/api/types.js';
 import PosterGrid from './PosterGrid.svelte';
 
 afterEach(() => vi.unstubAllGlobals());

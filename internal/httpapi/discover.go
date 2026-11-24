@@ -4,12 +4,12 @@ import (
 	"context"
 
 	"generic-arr-project/internal/httpapi/apigen"
-	"generic-arr-project/internal/library"
+	"generic-arr-project/internal/library/media"
 	"generic-arr-project/internal/metadata"
 )
 
 func (h *handlers) MovieList(ctx context.Context, req apigen.MovieListRequestObject) (apigen.MovieListResponseObject, error) {
-	out, err := h.svc.TMDBMovieList(ctx, metadata.MovieList(req.List))
+	out, err := h.svc.Media.TMDBMovieList(ctx, metadata.MovieList(req.List))
 	if err != nil {
 		return nil, err
 	}
@@ -17,7 +17,7 @@ func (h *handlers) MovieList(ctx context.Context, req apigen.MovieListRequestObj
 }
 
 func (h *handlers) MovieGenres(ctx context.Context, _ apigen.MovieGenresRequestObject) (apigen.MovieGenresResponseObject, error) {
-	out, err := h.svc.MovieGenres(ctx)
+	out, err := h.svc.Media.MovieGenres(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -26,7 +26,7 @@ func (h *handlers) MovieGenres(ctx context.Context, _ apigen.MovieGenresRequestO
 
 func (h *handlers) BrowseMovies(ctx context.Context, req apigen.BrowseMoviesRequestObject) (apigen.BrowseMoviesResponseObject, error) {
 	p := req.Params
-	out, err := h.svc.BrowseMovies(ctx, fromAPIBrowse(fromAPITitleFilter(p.Genre, p.Lang), p.Sort, p.Page))
+	out, err := h.svc.Media.BrowseMovies(ctx, fromAPIBrowse(fromAPITitleFilter(p.Genre, p.Lang), p.Sort, p.Page))
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func (h *handlers) BrowseMovies(ctx context.Context, req apigen.BrowseMoviesRequ
 }
 
 func (h *handlers) MoviesLike(ctx context.Context, req apigen.MoviesLikeRequestObject) (apigen.MoviesLikeResponseObject, error) {
-	out, err := h.svc.MoviesLike(ctx, req.TMDBID)
+	out, err := h.svc.Media.MoviesLike(ctx, req.TMDBID)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func (h *handlers) MoviesLike(ctx context.Context, req apigen.MoviesLikeRequestO
 }
 
 func (h *handlers) DiscoverMovie(ctx context.Context, req apigen.DiscoverMovieRequestObject) (apigen.DiscoverMovieResponseObject, error) {
-	out, err := h.svc.DiscoveredMovie(ctx, req.TMDBID)
+	out, err := h.svc.Media.DiscoveredMovie(ctx, req.TMDBID)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func (h *handlers) DiscoverMovie(ctx context.Context, req apigen.DiscoverMovieRe
 }
 
 func (h *handlers) DiscoverMovieReleases(ctx context.Context, req apigen.DiscoverMovieReleasesRequestObject) (apigen.DiscoverMovieReleasesResponseObject, error) {
-	out, err := h.svc.SearchDiscoveredMovie(ctx, req.TMDBID)
+	out, err := h.svc.Acquire.SearchDiscoveredMovie(ctx, req.TMDBID)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func (h *handlers) DiscoverMovieReleases(ctx context.Context, req apigen.Discove
 }
 
 func (h *handlers) DiscoverGrabMovie(ctx context.Context, req apigen.DiscoverGrabMovieRequestObject) (apigen.DiscoverGrabMovieResponseObject, error) {
-	out, err := h.svc.GrabDiscoveredMovie(ctx, req.TMDBID, fromAPIRelease(*req.Body))
+	out, err := h.svc.Acquire.GrabDiscoveredMovie(ctx, req.TMDBID, fromAPIRelease(*req.Body))
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (h *handlers) DiscoverGrabMovie(ctx context.Context, req apigen.DiscoverGra
 }
 
 func (h *handlers) SeriesList(ctx context.Context, req apigen.SeriesListRequestObject) (apigen.SeriesListResponseObject, error) {
-	out, err := h.svc.TMDBSeriesList(ctx, metadata.SeriesList(req.List))
+	out, err := h.svc.Media.TMDBSeriesList(ctx, metadata.SeriesList(req.List))
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (h *handlers) SeriesList(ctx context.Context, req apigen.SeriesListRequestO
 }
 
 func (h *handlers) SeriesGenres(ctx context.Context, _ apigen.SeriesGenresRequestObject) (apigen.SeriesGenresResponseObject, error) {
-	out, err := h.svc.SeriesGenres(ctx)
+	out, err := h.svc.Media.SeriesGenres(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (h *handlers) SeriesGenres(ctx context.Context, _ apigen.SeriesGenresReques
 
 func (h *handlers) BrowseSeries(ctx context.Context, req apigen.BrowseSeriesRequestObject) (apigen.BrowseSeriesResponseObject, error) {
 	p := req.Params
-	out, err := h.svc.BrowseSeries(ctx, fromAPIBrowse(fromAPITitleFilter(p.Genre, p.Lang), p.Sort, p.Page))
+	out, err := h.svc.Media.BrowseSeries(ctx, fromAPIBrowse(fromAPITitleFilter(p.Genre, p.Lang), p.Sort, p.Page))
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (h *handlers) BrowseSeries(ctx context.Context, req apigen.BrowseSeriesRequ
 }
 
 func (h *handlers) SeriesLike(ctx context.Context, req apigen.SeriesLikeRequestObject) (apigen.SeriesLikeResponseObject, error) {
-	out, err := h.svc.SeriesLike(ctx, req.TMDBID)
+	out, err := h.svc.Media.SeriesLike(ctx, req.TMDBID)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func (h *handlers) SeriesLike(ctx context.Context, req apigen.SeriesLikeRequestO
 }
 
 func (h *handlers) DiscoverSeries(ctx context.Context, req apigen.DiscoverSeriesRequestObject) (apigen.DiscoverSeriesResponseObject, error) {
-	out, err := h.svc.DiscoveredSeries(ctx, req.TMDBID)
+	out, err := h.svc.Media.DiscoveredSeries(ctx, req.TMDBID)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func (h *handlers) DiscoverSeries(ctx context.Context, req apigen.DiscoverSeries
 }
 
 func (h *handlers) DiscoverSeason(ctx context.Context, req apigen.DiscoverSeasonRequestObject) (apigen.DiscoverSeasonResponseObject, error) {
-	out, err := h.svc.DiscoveredSeason(ctx, req.TMDBID, req.Season)
+	out, err := h.svc.Media.DiscoveredSeason(ctx, req.TMDBID, req.Season)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func (h *handlers) DiscoverSeason(ctx context.Context, req apigen.DiscoverSeason
 }
 
 func (h *handlers) DiscoverEpisodeReleases(ctx context.Context, req apigen.DiscoverEpisodeReleasesRequestObject) (apigen.DiscoverEpisodeReleasesResponseObject, error) {
-	out, err := h.svc.SearchDiscoveredEpisode(ctx, req.TMDBID, req.Season, req.Episode)
+	out, err := h.svc.Acquire.SearchDiscoveredEpisode(ctx, req.TMDBID, req.Season, req.Episode)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func (h *handlers) DiscoverEpisodeReleases(ctx context.Context, req apigen.Disco
 }
 
 func (h *handlers) DiscoverSeasonReleases(ctx context.Context, req apigen.DiscoverSeasonReleasesRequestObject) (apigen.DiscoverSeasonReleasesResponseObject, error) {
-	out, err := h.svc.SearchDiscoveredSeason(ctx, req.TMDBID, req.Season)
+	out, err := h.svc.Acquire.SearchDiscoveredSeason(ctx, req.TMDBID, req.Season)
 	if err != nil {
 		return nil, err
 	}
@@ -135,20 +135,20 @@ func (h *handlers) DiscoverSeasonReleases(ctx context.Context, req apigen.Discov
 }
 
 func (h *handlers) DiscoverGrabSeries(ctx context.Context, req apigen.DiscoverGrabSeriesRequestObject) (apigen.DiscoverGrabSeriesResponseObject, error) {
-	out, err := h.svc.GrabDiscoveredSeries(ctx, req.TMDBID, fromAPIRelease(*req.Body))
+	out, err := h.svc.Acquire.GrabDiscoveredSeries(ctx, req.TMDBID, fromAPIRelease(*req.Body))
 	if err != nil {
 		return nil, err
 	}
 	return apigen.DiscoverGrabSeries201JSONResponse(toAPIDownload(out)), nil
 }
 
-func toAPIDiscoverMovie(m library.DiscoverMovie) apigen.LookupMovie {
+func toAPIDiscoverMovie(m media.DiscoverMovie) apigen.LookupMovie {
 	out := toAPILookupMovie(m.Movie)
 	out.LibraryID = m.LibraryID
 	return out
 }
 
-func toAPIDiscoverSeries(s library.DiscoverSeries) apigen.LookupSeries {
+func toAPIDiscoverSeries(s media.DiscoverSeries) apigen.LookupSeries {
 	out := toAPILookupSeries(s.Series)
 	out.LibraryID = s.LibraryID
 	return out
@@ -173,7 +173,7 @@ func toAPIMediaExtras(e metadata.Extras, networks []string) *apigen.MediaExtras 
 	return out
 }
 
-func toAPISeasonDetails(s library.DiscoverSeason) apigen.SeasonDetails {
+func toAPISeasonDetails(s media.DiscoverSeason) apigen.SeasonDetails {
 	return apigen.SeasonDetails{
 		SeasonNumber: s.Number,
 		Name:         s.Name,
@@ -191,26 +191,26 @@ func toAPISeasonDetails(s library.DiscoverSeason) apigen.SeasonDetails {
 }
 
 func (h *handlers) MovieRecommendations(ctx context.Context, _ apigen.MovieRecommendationsRequestObject) (apigen.MovieRecommendationsResponseObject, error) {
-	rows, err := h.svc.MovieRecommendations(ctx)
+	rows, err := h.svc.Media.MovieRecommendations(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return apigen.MovieRecommendations200JSONResponse(mapSlice(rows, func(r library.RecommendationRow[metadata.Movie]) apigen.MovieRecommendations {
+	return apigen.MovieRecommendations200JSONResponse(mapSlice(rows, func(r media.RecommendationRow[metadata.Movie]) apigen.MovieRecommendations {
 		return apigen.MovieRecommendations{Because: toAPIRecommendationSource(r.Because), Items: mapSlice(r.Items, toAPILookupMovie)}
 	})), nil
 }
 
 func (h *handlers) SeriesRecommendations(ctx context.Context, _ apigen.SeriesRecommendationsRequestObject) (apigen.SeriesRecommendationsResponseObject, error) {
-	rows, err := h.svc.SeriesRecommendations(ctx)
+	rows, err := h.svc.Media.SeriesRecommendations(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return apigen.SeriesRecommendations200JSONResponse(mapSlice(rows, func(r library.RecommendationRow[metadata.Series]) apigen.SeriesRecommendations {
+	return apigen.SeriesRecommendations200JSONResponse(mapSlice(rows, func(r media.RecommendationRow[metadata.Series]) apigen.SeriesRecommendations {
 		return apigen.SeriesRecommendations{Because: toAPIRecommendationSource(r.Because), Items: mapSlice(r.Items, toAPILookupSeries)}
 	})), nil
 }
 
-func toAPIRecommendationSource(s library.RecommendationSource) apigen.RecommendationSource {
+func toAPIRecommendationSource(s media.RecommendationSource) apigen.RecommendationSource {
 	return apigen.RecommendationSource{TMDBID: s.TMDBID, Title: s.Title}
 }
 
@@ -219,7 +219,7 @@ func toAPIGenre(g metadata.Genre) apigen.Genre {
 }
 
 func (h *handlers) DiscoverLanguages(ctx context.Context, _ apigen.DiscoverLanguagesRequestObject) (apigen.DiscoverLanguagesResponseObject, error) {
-	out, err := h.svc.Languages(ctx)
+	out, err := h.svc.Media.Languages(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -232,14 +232,14 @@ func toAPILanguage(l metadata.Language) apigen.Language {
 
 // fromAPITitleFilter maps the genre and lang query parameters, which the
 // spec has already checked.
-func fromAPITitleFilter(genres *apigen.BrowseGenre, lang *apigen.BrowseLanguage) library.TitleFilter {
-	return library.TitleFilter{GenreIDs: derefSlice(genres), OriginalLanguage: deref(lang)}
+func fromAPITitleFilter(genres *apigen.BrowseGenre, lang *apigen.BrowseLanguage) media.TitleFilter {
+	return media.TitleFilter{GenreIDs: derefSlice(genres), OriginalLanguage: deref(lang)}
 }
 
 // fromAPIBrowse applies the spec's defaults (popular, page 1), which the
 // generated server leaves unset.
-func fromAPIBrowse(filter library.TitleFilter, sort *apigen.DiscoverSort, page *int) library.BrowseQuery {
-	q := library.BrowseQuery{TitleFilter: filter, Sort: metadata.SortPopular, Page: 1}
+func fromAPIBrowse(filter media.TitleFilter, sort *apigen.DiscoverSort, page *int) media.BrowseQuery {
+	q := media.BrowseQuery{TitleFilter: filter, Sort: metadata.SortPopular, Page: 1}
 	if sort != nil {
 		q.Sort = metadata.DiscoverSort(*sort)
 	}

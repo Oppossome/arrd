@@ -10,9 +10,9 @@
 		type FacetField,
 		type Facets,
 		type Suggestion
-	} from '#lib/facets.js';
-	import type { MediaKind } from '#lib/links.js';
-	import { queries } from '#lib/query.js';
+	} from '#lib/domain/facets.js';
+	import type { MediaKind } from '#lib/nav/links.js';
+	import { queries } from '#lib/api/query.js';
 
 	interface Props {
 		kind: MediaKind;

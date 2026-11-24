@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { CountryFlag, Icon } from '#lib/components/atoms/index.js';
-	import type { CountryCount } from '#lib/types.js';
+	import type { CountryCount } from '#lib/api/types.js';
 
 	interface Props {
 		countries: CountryCount[];

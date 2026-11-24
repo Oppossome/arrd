@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { IconButton, Text } from '#lib/components/atoms/index.js';
-	import type { ToastKind } from '#lib/toast.svelte.js';
+	import type { ToastKind } from '#lib/stores/toast.svelte.js';
 
 	interface Props {
 		kind: ToastKind;

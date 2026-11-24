@@ -2,11 +2,11 @@
 	import { createQuery } from '@tanstack/svelte-query';
 	import { Badge, IconButton, Spinner, Text } from '#lib/components/atoms/index.js';
 	import { ConfirmDialog, DefinitionToggleList, EmptyState, ErrorMessage, IndexerForm, type SiteState } from '#lib/components/molecules/index.js';
-	import { timeAgo } from '#lib/format.js';
-	import { queries, useMutation } from '#lib/query.js';
-	import { compactValues, initialValues, needsSettings } from '#lib/settingsForm.js';
-	import { toasts } from '#lib/toast.svelte.js';
-	import type { Indexer, IndexerDefinition, IndexerInput } from '#lib/types.js';
+	import { timeAgo } from '#lib/utils/format.js';
+	import { queries, useMutation } from '#lib/api/query.js';
+	import { compactValues, initialValues, needsSettings } from '#lib/domain/settingsForm.js';
+	import { toasts } from '#lib/stores/toast.svelte.js';
+	import type { Indexer, IndexerDefinition, IndexerInput } from '#lib/api/types.js';
 
 	const indexers = createQuery(() => queries.indexers());
 	const definitions = createQuery(() => queries.indexerDefinitions());

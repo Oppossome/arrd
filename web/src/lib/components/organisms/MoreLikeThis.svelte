@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { createQuery } from '@tanstack/svelte-query';
 	import { ErrorMessage, PosterCard, PosterRow } from '#lib/components/molecules/index.js';
-	import { ApiError } from '#lib/api.js';
-	import { posterCardProps } from '#lib/discover.js';
-	import type { MediaKind } from '#lib/links.js';
-	import { queries } from '#lib/query.js';
+	import { ApiError } from '#lib/api/client.js';
+	import { posterCardProps } from '#lib/domain/discover.js';
+	import type { MediaKind } from '#lib/nav/links.js';
+	import { queries } from '#lib/api/query.js';
 
 	interface Props {
 		kind: MediaKind;

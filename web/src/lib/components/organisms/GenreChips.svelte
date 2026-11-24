@@ -2,8 +2,8 @@
 	import { createQuery } from '@tanstack/svelte-query';
 	import { Chip, Text } from '#lib/components/atoms/index.js';
 	import { ErrorMessage } from '#lib/components/molecules/index.js';
-	import { browseHref, type MediaKind } from '#lib/links.js';
-	import { queries } from '#lib/query.js';
+	import { browseHref, type MediaKind } from '#lib/nav/links.js';
+	import { queries } from '#lib/api/query.js';
 
 	/** Links to browse TMDB's catalogue by genre. */
 	let { kind }: { kind: MediaKind } = $props();

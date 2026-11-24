@@ -1,81 +1,66 @@
+// Package library wires arrd's application services together. The logic
+// lives in the subpackages:
+//
+//   - auth: admin password, sessions, the API key and setup state
+//   - settings: download, quality and general settings, root folders
+//   - engine: the torrent engine and VPN tunnel, and the traffic network
+//   - vpnconfig: saving, testing and monitoring the VPN
+//   - indexers: configured indexers, site definitions and searching them
+//   - media: the movie and TV library, TMDB browsing and artwork
+//   - acquire: searching, grabbing, downloading and importing releases
+//   - setup: onboarding
+//   - apperr: the error kinds the services return
 package library
 
 import (
 	"context"
-	"database/sql"
 	"errors"
-	"fmt"
 	"log/slog"
 	"path/filepath"
-	"sync"
-	"sync/atomic"
 	"time"
 
 	"generic-arr-project/internal/geoip"
-	"generic-arr-project/internal/indexer"
-	"generic-arr-project/internal/metadata"
+	"generic-arr-project/internal/library/acquire"
+	"generic-arr-project/internal/library/auth"
+	"generic-arr-project/internal/library/engine"
+	"generic-arr-project/internal/library/indexers"
+	"generic-arr-project/internal/library/media"
+	"generic-arr-project/internal/library/settings"
+	"generic-arr-project/internal/library/setup"
+	"generic-arr-project/internal/library/tmdb"
+	"generic-arr-project/internal/library/vpnconfig"
 	"generic-arr-project/internal/netx"
 	"generic-arr-project/internal/store"
 	"generic-arr-project/internal/vpn/provider"
 )
 
-const (
-	tmdbTimeout = 20 * time.Second
-	// geoIPTimeout bounds one geolocation database download (~8 MiB).
-	geoIPTimeout = 5 * time.Minute
-	// DefaultIPEchoURL answers with the caller's public IP as plain text.
-	DefaultIPEchoURL = "https://api.ipify.org"
-)
+// geoIPTimeout bounds one geolocation database download (~8 MiB).
+const geoIPTimeout = 5 * time.Minute
 
-// Service is the application core used by the HTTP API and scheduler.
-type Service struct {
-	store         *store.Store
-	direct        netx.Network
-	newRuntime    RuntimeFactory
-	tmdbBaseURL   string
-	ipEchoURL     string
-	posterBaseURL string
-	vpn           *provider.Registry
-	geo           *geoip.DB
-	// definitions is replaced when indexer definitions are reloaded.
-	definitions atomic.Pointer[indexer.Catalog]
-	// definitionsMu serializes changes to the definitions directory.
-	definitionsMu  sync.Mutex
-	dataDir        string
-	definitionsDir string
-	log            *slog.Logger
+// Services are the application services used by the HTTP API, plus what
+// the scheduler needs.
+type Services struct {
+	Auth     *auth.Service
+	Settings *settings.Service
+	Engine   *engine.Manager
+	VPN      *vpnconfig.Service
+	Indexers *indexers.Service
+	TMDB     *tmdb.Provider
+	Media    *media.Service
+	Acquire  *acquire.Service
+	Setup    *setup.Service
 
-	// rtMu guards the runtime. Work that uses the engine holds a read lock
-	// for its duration; ApplyRuntime takes the write lock, so an engine is
-	// never closed underneath a grab or an import.
-	rtMu  sync.RWMutex
-	rt    *Runtime
-	rtErr error // why there is no runtime, if there is none
-
-	setupDone atomic.Bool
-	apiKey    atomic.Pointer[string]
-
-	backoffMu sync.Mutex
-	backoff   map[int64]indexerBackoff // indexer id -> failure state
-
-	searchersMu sync.Mutex
-	searchers   map[int64]cachedSearcher // indexer id -> built searcher
-
-	now func() time.Time // replaceable in tests
-
-	logins  loginLimiter
-	posters posterFetcher
-
-	importMu    sync.Mutex
-	importRetry map[int64]time.Time // download id -> earliest next import attempt
+	geo *geoip.DB
+	log *slog.Logger
 }
 
-// Deps are the Service's collaborators.
+// Deps are the services' shared collaborators.
 type Deps struct {
 	Store *store.Store
 	// NewRuntime builds the torrent engine (and VPN tunnel) from settings.
-	NewRuntime RuntimeFactory
-	// DataDir is used to suggest default paths during onboarding.
+	NewRuntime engine.Factory
+	// DataDir is used to suggest default paths during onboarding and holds
+	// the poster and geolocation caches.
 	DataDir string
 	// DefinitionsDir holds the Cardigann site definitions (*.yml) indexers
 	// are built from; empty or missing means none.
@@ -85,115 +70,112 @@ type Deps struct {
 	// Optional overrides, mainly for tests.
 	Direct        netx.Network       // default netx.Direct{}
 	TMDBBaseURL   string             // default TMDB API
-	IPEchoURL     string             // default DefaultIPEchoURL
-	PosterBaseURL string             // default DefaultPosterBaseURL
+	IPEchoURL     string             // default vpnconfig.DefaultIPEchoURL
+	PosterBaseURL string             // default media.DefaultPosterBaseURL
 	GeoIPBaseURL  string             // default geoip.DefaultBaseURL
-	VPNProviders  *provider.Registry // default DefaultVPNProviders(Direct)
+	VPNProviders  *provider.Registry // default engine.DefaultVPNProviders(Direct)
+	Now           func() time.Time   // default time.Now
 }
 
-// New creates a Service. Call Start before use.
-func New(d Deps) (*Service, error) {
+// New builds the services. Call Start before use.
+func New(d Deps) (*Services, error) {
 	if d.Store == nil || d.NewRuntime == nil || d.Log == nil || d.DataDir == "" {
 		return nil, errors.New("library: Store, NewRuntime, DataDir and Log are required")
 	}
 	if d.Direct == nil {
 		d.Direct = netx.Direct{}
 	}
-	if d.PosterBaseURL == "" {
-		d.PosterBaseURL = DefaultPosterBaseURL
-	}
-	if d.IPEchoURL == "" {
-		d.IPEchoURL = DefaultIPEchoURL
+	if d.Now == nil {
+		d.Now = time.Now
 	}
 	if d.VPNProviders == nil {
-		reg, err := DefaultVPNProviders(d.Direct)
+		reg, err := engine.DefaultVPNProviders(d.Direct)
 		if err != nil {
 			return nil, err
 		}
 		d.VPNProviders = reg
 	}
-	s := &Service{
-		store:          d.Store,
-		direct:         d.Direct,
-		newRuntime:     d.NewRuntime,
-		tmdbBaseURL:    d.TMDBBaseURL,
-		ipEchoURL:      d.IPEchoURL,
-		posterBaseURL:  d.PosterBaseURL,
-		vpn:            d.VPNProviders,
-		geo:            geoip.New(filepath.Join(d.DataDir, "cache", "geoip"), d.GeoIPBaseURL, netx.HTTPClient(d.Direct, geoIPTimeout), d.Log),
-		dataDir:        d.DataDir,
-		definitionsDir: d.DefinitionsDir,
-		log:            d.Log.With("component", "library"),
-		rtErr:          errors.New("setup is not complete"),
-		backoff:        map[int64]indexerBackoff{},
-		searchers:      map[int64]cachedSearcher{},
-		importRetry:    map[int64]time.Time{},
-		now:            time.Now,
+	log := d.Log.With("component", "library")
+	s := &Services{
+		geo: geoip.New(filepath.Join(d.DataDir, "cache", "geoip"), d.GeoIPBaseURL, netx.HTTPClient(d.Direct, geoIPTimeout), d.Log),
+		log: log,
 	}
-	s.loadDefinitions()
+	now := d.Now
+
+	var err error
+	if s.TMDB, err = tmdb.New(d.Store, d.Direct, d.TMDBBaseURL); err != nil {
+		return nil, err
+	}
+	if s.Auth, err = auth.New(auth.Deps{Store: d.Store, Log: log, Now: now}); err != nil {
+		return nil, err
+	}
+	if s.Settings, err = settings.New(settings.Deps{Store: d.Store, TMDB: s.TMDB, Log: log}); err != nil {
+		return nil, err
+	}
+	if s.Engine, err = engine.New(engine.Deps{Store: d.Store, NewRuntime: d.NewRuntime, Direct: d.Direct, VPN: d.VPNProviders, Log: log}); err != nil {
+		return nil, err
+	}
+	if s.VPN, err = vpnconfig.New(vpnconfig.Deps{Store: d.Store, Engine: s.Engine, IPEchoURL: d.IPEchoURL, Log: log, Now: now}); err != nil {
+		return nil, err
+	}
+	if s.Indexers, err = indexers.New(indexers.Deps{Store: d.Store, Engine: s.Engine, DefinitionsDir: d.DefinitionsDir, Log: log}); err != nil {
+		return nil, err
+	}
+	if s.Media, err = media.New(media.Deps{
+		Store: d.Store, Settings: s.Settings, TMDB: s.TMDB, Searcher: wantedSearcher{s},
+		Direct: d.Direct, DataDir: d.DataDir, PosterBaseURL: d.PosterBaseURL, Log: log, Now: now,
+	}); err != nil {
+		return nil, err
+	}
+	if s.Acquire, err = acquire.New(acquire.Deps{
+		Store: d.Store, Engine: s.Engine, Settings: s.Settings, Indexers: s.Indexers, Media: s.Media, Geo: s.geo, Log: log,
+	}); err != nil {
+		return nil, err
+	}
+	if s.Setup, err = setup.New(setup.Deps{
+		Store: d.Store, Auth: s.Auth, Settings: s.Settings, VPN: s.VPN, Indexers: s.Indexers, Engine: s.Engine,
+		DataDir: d.DataDir, Log: log,
+	}); err != nil {
+		return nil, err
+	}
 	return s, nil
+}
+
+// wantedSearcher hands media's search-after-add to acquire, which is built
+// after media.
+type wantedSearcher struct{ s *Services }
+
+func (w wantedSearcher) SearchNewMovie(ctx context.Context, id int64) error {
+	return w.s.Acquire.SearchNewMovie(ctx, id)
+}
+
+func (w wantedSearcher) SearchNewSeries(ctx context.Context, id int64) error {
+	return w.s.Acquire.SearchNewSeries(ctx, id)
 }
 
 // Start loads the saved settings and, if onboarding is complete, starts the
 // torrent engine. A runtime failure (e.g. the VPN is unreachable) is
 // logged and retried by the scheduler rather than failing startup.
-func (s *Service) Start(ctx context.Context) error {
+func (s *Services) Start(ctx context.Context) error {
 	if err := s.geo.Open(); err != nil {
 		s.log.Warn("peer countries unavailable until the ip geolocation database is downloaded again", "err", err)
 	}
-	app, err := s.store.GetAppSettings(ctx)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil // onboarding pending
+	done, err := s.Auth.Load(ctx)
+	if err != nil || !done {
+		return err // !done: onboarding pending
 	}
-	if err != nil {
-		return fmt.Errorf("load settings: %w", err)
-	}
-	s.apiKey.Store(&app.APIKey)
-	s.setupDone.Store(true)
-	if err := s.ApplyRuntime(ctx); err != nil {
+	if err := s.Engine.Apply(ctx); err != nil {
 		s.log.Error("downloads unavailable", "err", err)
 	}
 	return nil
 }
 
-// SetupComplete reports whether onboarding has finished.
-func (s *Service) SetupComplete() bool { return s.setupDone.Load() }
+// Stop closes the engine and tunnel. Call on shutdown.
+func (s *Services) Stop() { s.Engine.Stop() }
 
-// trafficNetwork is the network indexer and download traffic uses: the VPN
-// whenever one is configured, never falling back to direct while its
-// tunnel is down, and direct when there is none.
-func (s *Service) trafficNetwork(ctx context.Context) (netx.Network, error) {
-	hasVPN, err := s.vpnConfigured(ctx)
-	if err != nil {
-		return nil, err
+// retryRuntime restarts a failed engine once onboarding is complete.
+func (s *Services) retryRuntime(ctx context.Context) {
+	if s.Auth.SetupComplete() {
+		s.Engine.Retry(ctx)
 	}
-	if !hasVPN {
-		return s.direct, nil
-	}
-	return s.vpnNetwork()
-}
-
-// vpnNetwork returns the live tunnel, or why there is none.
-func (s *Service) vpnNetwork() (netx.Network, error) {
-	s.rtMu.RLock()
-	defer s.rtMu.RUnlock()
-	if tun := s.rt.tunnel(); tun != nil {
-		return tun, nil
-	}
-	if s.rtErr != nil {
-		return nil, fmt.Errorf("vpn is down: %w", s.rtErr)
-	}
-	return nil, errors.New("no VPN is configured")
-}
-
-// tmdb returns a TMDB client using the saved API key.
-func (s *Service) tmdb(ctx context.Context) (*metadata.TMDB, error) {
-	app, err := s.store.GetAppSettings(ctx)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, errors.New("setup is not complete")
-	}
-	if err != nil {
-		return nil, fmt.Errorf("load settings: %w", err)
-	}
-	return &metadata.TMDB{APIKey: app.TMDBAPIKey, BaseURL: s.tmdbBaseURL, HTTP: netx.HTTPClient(s.direct, tmdbTimeout)}, nil
 }

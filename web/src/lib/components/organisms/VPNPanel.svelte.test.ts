@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mockFetch, renderWithClient } from '../../../test/helpers';
-import type { VPNProvider, VPNSettings } from '#lib/types.js';
+import type { VPNProvider, VPNSettings } from '#lib/api/types.js';
 import VPNPanel from './VPNPanel.svelte';
 
 afterEach(() => vi.unstubAllGlobals());

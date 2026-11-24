@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { createQuery } from '@tanstack/svelte-query';
 	import { Sparkline, Text } from '#lib/components/atoms/index.js';
-	import { formatRate } from '#lib/format.js';
-	import { queries } from '#lib/query.js';
+	import { formatRate } from '#lib/utils/format.js';
+	import { queries } from '#lib/api/query.js';
 
 	const throughput = createQuery(() => queries.throughput());
 	const t = $derived(throughput.data);

@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mockFetch, renderWithClient } from '../../../test/helpers';
-import type { ReleaseResult } from '#lib/types.js';
+import type { ReleaseResult } from '#lib/api/types.js';
 import ReleaseTable from './ReleaseTable.svelte';
 
 afterEach(() => vi.unstubAllGlobals());

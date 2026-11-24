@@ -2,8 +2,8 @@
 	import { createQuery, useQueryClient } from '@tanstack/svelte-query';
 	import { Badge, Button, Heading, IconButton, Spinner, Text } from '#lib/components/atoms/index.js';
 	import { DirInput, ErrorMessage } from '#lib/components/molecules/index.js';
-	import { queries, useMutation } from '#lib/query.js';
-	import type { MediaType } from '#lib/types.js';
+	import { queries, useMutation } from '#lib/api/query.js';
+	import type { MediaType } from '#lib/api/types.js';
 
 	const qc = useQueryClient();
 	const movieRoots = createQuery(() => queries.rootFolders('movie'));

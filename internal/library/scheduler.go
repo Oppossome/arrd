@@ -35,7 +35,7 @@ var DefaultSchedule = Schedule{
 
 // RunScheduler runs background jobs until ctx is cancelled. Jobs run one at
 // a time, so a slow search never overlaps with an import.
-func (s *Service) RunScheduler(ctx context.Context, sch Schedule) {
+func (s *Services) RunScheduler(ctx context.Context, sch Schedule) {
 	process := time.NewTicker(sch.ProcessDownloads)
 	defer process.Stop()
 	retry := time.NewTicker(sch.RetryRuntime)
@@ -66,26 +66,26 @@ func (s *Service) RunScheduler(ctx context.Context, sch Schedule) {
 		case <-ctx.Done():
 			return
 		case <-process.C:
-			logErr("process downloads", s.ProcessDownloads(ctx))
+			logErr("process downloads", s.Acquire.ProcessDownloads(ctx))
 		case <-retry.C:
 			s.retryRuntime(ctx)
 		case <-checkVPN.C:
-			logErr("check vpn", s.CheckVPN(ctx))
+			logErr("check vpn", s.VPN.CheckVPN(ctx))
 		case <-purge.C:
-			logErr("purge sessions", s.PurgeExpiredSessions(ctx))
+			logErr("purge sessions", s.Auth.PurgeExpiredSessions(ctx))
 		case <-rss.C:
-			_, err := s.RSSSync(ctx)
+			_, err := s.Acquire.RSSSync(ctx)
 			logErr("rss sync", err)
 			rss.Reset(sch.RSSSync)
 		case <-refresh.C:
 			s.log.Info("refreshing series metadata")
-			logErr("refresh series", s.RefreshAllSeries(ctx))
-			logErr("backfill backdrops", s.BackfillBackdrops(ctx))
+			logErr("refresh series", s.Media.RefreshAllSeries(ctx))
+			logErr("backfill backdrops", s.Media.BackfillBackdrops(ctx))
 			refresh.Reset(sch.RefreshSeries)
 		case <-wanted.C:
 			s.log.Info("searching for wanted movies and episodes")
-			logErr("wanted movie search", s.SearchWantedMovies(ctx))
-			logErr("wanted episode search", s.SearchWantedEpisodes(ctx, nil))
+			logErr("wanted movie search", s.Acquire.SearchWantedMovies(ctx))
+			logErr("wanted episode search", s.Acquire.SearchWantedEpisodes(ctx, nil))
 			wanted.Reset(sch.WantedSearch)
 		}
 	}
@@ -94,7 +94,7 @@ func (s *Service) RunScheduler(ctx context.Context, sch Schedule) {
 // runGeoIPUpdates keeps the peer geolocation database current: it is
 // fetched right away (peers are listed without countries until it is),
 // then checked every interval until ctx is cancelled.
-func (s *Service) runGeoIPUpdates(ctx context.Context, interval time.Duration) {
+func (s *Services) runGeoIPUpdates(ctx context.Context, interval time.Duration) {
 	for {
 		if err := s.geo.Update(ctx); err != nil && ctx.Err() == nil {
 			s.log.Error("update ip geolocation database", "err", err)

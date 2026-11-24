@@ -2,12 +2,12 @@
 	import { createQuery } from '@tanstack/svelte-query';
 	import { Badge, Button, Heading, Select, Spinner, Text } from '#lib/components/atoms/index.js';
 	import { ConfirmDialog, ErrorMessage, FormField, SettingsForm } from '#lib/components/molecules/index.js';
-	import { ApiError } from '#lib/api.js';
-	import { timeAgo } from '#lib/format.js';
-	import { queries, useMutation, useVPNOptions } from '#lib/query.js';
-	import { toasts } from '#lib/toast.svelte.js';
-	import type { VPNSettings, SettingValues } from '#lib/types.js';
-	import { initialValues, missingField, toVPNInput } from '#lib/settingsForm.js';
+	import { ApiError } from '#lib/api/client.js';
+	import { timeAgo } from '#lib/utils/format.js';
+	import { queries, useMutation, useVPNOptions } from '#lib/api/query.js';
+	import { toasts } from '#lib/stores/toast.svelte.js';
+	import type { VPNSettings, SettingValues } from '#lib/api/types.js';
+	import { initialValues, missingField, toVPNInput } from '#lib/domain/settingsForm.js';
 
 	const providers = createQuery(() => queries.vpnProviders());
 	const vpn = createQuery(() => queries.vpnSettings(true));

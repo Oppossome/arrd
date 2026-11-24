@@ -2,9 +2,9 @@
 	import { createQuery } from '@tanstack/svelte-query';
 	import { Heading, Skeleton } from '#lib/components/atoms/index.js';
 	import { ErrorMessage, PosterCard, PosterRow } from '#lib/components/molecules/index.js';
-	import { posterCardProps, type DiscoverList } from '#lib/discover.js';
-	import type { MediaKind } from '#lib/links.js';
-	import { queries } from '#lib/query.js';
+	import { posterCardProps, type DiscoverList } from '#lib/domain/discover.js';
+	import type { MediaKind } from '#lib/nav/links.js';
+	import { queries } from '#lib/api/query.js';
 
 	interface Props {
 		kind: MediaKind;

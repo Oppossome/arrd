@@ -75,10 +75,10 @@ func Run(ctx context.Context, opts Options, log *slog.Logger) error {
 	if err := svc.Start(ctx); err != nil {
 		return err
 	}
-	defer svc.StopRuntime()
+	defer svc.Stop()
 
 	setupToken := ""
-	if !svc.SetupComplete() {
+	if !svc.Auth.SetupComplete() {
 		if setupToken, err = newSetupToken(); err != nil {
 			return err
 		}

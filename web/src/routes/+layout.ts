@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
-import { queryClient } from '#lib/app-client.js';
-import { gateRedirect } from '#lib/auth-gate.js';
-import { queries } from '#lib/query.js';
+import { queryClient } from '#lib/api/app-client.js';
+import { gateRedirect } from '#lib/nav/auth-gate.js';
+import { queries } from '#lib/api/query.js';
 import type { LayoutLoad } from './$types';
 
 // A client-only single-page app embedded in the arrd binary.

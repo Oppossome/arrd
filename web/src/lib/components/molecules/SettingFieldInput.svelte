@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Input, Select, Text, Textarea } from '#lib/components/atoms/index.js';
-	import type { SettingField, SettingOption } from '#lib/types.js';
+	import type { SettingField, SettingOption } from '#lib/api/types.js';
 
 	/** One integration setting, rendered from the field the server declares. */
 	interface Props {

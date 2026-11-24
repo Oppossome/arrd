@@ -3,8 +3,8 @@
 	import { page } from '$app/state';
 	import { createQuery } from '@tanstack/svelte-query';
 	import { Icon, type IconName } from '#lib/components/atoms/index.js';
-	import { HOME, LIBRARY } from '#lib/links.js';
-	import { queries, useMutation } from '#lib/query.js';
+	import { HOME, LIBRARY } from '#lib/nav/links.js';
+	import { queries, useMutation } from '#lib/api/query.js';
 	import ThroughputWidget from './ThroughputWidget.svelte';
 
 	const links: { href: string; label: string; icon: IconName }[] = [

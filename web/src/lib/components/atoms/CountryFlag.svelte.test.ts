@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
-import { countryName } from '#lib/countries.js';
+import { countryName } from '#lib/utils/countries.js';
 import CountryFlag from './CountryFlag.svelte';
 
 describe('CountryFlag', () => {

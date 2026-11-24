@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mockFetch, renderWithClient } from '../../../test/helpers';
-import type { Indexer, IndexerDefinition, IndexerInput, VPNSettings } from '#lib/types.js';
+import type { Indexer, IndexerDefinition, IndexerInput, VPNSettings } from '#lib/api/types.js';
 import IndexersPanel from './IndexersPanel.svelte';
 
 afterEach(() => vi.unstubAllGlobals());

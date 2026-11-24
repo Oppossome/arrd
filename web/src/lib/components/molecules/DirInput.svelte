@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Icon, IconButton, Input, Spinner, Text } from '#lib/components/atoms/index.js';
-	import type { DirListing } from '#lib/types.js';
+	import type { DirListing } from '#lib/api/types.js';
 
 	interface Props {
 		id?: string;

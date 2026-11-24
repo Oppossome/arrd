@@ -1,9 +1,14 @@
-package library
+package library_test
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"generic-arr-project/internal/formspec"
+	"generic-arr-project/internal/library/apperr"
+	"generic-arr-project/internal/library/indexers"
+	"generic-arr-project/internal/library/libtest"
+	"generic-arr-project/internal/library/media"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -14,8 +19,6 @@ import (
 
 	"github.com/anacrolix/torrent/bencode"
 	"github.com/anacrolix/torrent/metainfo"
-
-	"generic-arr-project/internal/formspec"
 )
 
 // siteDefinition is a fictional private tracker in Cardigann format; SITE
@@ -101,7 +104,7 @@ func newPrivateSite(t *testing.T, torrentFile []byte) *privateSite {
 			}
 			s.queries <- r.URL.RawQuery
 			fmt.Fprintf(w, `<table><tr class="row"><td><a class="title" href="details.php?id=7">%s</a></td>
-<td><a class="dl" href="download.php?id=7">get</a></td><td class="size">60 MB</td><td class="seeders">9</td><td class="leechers">1</td></tr></table>`, releaseName)
+<td><a class="dl" href="download.php?id=7">get</a></td><td class="size">60 MB</td><td class="seeders">9</td><td class="leechers">1</td></tr></table>`, libtest.ReleaseName)
 		case "/download.php":
 			if !authed(r) {
 				http.Error(w, "forbidden", http.StatusForbidden)
@@ -119,7 +122,7 @@ func newPrivateSite(t *testing.T, torrentFile []byte) *privateSite {
 // smallTorrent is a valid .torrent for a one-file release.
 func smallTorrent(t *testing.T) []byte {
 	t.Helper()
-	root := filepath.Join(t.TempDir(), releaseName)
+	root := filepath.Join(t.TempDir(), libtest.ReleaseName)
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -141,9 +144,9 @@ func smallTorrent(t *testing.T) []byte {
 	return out
 }
 
-func writeDefinition(t *testing.T, env *testEnv, site *privateSite, name string) {
+func writeDefinition(t *testing.T, env *libtest.Env, site *privateSite, name string) {
 	t.Helper()
-	dir := filepath.Join(env.dataDir, "definitions")
+	dir := filepath.Join(env.DataDir, "definitions")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -156,23 +159,23 @@ func writeDefinition(t *testing.T, env *testEnv, site *privateSite, name string)
 func TestPrivateSiteEndToEnd(t *testing.T) {
 	ctx := context.Background()
 	site := newPrivateSite(t, smallTorrent(t))
-	tmdb := fakeTMDB(t)
+	tmdb := libtest.FakeTMDB(t)
 	base := t.TempDir()
-	env := newEnv(t, base, tmdb.URL, basicSetup(base), nil)
-	svc := env.svc
+	env := libtest.NewEnv(t, base, tmdb.URL, libtest.BasicSetup(base), nil)
+	svc := env.Svc
 
 	// Definitions are picked up on reload.
 	writeDefinition(t, env, site, "Example Bay")
-	if err := os.WriteFile(filepath.Join(env.dataDir, "definitions", "broken.yml"), []byte("id: [oops"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(env.DataDir, "definitions", "broken.yml"), []byte("id: [oops"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	reload := svc.ReloadIndexerDefinitions()
-	// Sorted by name: "Example Bay" before newEnv's "Other Site" and "Test Site".
+	reload := svc.Indexers.ReloadIndexerDefinitions()
+	// Sorted by name: "Example Bay" before libtest.NewEnv's "Other Site" and "Test Site".
 	if len(reload.Definitions) != 3 || reload.Definitions[0].ID != "examplebay" || len(reload.Errors) != 1 || !strings.Contains(reload.Errors[0], "broken.yml") {
 		t.Fatalf("reload = %+v", reload)
 	}
 
-	in := IndexerInput{
+	in := indexers.IndexerInput{
 		Name: "bay", Definition: "examplebay",
 		Settings: formspec.Values{"base_url": site.URL + "/", "username": "tester", "password": "fictional-pass"},
 	}
@@ -180,26 +183,26 @@ func TestPrivateSiteEndToEnd(t *testing.T) {
 	rssOn := true
 	withRSS := in
 	withRSS.EnableRSS = &rssOn
-	var ve *ValidationError
-	if _, err := svc.CreateIndexer(ctx, withRSS); !errors.As(err, &ve) || ve.Field != "enable_rss" {
+	var ve *apperr.ValidationError
+	if _, err := svc.Indexers.CreateIndexer(ctx, withRSS); !errors.As(err, &ve) || ve.Field != "enable_rss" {
 		t.Fatalf("create with rss = %v", err)
 	}
-	ix, err := svc.CreateIndexer(ctx, in)
+	ix, err := svc.Indexers.CreateIndexer(ctx, in)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if ix.EnableRSS || ix.Settings["password"] != "" || len(ix.SecretsSet) != 1 {
 		t.Errorf("indexer = %+v", ix)
 	}
-	if ix, err = svc.TestIndexer(ctx, ix.ID); err != nil || ix.Caps == nil || !ix.Caps.MovieSearch.Supports("imdbid") {
+	if ix, err = svc.Indexers.TestIndexer(ctx, ix.ID); err != nil || ix.Caps == nil || !ix.Caps.MovieSearch.Supports("imdbid") {
 		t.Fatalf("test = %+v, %v", ix, err)
 	}
 
-	movie, err := svc.AddMovie(ctx, AddMovieInput{TMDBID: 900001})
+	movie, err := svc.Media.AddMovie(ctx, media.AddMovieInput{TMDBID: 900001})
 	if err != nil {
 		t.Fatal(err)
 	}
-	res, err := svc.SearchMovie(ctx, movie.ID)
+	res, err := svc.Acquire.SearchMovie(ctx, movie.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -213,11 +216,11 @@ func TestPrivateSiteEndToEnd(t *testing.T) {
 	}
 
 	// The .torrent needs the signed-in session the search used.
-	dl, err := svc.GrabMovieRelease(ctx, movie.ID, res.Releases[0])
+	dl, err := svc.Acquire.GrabMovieRelease(ctx, movie.ID, res.Releases[0])
 	if err != nil {
 		t.Fatal(err)
 	}
-	if dl.ReleaseTitle != releaseName {
+	if dl.ReleaseTitle != libtest.ReleaseName {
 		t.Errorf("download = %+v", dl)
 	}
 	if n := site.logins.Load(); n != 1 {
@@ -226,8 +229,8 @@ func TestPrivateSiteEndToEnd(t *testing.T) {
 
 	// A changed definition gets a fresh searcher (and session).
 	writeDefinition(t, env, site, "Example Bay v2")
-	svc.ReloadIndexerDefinitions()
-	if _, err := svc.SearchMovie(ctx, movie.ID); err != nil {
+	svc.Indexers.ReloadIndexerDefinitions()
+	if _, err := svc.Acquire.SearchMovie(ctx, movie.ID); err != nil {
 		t.Fatal(err)
 	}
 	if n := site.logins.Load(); n != 2 {
@@ -235,7 +238,7 @@ func TestPrivateSiteEndToEnd(t *testing.T) {
 	}
 
 	// RSS sync skips it rather than failing it.
-	rss, err := svc.RSSSync(ctx)
+	rss, err := svc.Acquire.RSSSync(ctx)
 	if err != nil || len(rss.Failures) != 0 {
 		t.Errorf("rss = %+v, %v", rss, err)
 	}

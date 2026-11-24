@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mockFetch, renderWithClient } from '../../../test/helpers';
-import { newDraft } from '#lib/setup.js';
+import { newDraft } from '#lib/domain/setup.js';
 import SetupFoldersStep from './SetupFoldersStep.svelte';
 
 afterEach(() => vi.unstubAllGlobals());

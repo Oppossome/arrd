@@ -2,11 +2,11 @@
 	import { createQuery } from '@tanstack/svelte-query';
 	import { Badge, Button, Heading, IconButton, Select, Spinner, Text } from '#lib/components/atoms/index.js';
 	import { EmptyState, ErrorMessage } from '#lib/components/molecules/index.js';
-	import { formatBytes, timeAgo } from '#lib/format.js';
-	import { queries, useMutation } from '#lib/query.js';
-	import { releaseCoverage, sortReleases, type ReleaseSortKey, type ReleaseSource } from '#lib/releases.js';
-	import { toasts } from '#lib/toast.svelte.js';
-	import type { ReleaseResult } from '#lib/types.js';
+	import { formatBytes, timeAgo } from '#lib/utils/format.js';
+	import { queries, useMutation } from '#lib/api/query.js';
+	import { releaseCoverage, sortReleases, type ReleaseSortKey, type ReleaseSource } from '#lib/domain/releases.js';
+	import { toasts } from '#lib/stores/toast.svelte.js';
+	import type { ReleaseResult } from '#lib/api/types.js';
 
 	interface Props {
 		source: ReleaseSource;

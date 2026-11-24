@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { createQuery } from '@tanstack/svelte-query';
 	import { ErrorMessage, PosterCard, PosterRow } from '#lib/components/molecules/index.js';
-	import { posterCardProps } from '#lib/discover.js';
-	import type { MediaKind } from '#lib/links.js';
-	import { queries } from '#lib/query.js';
+	import { posterCardProps } from '#lib/domain/discover.js';
+	import type { MediaKind } from '#lib/nav/links.js';
+	import { queries } from '#lib/api/query.js';
 
 	/** "Because you added X" rows, one per recently added library title. */
 	let { kind }: { kind: MediaKind } = $props();

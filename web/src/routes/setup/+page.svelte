@@ -10,8 +10,8 @@
 		SetupVPNStep
 	} from '#lib/components/organisms/index.js';
 	import { WizardLayout } from '#lib/components/templates/index.js';
-	import { setupToken } from '#lib/api.js';
-	import { newDraft, SETUP_STEPS } from '#lib/setup.js';
+	import { setupToken } from '#lib/api/client.js';
+	import { newDraft, SETUP_STEPS } from '#lib/domain/setup.js';
 
 	const urlToken = page.url.searchParams.get('token');
 	const draft = $state(newDraft(urlToken ?? setupToken.get() ?? ''));

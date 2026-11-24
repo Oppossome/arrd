@@ -2,10 +2,10 @@
 	import { createQuery } from '@tanstack/svelte-query';
 	import { Heading, Skeleton } from '#lib/components/atoms/index.js';
 	import { EmptyState, ErrorMessage, PosterCard, PosterWall } from '#lib/components/molecules/index.js';
-	import { posterCardProps } from '#lib/discover.js';
-	import type { MediaKind } from '#lib/links.js';
-	import { queries } from '#lib/query.js';
-	import type { TitleFilter } from '#lib/types.js';
+	import { posterCardProps } from '#lib/domain/discover.js';
+	import type { MediaKind } from '#lib/nav/links.js';
+	import { queries } from '#lib/api/query.js';
+	import type { TitleFilter } from '#lib/api/types.js';
 
 	interface Props {
 		kind: MediaKind;

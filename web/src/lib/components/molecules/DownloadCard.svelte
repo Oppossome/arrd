@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { IconButton, Link, ProgressBar, Text } from '#lib/components/atoms/index.js';
 	import PeerSummary from './PeerSummary.svelte';
-	import { backdropURL, posterURL } from '#lib/api.js';
-	import { formatBytes, formatETA, formatRate, percent } from '#lib/format.js';
-	import type { Download } from '#lib/types.js';
+	import { backdropURL, posterURL } from '#lib/api/client.js';
+	import { formatBytes, formatETA, formatRate, percent } from '#lib/utils/format.js';
+	import type { Download } from '#lib/api/types.js';
 
 	interface Props {
 		download: Download;

@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"generic-arr-project/internal/library"
+	"generic-arr-project/internal/library/apperr"
 )
 
 const setupRequiredMessage = "setup required: complete onboarding at /api/v1/setup"
@@ -34,9 +34,9 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 // writeErr maps service errors to HTTP statuses. Unexpected errors are
 // logged and reported as 500 with their message (single-user admin API).
 func (h *handlers) writeErr(w http.ResponseWriter, r *http.Request, err error) {
-	var ve *library.ValidationError
-	var ce *library.ConflictError
-	var rl *library.RateLimitedError
+	var ve *apperr.ValidationError
+	var ce *apperr.ConflictError
+	var rl *apperr.RateLimitedError
 	switch {
 	case errors.As(err, &ve):
 		writeJSON(w, http.StatusBadRequest, errorBody{Error: ve.Message, Field: ve.Field})
@@ -45,9 +45,9 @@ func (h *handlers) writeErr(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.As(err, &rl):
 		w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(rl.RetryAfter.Seconds()))))
 		writeJSON(w, http.StatusTooManyRequests, errorBody{Error: rl.Error()})
-	case errors.Is(err, library.ErrInvalidCredentials):
+	case errors.Is(err, apperr.ErrInvalidCredentials):
 		writeJSON(w, http.StatusUnauthorized, errorBody{Error: "wrong password"})
-	case errors.Is(err, library.ErrNotFound):
+	case errors.Is(err, apperr.ErrNotFound):
 		writeJSON(w, http.StatusNotFound, errorBody{Error: err.Error()})
 	case errors.Is(err, errSetupRequired):
 		writeJSON(w, http.StatusServiceUnavailable, errorBody{Error: setupRequiredMessage})

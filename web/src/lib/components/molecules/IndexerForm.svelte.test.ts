@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import type { Indexer, IndexerDefinition, IndexerInput } from '#lib/types.js';
+import type { Indexer, IndexerDefinition, IndexerInput } from '#lib/api/types.js';
 import IndexerForm from './IndexerForm.svelte';
 
 const siteAddress = (value: string) => ({ value, label: value });

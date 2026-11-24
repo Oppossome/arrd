@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Input, Text } from '#lib/components/atoms/index.js';
 	import { FormField } from '#lib/components/molecules/index.js';
-	import { setupToken } from '#lib/api.js';
-	import { MIN_PASSWORD, passwordProblem, type SetupDraft } from '#lib/setup.js';
+	import { setupToken } from '#lib/api/client.js';
+	import { MIN_PASSWORD, passwordProblem, type SetupDraft } from '#lib/domain/setup.js';
 
 	interface Props {
 		draft: SetupDraft;

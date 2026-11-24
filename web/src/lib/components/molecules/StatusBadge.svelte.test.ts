@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
-import { statusLabel } from '#lib/status.js';
+import { statusLabel } from '#lib/domain/status.js';
 import StatusBadge from './StatusBadge.svelte';
 
 describe('StatusBadge', () => {

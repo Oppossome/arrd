@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"generic-arr-project/internal/library"
+	"generic-arr-project/internal/library/engine"
 	"generic-arr-project/internal/netx"
 	"generic-arr-project/internal/store"
 	"generic-arr-project/internal/torrent"
@@ -55,12 +56,12 @@ func newUnconfiguredServerUI(t *testing.T, ui fs.FS) *testServer {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { st.Close() })
-	factory := func(context.Context, library.RuntimeSettings) (*library.Runtime, error) {
+	factory := func(context.Context, engine.Settings) (*engine.Runtime, error) {
 		eng, err := torrent.New(torrent.Config{StateDir: filepath.Join(dataDir, "state"), Network: v4Only{}}, log)
 		if err != nil {
 			return nil, err
 		}
-		return &library.Runtime{Engine: eng, Close: eng.Close}, nil
+		return &engine.Runtime{Engine: eng, Close: eng.Close}, nil
 	}
 	defsDir := filepath.Join(dataDir, "definitions")
 	if err := os.MkdirAll(defsDir, 0o700); err != nil {
@@ -76,7 +77,7 @@ func newUnconfiguredServerUI(t *testing.T, ui fs.FS) *testServer {
 	if err := svc.Start(ctx); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(svc.StopRuntime)
+	t.Cleanup(svc.Stop)
 	h, err := New(svc, testSetupToken, log, ui)
 	if err != nil {
 		t.Fatal(err)

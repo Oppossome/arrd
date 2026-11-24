@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import type { VPNProvider } from '#lib/types.js';
+import type { VPNProvider } from '#lib/api/types.js';
 import SettingsForm from './SettingsForm.svelte';
 
 const fictionalVPN: VPNProvider = {

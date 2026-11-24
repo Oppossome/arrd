@@ -3,10 +3,10 @@
 	import { Checkbox, Heading, Text } from '#lib/components/atoms/index.js';
 	import { ConfirmDialog, DownloadCard, ErrorMessage } from '#lib/components/molecules/index.js';
 	import PeerPopover from './PeerPopover.svelte';
-	import { activeDownloads } from '#lib/downloads.js';
-	import { libraryHref } from '#lib/links.js';
-	import { queries, useMutation } from '#lib/query.js';
-	import type { Download } from '#lib/types.js';
+	import { activeDownloads } from '#lib/domain/downloads.js';
+	import { libraryHref } from '#lib/nav/links.js';
+	import { queries, useMutation } from '#lib/api/query.js';
+	import type { Download } from '#lib/api/types.js';
 
 	// The same (unfiltered) queue query the poster grids read.
 	const queue = createQuery(() => queries.queue());

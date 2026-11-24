@@ -2,11 +2,11 @@
 	import { createQuery } from '@tanstack/svelte-query';
 	import { Skeleton } from '#lib/components/atoms/index.js';
 	import { EmptyState, ErrorMessage, PosterCard, SearchBox, Tabs } from '#lib/components/molecules/index.js';
-	import { posterURL } from '#lib/api.js';
-	import { itemDownloads, type ItemDownload } from '#lib/downloads.js';
-	import { libraryHref } from '#lib/links.js';
-	import { queries } from '#lib/query.js';
-	import type { MovieStatus } from '#lib/types.js';
+	import { posterURL } from '#lib/api/client.js';
+	import { itemDownloads, type ItemDownload } from '#lib/domain/downloads.js';
+	import { libraryHref } from '#lib/nav/links.js';
+	import { queries } from '#lib/api/query.js';
+	import type { MovieStatus } from '#lib/api/types.js';
 
 	interface Props {
 		kind: 'movies' | 'series';

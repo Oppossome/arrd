@@ -2,9 +2,9 @@
 	import { createQuery } from '@tanstack/svelte-query';
 	import { Button, Heading, Input, Spinner, Text } from '#lib/components/atoms/index.js';
 	import { ConfirmDialog, CopyField, ErrorMessage, FormField, SecretField } from '#lib/components/molecules/index.js';
-	import { fieldError } from '#lib/api.js';
-	import { queries, useMutation } from '#lib/query.js';
-	import { toasts } from '#lib/toast.svelte.js';
+	import { fieldError } from '#lib/api/client.js';
+	import { queries, useMutation } from '#lib/api/query.js';
+	import { toasts } from '#lib/stores/toast.svelte.js';
 
 	const general = createQuery(() => queries.generalSettings());
 	const updateGeneral = useMutation('updateGeneral');

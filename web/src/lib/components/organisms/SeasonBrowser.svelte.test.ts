@@ -1,7 +1,7 @@
 import { fireEvent, screen, within } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mockFetch, renderWithClient } from '../../../test/helpers';
-import type { Episode, LookupSeries, SeasonDetails, Series } from '#lib/types.js';
+import type { Episode, LookupSeries, SeasonDetails, Series } from '#lib/api/types.js';
 import SeasonBrowser from './SeasonBrowser.svelte';
 
 afterEach(() => vi.unstubAllGlobals());

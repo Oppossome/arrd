@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { ApiError, fieldError, isFieldError } from '#lib/api.js';
+	import { ApiError, fieldError, isFieldError } from '#lib/api/client.js';
 	import { Button, Checkbox, Input, Text } from '#lib/components/atoms/index.js';
-	import { compactValues, initialValues, missingField } from '#lib/settingsForm.js';
+	import { compactValues, initialValues, missingField } from '#lib/domain/settingsForm.js';
 	import ErrorMessage from './ErrorMessage.svelte';
 	import FormField from './FormField.svelte';
 	import SettingsForm from './SettingsForm.svelte';
-	import type { IndexerDefinition, IndexerInput } from '#lib/types.js';
+	import type { IndexerDefinition, IndexerInput } from '#lib/api/types.js';
 
 	interface Props {
 		/** The site the settings are for. */

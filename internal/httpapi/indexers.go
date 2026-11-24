@@ -8,11 +8,11 @@ import (
 	"generic-arr-project/internal/formspec"
 	"generic-arr-project/internal/httpapi/apigen"
 	"generic-arr-project/internal/indexer"
-	"generic-arr-project/internal/library"
+	"generic-arr-project/internal/library/indexers"
 )
 
 func (h *handlers) ListIndexers(ctx context.Context, _ apigen.ListIndexersRequestObject) (apigen.ListIndexersResponseObject, error) {
-	out, err := h.svc.Indexers(ctx)
+	out, err := h.svc.Indexers.Indexers(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -20,7 +20,7 @@ func (h *handlers) ListIndexers(ctx context.Context, _ apigen.ListIndexersReques
 }
 
 func (h *handlers) CreateIndexer(ctx context.Context, req apigen.CreateIndexerRequestObject) (apigen.CreateIndexerResponseObject, error) {
-	out, err := h.svc.CreateIndexer(ctx, fromAPIIndexerInput(*req.Body))
+	out, err := h.svc.Indexers.CreateIndexer(ctx, fromAPIIndexerInput(*req.Body))
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +28,7 @@ func (h *handlers) CreateIndexer(ctx context.Context, req apigen.CreateIndexerRe
 }
 
 func (h *handlers) GetIndexer(ctx context.Context, req apigen.GetIndexerRequestObject) (apigen.GetIndexerResponseObject, error) {
-	out, err := h.svc.Indexer(ctx, req.ID)
+	out, err := h.svc.Indexers.Indexer(ctx, req.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func (h *handlers) GetIndexer(ctx context.Context, req apigen.GetIndexerRequestO
 }
 
 func (h *handlers) UpdateIndexer(ctx context.Context, req apigen.UpdateIndexerRequestObject) (apigen.UpdateIndexerResponseObject, error) {
-	out, err := h.svc.UpdateIndexer(ctx, req.ID, fromAPIIndexerInput(*req.Body))
+	out, err := h.svc.Indexers.UpdateIndexer(ctx, req.ID, fromAPIIndexerInput(*req.Body))
 	if err != nil {
 		return nil, err
 	}
@@ -44,14 +44,14 @@ func (h *handlers) UpdateIndexer(ctx context.Context, req apigen.UpdateIndexerRe
 }
 
 func (h *handlers) DeleteIndexer(ctx context.Context, req apigen.DeleteIndexerRequestObject) (apigen.DeleteIndexerResponseObject, error) {
-	if err := h.svc.DeleteIndexer(ctx, req.ID); err != nil {
+	if err := h.svc.Indexers.DeleteIndexer(ctx, req.ID); err != nil {
 		return nil, err
 	}
 	return apigen.DeleteIndexer204Response{}, nil
 }
 
 func (h *handlers) TestIndexer(ctx context.Context, req apigen.TestIndexerRequestObject) (apigen.TestIndexerResponseObject, error) {
-	out, err := h.svc.TestIndexer(ctx, req.ID)
+	out, err := h.svc.Indexers.TestIndexer(ctx, req.ID)
 	if err != nil {
 		// A failed test is a normal outcome, not a server error.
 		return apigen.TestIndexer502JSONResponse{Error: err.Error()}, nil
@@ -62,12 +62,12 @@ func (h *handlers) TestIndexer(ctx context.Context, req apigen.TestIndexerReques
 // IndexerDefinitions lists the sites indexers can be added for and the
 // settings each needs; used by settings and the setup wizard.
 func (h *handlers) IndexerDefinitions(context.Context, apigen.IndexerDefinitionsRequestObject) (apigen.IndexerDefinitionsResponseObject, error) {
-	return apigen.IndexerDefinitions200JSONResponse(mapSlice(h.svc.IndexerDefinitions(), toAPIIndexerDefinition)), nil
+	return apigen.IndexerDefinitions200JSONResponse(mapSlice(h.svc.Indexers.IndexerDefinitions(), toAPIIndexerDefinition)), nil
 }
 
 // ReloadIndexerDefinitions re-reads the definitions directory.
 func (h *handlers) ReloadIndexerDefinitions(context.Context, apigen.ReloadIndexerDefinitionsRequestObject) (apigen.ReloadIndexerDefinitionsResponseObject, error) {
-	out := h.svc.ReloadIndexerDefinitions()
+	out := h.svc.Indexers.ReloadIndexerDefinitions()
 	return apigen.ReloadIndexerDefinitions200JSONResponse{Definitions: mapSlice(out.Definitions, toAPIIndexerDefinition), Errors: nonNil(out.Errors)}, nil
 }
 
@@ -77,7 +77,7 @@ func (h *handlers) UploadIndexerDefinitions(_ context.Context, req apigen.Upload
 	if err != nil {
 		return nil, fmt.Errorf("%w: read upload: %v", errBadRequest, err)
 	}
-	out, err := h.svc.UploadIndexerDefinitions(data)
+	out, err := h.svc.Indexers.UploadIndexerDefinitions(data)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func (h *handlers) UploadIndexerDefinitions(_ context.Context, req apigen.Upload
 
 // DeleteIndexerDefinition removes a definition's file.
 func (h *handlers) DeleteIndexerDefinition(_ context.Context, req apigen.DeleteIndexerDefinitionRequestObject) (apigen.DeleteIndexerDefinitionResponseObject, error) {
-	if err := h.svc.DeleteIndexerDefinition(req.DefinitionID); err != nil {
+	if err := h.svc.Indexers.DeleteIndexerDefinition(req.DefinitionID); err != nil {
 		return nil, err
 	}
 	return apigen.DeleteIndexerDefinition204Response{}, nil
@@ -107,7 +107,7 @@ func toAPIIndexerDefinition(k indexer.Definition) apigen.IndexerDefinition {
 	}
 }
 
-func toAPIIndexer(ix library.Indexer) apigen.Indexer {
+func toAPIIndexer(ix indexers.Indexer) apigen.Indexer {
 	return apigen.Indexer{
 		ID:              ix.ID,
 		Name:            ix.Name,
@@ -147,8 +147,8 @@ func toAPICategory(c indexer.Category) apigen.IndexerCategory {
 	return apigen.IndexerCategory{ID: c.ID, Name: c.Name, Subcats: optSlice(c.Subcats, toAPICategory)}
 }
 
-func fromAPIIndexerInput(in apigen.IndexerInput) library.IndexerInput {
-	return library.IndexerInput{
+func fromAPIIndexerInput(in apigen.IndexerInput) indexers.IndexerInput {
+	return indexers.IndexerInput{
 		Name:            deref(in.Name),
 		Definition:      deref(in.Definition),
 		Settings:        formspec.Values(deref(in.Settings)),

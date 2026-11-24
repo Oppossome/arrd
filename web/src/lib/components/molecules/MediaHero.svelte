@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { Heading, IconButton, Rating, Text } from '#lib/components/atoms/index.js';
-	import { formatRuntime } from '#lib/format.js';
+	import { formatRuntime } from '#lib/utils/format.js';
 
 	interface Props {
 		title: string;

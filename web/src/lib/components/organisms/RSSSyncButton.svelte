@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Button } from '#lib/components/atoms/index.js';
-	import { useMutation } from '#lib/query.js';
-	import { toasts } from '#lib/toast.svelte.js';
+	import { useMutation } from '#lib/api/query.js';
+	import { toasts } from '#lib/stores/toast.svelte.js';
 
 	const sync = useMutation('rssSync');
 </script>

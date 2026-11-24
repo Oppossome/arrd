@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Toast } from '#lib/components/molecules/index.js';
-	import { toasts } from '#lib/toast.svelte.js';
+	import { toasts } from '#lib/stores/toast.svelte.js';
 </script>
 
 <div class="toasts" aria-live="polite">

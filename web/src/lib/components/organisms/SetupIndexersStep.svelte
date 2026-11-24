@@ -2,10 +2,10 @@
 	import { createQuery } from '@tanstack/svelte-query';
 	import { Spinner, Text } from '#lib/components/atoms/index.js';
 	import { DefinitionToggleList, ErrorMessage, IndexerForm, type SiteState } from '#lib/components/molecules/index.js';
-	import { queries } from '#lib/query.js';
-	import { compactValues, initialValues, needsSettings } from '#lib/settingsForm.js';
-	import type { SetupDraft } from '#lib/setup.js';
-	import type { IndexerDefinition, IndexerInput } from '#lib/types.js';
+	import { queries } from '#lib/api/query.js';
+	import { compactValues, initialValues, needsSettings } from '#lib/domain/settingsForm.js';
+	import type { SetupDraft } from '#lib/domain/setup.js';
+	import type { IndexerDefinition, IndexerInput } from '#lib/api/types.js';
 
 	let { draft }: { draft: SetupDraft } = $props();
 	const definitions = createQuery(() => queries.indexerDefinitions());

@@ -4,12 +4,12 @@ import (
 	"context"
 
 	"generic-arr-project/internal/httpapi/apigen"
-	"generic-arr-project/internal/library"
+	"generic-arr-project/internal/library/media"
 	"generic-arr-project/internal/metadata"
 )
 
 func (h *handlers) LookupSeries(ctx context.Context, req apigen.LookupSeriesRequestObject) (apigen.LookupSeriesResponseObject, error) {
-	out, err := h.svc.LookupSeries(ctx, deref(req.Params.Q), deref(req.Params.Year), fromAPITitleFilter(req.Params.Genre, req.Params.Lang))
+	out, err := h.svc.Media.LookupSeries(ctx, deref(req.Params.Q), deref(req.Params.Year), fromAPITitleFilter(req.Params.Genre, req.Params.Lang))
 	if err != nil {
 		return nil, err
 	}
@@ -17,7 +17,7 @@ func (h *handlers) LookupSeries(ctx context.Context, req apigen.LookupSeriesRequ
 }
 
 func (h *handlers) ListSeries(ctx context.Context, _ apigen.ListSeriesRequestObject) (apigen.ListSeriesResponseObject, error) {
-	out, err := h.svc.SeriesList(ctx)
+	out, err := h.svc.Media.SeriesList(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -25,7 +25,7 @@ func (h *handlers) ListSeries(ctx context.Context, _ apigen.ListSeriesRequestObj
 }
 
 func (h *handlers) AddSeries(ctx context.Context, req apigen.AddSeriesRequestObject) (apigen.AddSeriesResponseObject, error) {
-	out, err := h.svc.AddSeries(ctx, fromAPIAddSeries(*req.Body))
+	out, err := h.svc.Media.AddSeries(ctx, fromAPIAddSeries(*req.Body))
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +33,7 @@ func (h *handlers) AddSeries(ctx context.Context, req apigen.AddSeriesRequestObj
 }
 
 func (h *handlers) GetSeries(ctx context.Context, req apigen.GetSeriesRequestObject) (apigen.GetSeriesResponseObject, error) {
-	out, err := h.svc.SeriesDetail(ctx, req.ID)
+	out, err := h.svc.Media.SeriesDetail(ctx, req.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (h *handlers) GetSeries(ctx context.Context, req apigen.GetSeriesRequestObj
 }
 
 func (h *handlers) UpdateSeries(ctx context.Context, req apigen.UpdateSeriesRequestObject) (apigen.UpdateSeriesResponseObject, error) {
-	out, err := h.svc.UpdateSeries(ctx, req.ID, fromAPIUpdateSeries(*req.Body))
+	out, err := h.svc.Media.UpdateSeries(ctx, req.ID, fromAPIUpdateSeries(*req.Body))
 	if err != nil {
 		return nil, err
 	}
@@ -49,14 +49,14 @@ func (h *handlers) UpdateSeries(ctx context.Context, req apigen.UpdateSeriesRequ
 }
 
 func (h *handlers) DeleteSeries(ctx context.Context, req apigen.DeleteSeriesRequestObject) (apigen.DeleteSeriesResponseObject, error) {
-	if err := h.svc.DeleteSeries(ctx, req.ID); err != nil {
+	if err := h.svc.Media.DeleteSeries(ctx, req.ID); err != nil {
 		return nil, err
 	}
 	return apigen.DeleteSeries204Response{}, nil
 }
 
 func (h *handlers) RefreshSeries(ctx context.Context, req apigen.RefreshSeriesRequestObject) (apigen.RefreshSeriesResponseObject, error) {
-	out, err := h.svc.RefreshSeries(ctx, req.ID)
+	out, err := h.svc.Media.RefreshSeries(ctx, req.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (h *handlers) RefreshSeries(ctx context.Context, req apigen.RefreshSeriesRe
 }
 
 func (h *handlers) SeriesEpisodes(ctx context.Context, req apigen.SeriesEpisodesRequestObject) (apigen.SeriesEpisodesResponseObject, error) {
-	out, err := h.svc.SeriesEpisodes(ctx, req.ID)
+	out, err := h.svc.Media.SeriesEpisodes(ctx, req.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -72,18 +72,18 @@ func (h *handlers) SeriesEpisodes(ctx context.Context, req apigen.SeriesEpisodes
 }
 
 func (h *handlers) SearchSeriesWanted(ctx context.Context, req apigen.SearchSeriesWantedRequestObject) (apigen.SearchSeriesWantedResponseObject, error) {
-	if _, err := h.svc.SeriesDetail(ctx, req.ID); err != nil {
+	if _, err := h.svc.Media.SeriesDetail(ctx, req.ID); err != nil {
 		return nil, err
 	}
 	id := req.ID
-	if err := h.svc.SearchWantedEpisodes(ctx, &id); err != nil {
+	if err := h.svc.Acquire.SearchWantedEpisodes(ctx, &id); err != nil {
 		return nil, err
 	}
 	return apigen.SearchSeriesWanted204Response{}, nil
 }
 
 func (h *handlers) GrabSeries(ctx context.Context, req apigen.GrabSeriesRequestObject) (apigen.GrabSeriesResponseObject, error) {
-	out, err := h.svc.GrabSeriesRelease(ctx, req.ID, fromAPIRelease(*req.Body))
+	out, err := h.svc.Acquire.GrabSeriesRelease(ctx, req.ID, fromAPIRelease(*req.Body))
 	if err != nil {
 		return nil, err
 	}
@@ -91,14 +91,14 @@ func (h *handlers) GrabSeries(ctx context.Context, req apigen.GrabSeriesRequestO
 }
 
 func (h *handlers) UpdateSeason(ctx context.Context, req apigen.UpdateSeasonRequestObject) (apigen.UpdateSeasonResponseObject, error) {
-	if err := h.svc.SetSeasonMonitored(ctx, req.ID, req.Season, req.Body.Monitored); err != nil {
+	if err := h.svc.Media.SetSeasonMonitored(ctx, req.ID, req.Season, req.Body.Monitored); err != nil {
 		return nil, err
 	}
 	return apigen.UpdateSeason204Response{}, nil
 }
 
 func (h *handlers) SeasonReleases(ctx context.Context, req apigen.SeasonReleasesRequestObject) (apigen.SeasonReleasesResponseObject, error) {
-	out, err := h.svc.SearchSeason(ctx, req.ID, req.Season)
+	out, err := h.svc.Acquire.SearchSeason(ctx, req.ID, req.Season)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (h *handlers) SeasonReleases(ctx context.Context, req apigen.SeasonReleases
 }
 
 func (h *handlers) SearchSeason(ctx context.Context, req apigen.SearchSeasonRequestObject) (apigen.SearchSeasonResponseObject, error) {
-	out, err := h.svc.AutoSearchSeason(ctx, req.ID, req.Season)
+	out, err := h.svc.Acquire.AutoSearchSeason(ctx, req.ID, req.Season)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func (h *handlers) SearchSeason(ctx context.Context, req apigen.SearchSeasonRequ
 }
 
 func (h *handlers) UpdateEpisode(ctx context.Context, req apigen.UpdateEpisodeRequestObject) (apigen.UpdateEpisodeResponseObject, error) {
-	out, err := h.svc.SetEpisodeMonitored(ctx, req.ID, req.Body.Monitored)
+	out, err := h.svc.Media.SetEpisodeMonitored(ctx, req.ID, req.Body.Monitored)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func (h *handlers) UpdateEpisode(ctx context.Context, req apigen.UpdateEpisodeRe
 }
 
 func (h *handlers) EpisodeReleases(ctx context.Context, req apigen.EpisodeReleasesRequestObject) (apigen.EpisodeReleasesResponseObject, error) {
-	out, err := h.svc.SearchEpisode(ctx, req.ID)
+	out, err := h.svc.Acquire.SearchEpisode(ctx, req.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +130,7 @@ func (h *handlers) EpisodeReleases(ctx context.Context, req apigen.EpisodeReleas
 }
 
 func (h *handlers) SearchEpisode(ctx context.Context, req apigen.SearchEpisodeRequestObject) (apigen.SearchEpisodeResponseObject, error) {
-	out, err := h.svc.AutoSearchEpisode(ctx, req.ID)
+	out, err := h.svc.Acquire.AutoSearchEpisode(ctx, req.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -138,14 +138,14 @@ func (h *handlers) SearchEpisode(ctx context.Context, req apigen.SearchEpisodeRe
 }
 
 func (h *handlers) GrabEpisode(ctx context.Context, req apigen.GrabEpisodeRequestObject) (apigen.GrabEpisodeResponseObject, error) {
-	out, err := h.svc.GrabEpisodeRelease(ctx, req.ID, fromAPIRelease(*req.Body))
+	out, err := h.svc.Acquire.GrabEpisodeRelease(ctx, req.ID, fromAPIRelease(*req.Body))
 	if err != nil {
 		return nil, err
 	}
 	return apigen.GrabEpisode201JSONResponse(toAPIDownload(out)), nil
 }
 
-func toAPISeries(s library.Series) apigen.Series {
+func toAPISeries(s media.Series) apigen.Series {
 	return apigen.Series{
 		ID:              s.ID,
 		TMDBID:          s.TMDBID,
@@ -166,7 +166,7 @@ func toAPISeries(s library.Series) apigen.Series {
 	}
 }
 
-func toAPISeasonStatus(s library.SeasonStatus) apigen.SeasonStatus {
+func toAPISeasonStatus(s media.SeasonStatus) apigen.SeasonStatus {
 	return apigen.SeasonStatus{
 		Season:     s.Number,
 		Episodes:   s.Episodes,
@@ -177,7 +177,7 @@ func toAPISeasonStatus(s library.SeasonStatus) apigen.SeasonStatus {
 	}
 }
 
-func toAPIEpisode(e library.Episode) apigen.Episode {
+func toAPIEpisode(e media.Episode) apigen.Episode {
 	return apigen.Episode{
 		ID:          e.ID,
 		SeriesID:    e.SeriesID,
@@ -213,15 +213,15 @@ func toAPILookupSeries(s metadata.Series) apigen.LookupSeries {
 	}
 }
 
-func fromAPIAddSeries(in apigen.AddSeriesRequest) library.AddSeriesInput {
-	return library.AddSeriesInput{
+func fromAPIAddSeries(in apigen.AddSeriesRequest) media.AddSeriesInput {
+	return media.AddSeriesInput{
 		TMDBID:       in.TMDBID,
 		RootFolderID: in.RootFolderID,
-		Monitor:      library.MonitorMode(deref(in.Monitor)),
+		Monitor:      media.MonitorMode(deref(in.Monitor)),
 		Search:       deref(in.Search),
 	}
 }
 
-func fromAPIUpdateSeries(in apigen.UpdateSeriesRequest) library.UpdateSeriesInput {
-	return library.UpdateSeriesInput{Monitored: in.Monitored, RootFolderID: in.RootFolderID}
+func fromAPIUpdateSeries(in apigen.UpdateSeriesRequest) media.UpdateSeriesInput {
+	return media.UpdateSeriesInput{Monitored: in.Monitored, RootFolderID: in.RootFolderID}
 }

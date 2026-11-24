@@ -13,9 +13,9 @@ import (
 // Cookie-authenticated requests that change state must come from this
 // origin (CSRF protection); API-key requests are exempt because browsers
 // never attach the key on their own.
-func requireAuth(svc *library.Service, next http.Handler) http.Handler {
+func requireAuth(svc *library.Services, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !svc.SetupComplete() {
+		if !svc.Auth.SetupComplete() {
 			writeJSON(w, http.StatusServiceUnavailable, errorBody{Error: setupRequiredMessage})
 			return
 		}
@@ -24,14 +24,14 @@ func requireAuth(svc *library.Service, next http.Handler) http.Handler {
 			key = r.URL.Query().Get("apikey")
 		}
 		if key != "" {
-			if !svc.CheckAPIKey(key) {
+			if !svc.Auth.CheckAPIKey(key) {
 				writeJSON(w, http.StatusUnauthorized, errorBody{Error: "missing or invalid API key"})
 				return
 			}
 			next.ServeHTTP(w, r)
 			return
 		}
-		ok, err := svc.ValidateSession(r.Context(), sessionCookie(r))
+		ok, err := svc.Auth.ValidateSession(r.Context(), sessionCookie(r))
 		if err != nil || !ok {
 			writeJSON(w, http.StatusUnauthorized, errorBody{Error: "not signed in"})
 			return
@@ -42,9 +42,9 @@ func requireAuth(svc *library.Service, next http.Handler) http.Handler {
 
 // requireSetupToken admits onboarding requests carrying the token, only
 // while setup is incomplete.
-func requireSetupToken(svc *library.Service, token string, next http.Handler) http.Handler {
+func requireSetupToken(svc *library.Services, token string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if svc.SetupComplete() {
+		if svc.Auth.SetupComplete() {
 			writeJSON(w, http.StatusConflict, errorBody{Error: "setup is already complete"})
 			return
 		}
@@ -58,10 +58,10 @@ func requireSetupToken(svc *library.Service, token string, next http.Handler) ht
 
 // setupTokenOrAuth uses the setup token before onboarding and normal
 // authentication after it.
-func setupTokenOrAuth(svc *library.Service, token string, next http.Handler) http.Handler {
+func setupTokenOrAuth(svc *library.Services, token string, next http.Handler) http.Handler {
 	authed := requireAuth(svc, next)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if svc.SetupComplete() {
+		if svc.Auth.SetupComplete() {
 			authed.ServeHTTP(w, r)
 			return
 		}

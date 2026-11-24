@@ -4,12 +4,12 @@ import (
 	"context"
 
 	"generic-arr-project/internal/httpapi/apigen"
-	"generic-arr-project/internal/library"
+	"generic-arr-project/internal/library/vpnconfig"
 	"generic-arr-project/internal/vpn/provider"
 )
 
 func (h *handlers) GetVPNSettings(ctx context.Context, _ apigen.GetVPNSettingsRequestObject) (apigen.GetVPNSettingsResponseObject, error) {
-	out, err := h.svc.VPNSettings(ctx)
+	out, err := h.svc.VPN.VPNSettings(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -17,7 +17,7 @@ func (h *handlers) GetVPNSettings(ctx context.Context, _ apigen.GetVPNSettingsRe
 }
 
 func (h *handlers) PutVPNSettings(ctx context.Context, req apigen.PutVPNSettingsRequestObject) (apigen.PutVPNSettingsResponseObject, error) {
-	out, err := h.svc.SetVPN(ctx, fromAPIVPNInput(*req.Body))
+	out, err := h.svc.VPN.SetVPN(ctx, fromAPIVPNInput(*req.Body))
 	if err != nil {
 		return nil, err
 	}
@@ -25,7 +25,7 @@ func (h *handlers) PutVPNSettings(ctx context.Context, req apigen.PutVPNSettings
 }
 
 func (h *handlers) DeleteVPNSettings(ctx context.Context, _ apigen.DeleteVPNSettingsRequestObject) (apigen.DeleteVPNSettingsResponseObject, error) {
-	if err := h.svc.RemoveVPN(ctx); err != nil {
+	if err := h.svc.VPN.RemoveVPN(ctx); err != nil {
 		return nil, err
 	}
 	return apigen.DeleteVPNSettings204Response{}, nil
@@ -34,12 +34,12 @@ func (h *handlers) DeleteVPNSettings(ctx context.Context, _ apigen.DeleteVPNSett
 // TestVPN tests the posted provider settings, or the running tunnel for an
 // empty body.
 func (h *handlers) TestVPN(ctx context.Context, req apigen.TestVPNRequestObject) (apigen.TestVPNResponseObject, error) {
-	var in *library.VPNInput
+	var in *vpnconfig.VPNInput
 	if req.Body != nil {
 		v := fromAPIVPNInput(*req.Body)
 		in = &v
 	}
-	out, err := h.svc.TestVPN(ctx, in)
+	out, err := h.svc.VPN.TestVPN(ctx, in)
 	if err != nil {
 		return nil, err
 	}
@@ -49,12 +49,12 @@ func (h *handlers) TestVPN(ctx context.Context, req apigen.TestVPNRequestObject)
 // VPNProviders lists VPN providers and the settings each needs; used by
 // settings and the setup wizard.
 func (h *handlers) VPNProviders(context.Context, apigen.VPNProvidersRequestObject) (apigen.VPNProvidersResponseObject, error) {
-	return apigen.VPNProviders200JSONResponse(mapSlice(h.svc.VPNProviders(), toAPIVPNProvider)), nil
+	return apigen.VPNProviders200JSONResponse(mapSlice(h.svc.VPN.VPNProviders(), toAPIVPNProvider)), nil
 }
 
 // VPNOptions lists the choices for a provider's select field.
 func (h *handlers) VPNOptions(ctx context.Context, req apigen.VPNOptionsRequestObject) (apigen.VPNOptionsResponseObject, error) {
-	out, err := h.svc.VPNOptions(ctx, req.ID, req.Field)
+	out, err := h.svc.VPN.VPNOptions(ctx, req.ID, req.Field)
 	if err != nil {
 		return nil, err
 	}
@@ -71,11 +71,11 @@ func toAPIVPNProvider(d provider.Definition) apigen.VPNProvider {
 	}
 }
 
-func fromAPIVPNInput(in apigen.VPNInput) library.VPNInput {
-	return library.VPNInput{Provider: in.Provider, Values: provider.Values(in.Values)}
+func fromAPIVPNInput(in apigen.VPNInput) vpnconfig.VPNInput {
+	return vpnconfig.VPNInput{Provider: in.Provider, Values: provider.Values(in.Values)}
 }
 
-func toAPIVPNSettings(s library.VPNSettings) apigen.VPNSettings {
+func toAPIVPNSettings(s vpnconfig.VPNSettings) apigen.VPNSettings {
 	out := apigen.VPNSettings{
 		Configured:    s.Configured,
 		Provider:      optional(s.Provider),
@@ -97,7 +97,7 @@ func toAPIVPNSettings(s library.VPNSettings) apigen.VPNSettings {
 	return out
 }
 
-func toAPIVPNTest(t library.VPNTest) apigen.VPNTest {
+func toAPIVPNTest(t vpnconfig.VPNTest) apigen.VPNTest {
 	return apigen.VPNTest{
 		PublicIP:      t.PublicIP,
 		IgnoredKeys:   optSlice(t.IgnoredKeys, identity[string]),

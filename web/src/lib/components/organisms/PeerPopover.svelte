@@ -2,8 +2,8 @@
 	import { createQuery } from '@tanstack/svelte-query';
 	import { CountryFlag, Heading, IconButton, Spinner, Text } from '#lib/components/atoms/index.js';
 	import { EmptyState, ErrorMessage } from '#lib/components/molecules/index.js';
-	import { formatRate } from '#lib/format.js';
-	import { queries } from '#lib/query.js';
+	import { formatRate } from '#lib/utils/format.js';
+	import { queries } from '#lib/api/query.js';
 
 	interface Props {
 		/** The download whose peers to show; null when closed. */

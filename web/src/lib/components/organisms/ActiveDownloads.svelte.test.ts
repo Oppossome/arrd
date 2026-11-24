@@ -2,7 +2,7 @@ import { fireEvent, screen, within } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { download, peer, progress } from '../../../test/fixtures';
 import { mockFetch, renderWithClient } from '../../../test/helpers';
-import { countryName } from '#lib/countries.js';
+import { countryName } from '#lib/utils/countries.js';
 import ActiveDownloads from './ActiveDownloads.svelte';
 
 afterEach(() => vi.unstubAllGlobals());

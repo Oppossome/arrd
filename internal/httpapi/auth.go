@@ -58,9 +58,9 @@ func clientIP(r *http.Request) string {
 
 // Session reports what the UI should show: setup, login or the app.
 func (h *handlers) Session(ctx context.Context, _ apigen.SessionRequestObject) (apigen.SessionResponseObject, error) {
-	out := apigen.Session200JSONResponse{SetupComplete: h.svc.SetupComplete()}
+	out := apigen.Session200JSONResponse{SetupComplete: h.svc.Auth.SetupComplete()}
 	if out.SetupComplete {
-		ok, err := h.svc.ValidateSession(ctx, sessionCookie(httpRequest(ctx)))
+		ok, err := h.svc.Auth.ValidateSession(ctx, sessionCookie(httpRequest(ctx)))
 		if err != nil {
 			return nil, err
 		}
@@ -70,11 +70,11 @@ func (h *handlers) Session(ctx context.Context, _ apigen.SessionRequestObject) (
 }
 
 func (h *handlers) Login(ctx context.Context, req apigen.LoginRequestObject) (apigen.LoginResponseObject, error) {
-	if !h.svc.SetupComplete() {
+	if !h.svc.Auth.SetupComplete() {
 		return nil, errSetupRequired
 	}
 	r := httpRequest(ctx)
-	token, err := h.svc.Login(ctx, req.Body.Password, clientIP(r))
+	token, err := h.svc.Auth.Login(ctx, req.Body.Password, clientIP(r))
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func (h *handlers) Login(ctx context.Context, req apigen.LoginRequestObject) (ap
 
 func (h *handlers) Logout(ctx context.Context, _ apigen.LogoutRequestObject) (apigen.LogoutResponseObject, error) {
 	r := httpRequest(ctx)
-	if err := h.svc.Logout(ctx, sessionCookie(r)); err != nil {
+	if err := h.svc.Auth.Logout(ctx, sessionCookie(r)); err != nil {
 		return nil, err
 	}
 	cookie := expiredSessionCookie(r).String()
@@ -93,7 +93,7 @@ func (h *handlers) Logout(ctx context.Context, _ apigen.LogoutRequestObject) (ap
 
 // ChangePassword keeps the caller's own session and ends all others.
 func (h *handlers) ChangePassword(ctx context.Context, req apigen.ChangePasswordRequestObject) (apigen.ChangePasswordResponseObject, error) {
-	err := h.svc.ChangePassword(ctx, req.Body.CurrentPassword, req.Body.NewPassword, sessionCookie(httpRequest(ctx)))
+	err := h.svc.Auth.ChangePassword(ctx, req.Body.CurrentPassword, req.Body.NewPassword, sessionCookie(httpRequest(ctx)))
 	if err != nil {
 		return nil, err
 	}

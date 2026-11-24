@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"generic-arr-project/internal/library"
+	"generic-arr-project/internal/library/engine"
 	"generic-arr-project/internal/netx"
 	"generic-arr-project/internal/store"
 	"generic-arr-project/internal/torrent"
@@ -37,11 +37,11 @@ const progressInterval = 2 * time.Second
 // does not need incoming peers. Providers that renew credentials register
 // a separate key for this tunnel.
 func fetchTunnel(ctx context.Context, st *store.Store, log *slog.Logger) (*provider.Connection, error) {
-	reg, err := library.DefaultVPNProviders(netx.Direct{})
+	reg, err := engine.DefaultVPNProviders(netx.Direct{})
 	if err != nil {
 		return nil, err
 	}
-	p, err := library.LoadVPNProvider(ctx, st, reg)
+	p, err := engine.LoadVPNProvider(ctx, st, reg)
 	if err != nil {
 		return nil, err
 	}

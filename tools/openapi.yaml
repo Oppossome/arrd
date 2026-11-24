@@ -1,5 +1,5 @@
 # arrd's JSON API. This file is the contract: the Go server glue
-# (internal/httpapi/apigen) and the web client types (web/src/lib/api.gen.ts)
+# (internal/httpapi/apigen) and the web client types (web/src/lib/api/api.gen.ts)
 # are generated from it. After editing, run:
 #   go generate ./tools
 #   cd web && npm run gen:api

@@ -4,15 +4,15 @@ import (
 	"context"
 
 	"generic-arr-project/internal/httpapi/apigen"
-	"generic-arr-project/internal/library"
+	"generic-arr-project/internal/library/setup"
 )
 
 func (h *handlers) SetupStatus(context.Context, apigen.SetupStatusRequestObject) (apigen.SetupStatusResponseObject, error) {
-	return apigen.SetupStatus200JSONResponse(toAPISetupStatus(h.svc.SetupStatus())), nil
+	return apigen.SetupStatus200JSONResponse(toAPISetupStatus(h.svc.Setup.SetupStatus())), nil
 }
 
 func (h *handlers) CompleteSetup(ctx context.Context, req apigen.CompleteSetupRequestObject) (apigen.CompleteSetupResponseObject, error) {
-	out, err := h.svc.CompleteSetup(ctx, fromAPISetupInput(*req.Body))
+	out, err := h.svc.Setup.CompleteSetup(ctx, fromAPISetupInput(*req.Body))
 	if err != nil {
 		return nil, err
 	}
@@ -25,12 +25,12 @@ func (h *handlers) CompleteSetup(ctx context.Context, req apigen.CompleteSetupRe
 }
 
 func (h *handlers) ValidatePaths(_ context.Context, req apigen.ValidatePathsRequestObject) (apigen.ValidatePathsResponseObject, error) {
-	return apigen.ValidatePaths200JSONResponse(toAPIPathsCheck(library.ValidatePaths(fromAPIPathsInput(*req.Body)))), nil
+	return apigen.ValidatePaths200JSONResponse(toAPIPathsCheck(setup.ValidatePaths(fromAPIPathsInput(*req.Body)))), nil
 }
 
 func (h *handlers) ValidateVPN(ctx context.Context, req apigen.ValidateVPNRequestObject) (apigen.ValidateVPNResponseObject, error) {
 	in := fromAPIVPNInput(*req.Body)
-	out, err := h.svc.TestVPN(ctx, &in)
+	out, err := h.svc.VPN.TestVPN(ctx, &in)
 	if err != nil {
 		return nil, err
 	}
@@ -38,13 +38,13 @@ func (h *handlers) ValidateVPN(ctx context.Context, req apigen.ValidateVPNReques
 }
 
 func (h *handlers) ValidateTMDB(ctx context.Context, req apigen.ValidateTMDBRequestObject) (apigen.ValidateTMDBResponseObject, error) {
-	if err := h.svc.ValidateTMDBKey(ctx, req.Body.TMDBAPIKey); err != nil {
+	if err := h.svc.TMDB.ValidateTMDBKey(ctx, req.Body.TMDBAPIKey); err != nil {
 		return nil, err
 	}
 	return apigen.ValidateTMDB200JSONResponse{Valid: true}, nil
 }
 
-func toAPISetupStatus(s library.SetupStatus) apigen.SetupStatus {
+func toAPISetupStatus(s setup.SetupStatus) apigen.SetupStatus {
 	return apigen.SetupStatus{
 		SetupComplete: s.SetupComplete,
 		Suggested: apigen.SuggestedPaths{
@@ -56,8 +56,8 @@ func toAPISetupStatus(s library.SetupStatus) apigen.SetupStatus {
 	}
 }
 
-func fromAPISetupInput(in apigen.SetupInput) library.SetupInput {
-	out := library.SetupInput{
+func fromAPISetupInput(in apigen.SetupInput) setup.SetupInput {
+	out := setup.SetupInput{
 		AdminPassword: in.AdminPassword,
 		TMDBAPIKey:    in.TMDBAPIKey,
 		Downloads:     fromAPIDownloadSettingsInput(in.Downloads),
@@ -73,7 +73,7 @@ func fromAPISetupInput(in apigen.SetupInput) library.SetupInput {
 	return out
 }
 
-func toAPISetupResult(r library.SetupResult) apigen.SetupResult {
+func toAPISetupResult(r setup.SetupResult) apigen.SetupResult {
 	return apigen.SetupResult{
 		APIKey:       r.APIKey,
 		Warnings:     optSlice(r.Warnings, identity[string]),
@@ -81,8 +81,8 @@ func toAPISetupResult(r library.SetupResult) apigen.SetupResult {
 	}
 }
 
-func fromAPIPathsInput(in apigen.PathsInput) library.PathsInput {
-	return library.PathsInput{
+func fromAPIPathsInput(in apigen.PathsInput) setup.PathsInput {
+	return setup.PathsInput{
 		Downloads:     fromAPIDownloadSettingsInput(in.Downloads),
 		MovieRoot:     deref(in.MovieRoot),
 		TVRoot:        deref(in.TVRoot),
@@ -90,7 +90,7 @@ func fromAPIPathsInput(in apigen.PathsInput) library.PathsInput {
 	}
 }
 
-func toAPIPathsCheck(c library.PathsCheck) apigen.PathsCheck {
+func toAPIPathsCheck(c setup.PathsCheck) apigen.PathsCheck {
 	errs := c.Errors
 	if errs == nil {
 		errs = map[string]string{}

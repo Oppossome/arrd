@@ -3,10 +3,10 @@
 	import { goto } from '$app/navigation';
 	import { Button, Icon, IconButton, Text } from '#lib/components/atoms/index.js';
 	import { ConfirmDialog, ErrorMessage, MonitorToggle, StatusBadge } from '#lib/components/molecules/index.js';
-	import { LIBRARY } from '#lib/links.js';
-	import { queries, useMutation } from '#lib/query.js';
-	import type { SourcesRequest } from '#lib/releases.js';
-	import { toasts } from '#lib/toast.svelte.js';
+	import { LIBRARY } from '#lib/nav/links.js';
+	import { queries, useMutation } from '#lib/api/query.js';
+	import type { SourcesRequest } from '#lib/domain/releases.js';
+	import { toasts } from '#lib/stores/toast.svelte.js';
 
 	interface Props {
 		id: number;

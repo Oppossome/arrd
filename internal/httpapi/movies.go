@@ -4,12 +4,12 @@ import (
 	"context"
 
 	"generic-arr-project/internal/httpapi/apigen"
-	"generic-arr-project/internal/library"
+	"generic-arr-project/internal/library/media"
 	"generic-arr-project/internal/metadata"
 )
 
 func (h *handlers) LookupMovies(ctx context.Context, req apigen.LookupMoviesRequestObject) (apigen.LookupMoviesResponseObject, error) {
-	out, err := h.svc.LookupMovies(ctx, deref(req.Params.Q), deref(req.Params.Year), fromAPITitleFilter(req.Params.Genre, req.Params.Lang))
+	out, err := h.svc.Media.LookupMovies(ctx, deref(req.Params.Q), deref(req.Params.Year), fromAPITitleFilter(req.Params.Genre, req.Params.Lang))
 	if err != nil {
 		return nil, err
 	}
@@ -17,7 +17,7 @@ func (h *handlers) LookupMovies(ctx context.Context, req apigen.LookupMoviesRequ
 }
 
 func (h *handlers) ListMovies(ctx context.Context, _ apigen.ListMoviesRequestObject) (apigen.ListMoviesResponseObject, error) {
-	out, err := h.svc.Movies(ctx)
+	out, err := h.svc.Media.Movies(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -25,7 +25,7 @@ func (h *handlers) ListMovies(ctx context.Context, _ apigen.ListMoviesRequestObj
 }
 
 func (h *handlers) AddMovie(ctx context.Context, req apigen.AddMovieRequestObject) (apigen.AddMovieResponseObject, error) {
-	out, err := h.svc.AddMovie(ctx, fromAPIAddMovie(*req.Body))
+	out, err := h.svc.Media.AddMovie(ctx, fromAPIAddMovie(*req.Body))
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +33,7 @@ func (h *handlers) AddMovie(ctx context.Context, req apigen.AddMovieRequestObjec
 }
 
 func (h *handlers) GetMovie(ctx context.Context, req apigen.GetMovieRequestObject) (apigen.GetMovieResponseObject, error) {
-	out, err := h.svc.Movie(ctx, req.ID)
+	out, err := h.svc.Media.Movie(ctx, req.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (h *handlers) GetMovie(ctx context.Context, req apigen.GetMovieRequestObjec
 }
 
 func (h *handlers) UpdateMovie(ctx context.Context, req apigen.UpdateMovieRequestObject) (apigen.UpdateMovieResponseObject, error) {
-	out, err := h.svc.UpdateMovie(ctx, req.ID, fromAPIUpdateMovie(*req.Body))
+	out, err := h.svc.Media.UpdateMovie(ctx, req.ID, fromAPIUpdateMovie(*req.Body))
 	if err != nil {
 		return nil, err
 	}
@@ -49,14 +49,14 @@ func (h *handlers) UpdateMovie(ctx context.Context, req apigen.UpdateMovieReques
 }
 
 func (h *handlers) DeleteMovie(ctx context.Context, req apigen.DeleteMovieRequestObject) (apigen.DeleteMovieResponseObject, error) {
-	if err := h.svc.DeleteMovie(ctx, req.ID); err != nil {
+	if err := h.svc.Media.DeleteMovie(ctx, req.ID); err != nil {
 		return nil, err
 	}
 	return apigen.DeleteMovie204Response{}, nil
 }
 
 func (h *handlers) MovieReleases(ctx context.Context, req apigen.MovieReleasesRequestObject) (apigen.MovieReleasesResponseObject, error) {
-	out, err := h.svc.SearchMovie(ctx, req.ID)
+	out, err := h.svc.Acquire.SearchMovie(ctx, req.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (h *handlers) MovieReleases(ctx context.Context, req apigen.MovieReleasesRe
 }
 
 func (h *handlers) SearchMovie(ctx context.Context, req apigen.SearchMovieRequestObject) (apigen.SearchMovieResponseObject, error) {
-	out, err := h.svc.AutoSearchMovie(ctx, req.ID)
+	out, err := h.svc.Acquire.AutoSearchMovie(ctx, req.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -72,14 +72,14 @@ func (h *handlers) SearchMovie(ctx context.Context, req apigen.SearchMovieReques
 }
 
 func (h *handlers) GrabMovie(ctx context.Context, req apigen.GrabMovieRequestObject) (apigen.GrabMovieResponseObject, error) {
-	out, err := h.svc.GrabMovieRelease(ctx, req.ID, fromAPIRelease(*req.Body))
+	out, err := h.svc.Acquire.GrabMovieRelease(ctx, req.ID, fromAPIRelease(*req.Body))
 	if err != nil {
 		return nil, err
 	}
 	return apigen.GrabMovie201JSONResponse(toAPIDownload(out)), nil
 }
 
-func toAPIMovie(m library.Movie) apigen.Movie {
+func toAPIMovie(m media.Movie) apigen.Movie {
 	return apigen.Movie{
 		ID:            m.ID,
 		TMDBID:        m.TMDBID,
@@ -112,8 +112,8 @@ func toAPILookupMovie(m metadata.Movie) apigen.LookupMovie {
 	}
 }
 
-func fromAPIAddMovie(in apigen.AddMovieRequest) library.AddMovieInput {
-	return library.AddMovieInput{
+func fromAPIAddMovie(in apigen.AddMovieRequest) media.AddMovieInput {
+	return media.AddMovieInput{
 		TMDBID:       in.TMDBID,
 		RootFolderID: in.RootFolderID,
 		Monitored:    in.Monitored,
@@ -121,6 +121,6 @@ func fromAPIAddMovie(in apigen.AddMovieRequest) library.AddMovieInput {
 	}
 }
 
-func fromAPIUpdateMovie(in apigen.UpdateMovieRequest) library.UpdateMovieInput {
-	return library.UpdateMovieInput{Monitored: in.Monitored, RootFolderID: in.RootFolderID}
+func fromAPIUpdateMovie(in apigen.UpdateMovieRequest) media.UpdateMovieInput {
+	return media.UpdateMovieInput{Monitored: in.Monitored, RootFolderID: in.RootFolderID}
 }

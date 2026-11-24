@@ -2,10 +2,10 @@
 	import { createQuery } from '@tanstack/svelte-query';
 	import { Button, Icon, Link, Text } from '#lib/components/atoms/index.js';
 	import { ErrorMessage } from '#lib/components/molecules/index.js';
-	import { libraryHref } from '#lib/links.js';
-	import { queries, useMutation } from '#lib/query.js';
-	import type { SourcesRequest } from '#lib/releases.js';
-	import { toasts } from '#lib/toast.svelte.js';
+	import { libraryHref } from '#lib/nav/links.js';
+	import { queries, useMutation } from '#lib/api/query.js';
+	import type { SourcesRequest } from '#lib/domain/releases.js';
+	import { toasts } from '#lib/stores/toast.svelte.js';
 
 	interface Props {
 		kind: 'movies' | 'series';

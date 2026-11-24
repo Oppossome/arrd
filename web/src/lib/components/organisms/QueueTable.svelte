@@ -2,11 +2,11 @@
 	import { createQuery } from '@tanstack/svelte-query';
 	import { Checkbox, IconButton, Link, Spinner, Text } from '#lib/components/atoms/index.js';
 	import { ConfirmDialog, DownloadProgress, EmptyState, ErrorMessage, StatusBadge } from '#lib/components/molecules/index.js';
-	import { formatBytes, timeAgo } from '#lib/format.js';
-	import { libraryHref } from '#lib/links.js';
-	import { queries, useMutation, type QueueFilter } from '#lib/query.js';
+	import { formatBytes, timeAgo } from '#lib/utils/format.js';
+	import { libraryHref } from '#lib/nav/links.js';
+	import { queries, useMutation, type QueueFilter } from '#lib/api/query.js';
 	import PeerPopover from './PeerPopover.svelte';
-	import type { Download } from '#lib/types.js';
+	import type { Download } from '#lib/api/types.js';
 
 	interface Props {
 		filter?: QueueFilter;

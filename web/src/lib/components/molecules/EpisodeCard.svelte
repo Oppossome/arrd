@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { Rating, Text } from '#lib/components/atoms/index.js';
-	import { episodeCode, formatDate, formatRuntime } from '#lib/format.js';
+	import { episodeCode, formatDate, formatRuntime } from '#lib/utils/format.js';
 
 	interface Props {
 		season: number;

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Input, Link, Text } from '#lib/components/atoms/index.js';
 	import { FormField } from '#lib/components/molecules/index.js';
-	import { useMutation } from '#lib/query.js';
-	import type { SetupDraft } from '#lib/setup.js';
+	import { useMutation } from '#lib/api/query.js';
+	import type { SetupDraft } from '#lib/domain/setup.js';
 
 	let { draft }: { draft: SetupDraft } = $props();
 	const check = useMutation('validateTMDB');

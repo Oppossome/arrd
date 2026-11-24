@@ -12,8 +12,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { Badge, Button, Checkbox, IconButton, Text, Toggle } from '#lib/components/atoms/index.js';
-	import { wordMatcher } from '#lib/search.js';
-	import type { IndexerDefinition } from '#lib/types.js';
+	import { wordMatcher } from '#lib/utils/search.js';
+	import type { IndexerDefinition } from '#lib/api/types.js';
 	import SearchBox from './SearchBox.svelte';
 
 	interface Props {

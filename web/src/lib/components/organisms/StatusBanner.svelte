@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { createQuery } from '@tanstack/svelte-query';
 	import { Icon, Link, Text } from '#lib/components/atoms/index.js';
-	import { queries } from '#lib/query.js';
+	import { queries } from '#lib/api/query.js';
 
 	const status = createQuery(() => queries.status());
 </script>

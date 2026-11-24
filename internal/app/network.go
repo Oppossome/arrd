@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	"generic-arr-project/internal/library"
+	"generic-arr-project/internal/library/engine"
 	"generic-arr-project/internal/netx"
 	"generic-arr-project/internal/torrent"
 	"generic-arr-project/internal/vpn/provider"
@@ -13,9 +13,9 @@ import (
 // newRuntimeFactory builds the torrent engine, on the VPN tunnel when one is
 // configured and direct otherwise. A configured VPN never falls back to
 // direct: if the tunnel fails, no engine is started.
-func newRuntimeFactory(stateDir string, log *slog.Logger) library.RuntimeFactory {
-	return func(ctx context.Context, rs library.RuntimeSettings) (*library.Runtime, error) {
-		rt := &library.Runtime{}
+func newRuntimeFactory(stateDir string, log *slog.Logger) engine.Factory {
+	return func(ctx context.Context, rs engine.Settings) (*engine.Runtime, error) {
+		rt := &engine.Runtime{}
 		var n netx.Network = netx.Direct{}
 		listenPort := 0
 		if rs.VPN != nil {

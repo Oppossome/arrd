@@ -3,9 +3,9 @@
 	import { createQuery, useQueryClient } from '@tanstack/svelte-query';
 	import { Checkbox, Select, Text } from '#lib/components/atoms/index.js';
 	import { DirInput, ErrorMessage, FormField } from '#lib/components/molecules/index.js';
-	import { queries, useMutation } from '#lib/query.js';
-	import type { SetupDraft } from '#lib/setup.js';
-	import type { ImportMode, PathsCheck } from '#lib/types.js';
+	import { queries, useMutation } from '#lib/api/query.js';
+	import type { SetupDraft } from '#lib/domain/setup.js';
+	import type { ImportMode, PathsCheck } from '#lib/api/types.js';
 
 	let { draft }: { draft: SetupDraft } = $props();
 	const qc = useQueryClient();

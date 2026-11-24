@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Text, Toggle } from '#lib/components/atoms/index.js';
-	import type { SettingOption, SettingValues, SettingsSchema } from '#lib/types.js';
+	import type { SettingOption, SettingValues, SettingsSchema } from '#lib/api/types.js';
 	import FormField from './FormField.svelte';
 	import SettingFieldInput from './SettingFieldInput.svelte';
 

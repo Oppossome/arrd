@@ -3,11 +3,11 @@
 	import { goto } from '$app/navigation';
 	import { Text } from '#lib/components/atoms/index.js';
 	import { ErrorMessage } from '#lib/components/molecules/index.js';
-	import { setupToken } from '#lib/api.js';
-	import { HOME } from '#lib/auth-gate.js';
-	import { queries, useMutation } from '#lib/query.js';
-	import { toSetupInput, type SetupDraft } from '#lib/setup.js';
-	import { toasts } from '#lib/toast.svelte.js';
+	import { setupToken } from '#lib/api/client.js';
+	import { HOME } from '#lib/nav/auth-gate.js';
+	import { queries, useMutation } from '#lib/api/query.js';
+	import { toSetupInput, type SetupDraft } from '#lib/domain/setup.js';
+	import { toasts } from '#lib/stores/toast.svelte.js';
 
 	let { draft }: { draft: SetupDraft } = $props();
 	const complete = useMutation('completeSetup');

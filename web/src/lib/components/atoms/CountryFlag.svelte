@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { countryName, flagEmoji } from '#lib/countries.js';
+	import { countryName, flagEmoji } from '#lib/utils/countries.js';
 
 	interface Props {
 		/** ISO 3166-1 alpha-2; empty when unknown. */

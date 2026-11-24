@@ -2,8 +2,8 @@
 	import { createQuery } from '@tanstack/svelte-query';
 	import { Button, Text } from '#lib/components/atoms/index.js';
 	import { ErrorMessage } from '#lib/components/molecules/index.js';
-	import { queries, useMutation } from '#lib/query.js';
-	import { toasts } from '#lib/toast.svelte.js';
+	import { queries, useMutation } from '#lib/api/query.js';
+	import { toasts } from '#lib/stores/toast.svelte.js';
 
 	const definitions = createQuery(() => queries.indexerDefinitions());
 	const upload = useMutation('uploadIndexerDefinitions');

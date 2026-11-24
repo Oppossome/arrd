@@ -10,10 +10,10 @@
 		RecommendationRows
 	} from '#lib/components/organisms/index.js';
 	import { ListLayout } from '#lib/components/templates/index.js';
-	import { DEFAULT_SORT, discoverRows, parseSort } from '#lib/discover.js';
-	import { hasFilter, parseFacets, type Facets } from '#lib/facets.js';
-	import { browseHref } from '#lib/links.js';
-	import type { DiscoverSort } from '#lib/types.js';
+	import { DEFAULT_SORT, discoverRows, parseSort } from '#lib/domain/discover.js';
+	import { hasFilter, parseFacets, type Facets } from '#lib/domain/facets.js';
+	import { browseHref } from '#lib/nav/links.js';
+	import type { DiscoverSort } from '#lib/api/types.js';
 
 	const facets = $derived(parseFacets(page.url.searchParams));
 	const sort = $derived(parseSort(page.url.searchParams.get('sort')));

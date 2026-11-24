@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Badge, Poster, ProgressRing, Text } from '#lib/components/atoms/index.js';
 	import StatusBadge from './StatusBadge.svelte';
-	import type { ItemDownload } from '#lib/downloads.js';
-	import type { MovieStatus } from '#lib/types.js';
+	import type { ItemDownload } from '#lib/domain/downloads.js';
+	import type { MovieStatus } from '#lib/api/types.js';
 
 	interface Props {
 		href: string;

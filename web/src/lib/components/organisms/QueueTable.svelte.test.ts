@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mockFetch, renderWithClient } from '../../../test/helpers';
-import type { Download } from '#lib/types.js';
+import type { Download } from '#lib/api/types.js';
 import QueueTable from './QueueTable.svelte';
 
 afterEach(() => vi.unstubAllGlobals());

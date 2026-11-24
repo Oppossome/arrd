@@ -2,8 +2,8 @@
 	import { goto } from '$app/navigation';
 	import { Button, Input } from '#lib/components/atoms/index.js';
 	import { ErrorMessage, FormField } from '#lib/components/molecules/index.js';
-	import { HOME, safeNext } from '#lib/auth-gate.js';
-	import { useMutation } from '#lib/query.js';
+	import { HOME, safeNext } from '#lib/nav/auth-gate.js';
+	import { useMutation } from '#lib/api/query.js';
 
 	let { next = null }: { next?: string | null } = $props();
 	let password = $state('');

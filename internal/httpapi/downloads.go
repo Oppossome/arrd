@@ -4,12 +4,13 @@ import (
 	"context"
 
 	"generic-arr-project/internal/httpapi/apigen"
-	"generic-arr-project/internal/library"
+	"generic-arr-project/internal/library/acquire"
+	"generic-arr-project/internal/library/indexers"
 	"generic-arr-project/internal/torrent"
 )
 
 func (h *handlers) ListQueue(ctx context.Context, req apigen.ListQueueRequestObject) (apigen.ListQueueResponseObject, error) {
-	out, err := h.svc.Queue(ctx, library.QueueFilter{MovieID: req.Params.MovieID, SeriesID: req.Params.SeriesID})
+	out, err := h.svc.Acquire.Queue(ctx, acquire.QueueFilter{MovieID: req.Params.MovieID, SeriesID: req.Params.SeriesID})
 	if err != nil {
 		return nil, err
 	}
@@ -17,21 +18,21 @@ func (h *handlers) ListQueue(ctx context.Context, req apigen.ListQueueRequestObj
 }
 
 func (h *handlers) RemoveQueueItem(ctx context.Context, req apigen.RemoveQueueItemRequestObject) (apigen.RemoveQueueItemResponseObject, error) {
-	if err := h.svc.RemoveDownload(ctx, req.ID, deref(req.Params.DeleteData)); err != nil {
+	if err := h.svc.Acquire.RemoveDownload(ctx, req.ID, deref(req.Params.DeleteData)); err != nil {
 		return nil, err
 	}
 	return apigen.RemoveQueueItem204Response{}, nil
 }
 
 func (h *handlers) RSSSync(ctx context.Context, _ apigen.RSSSyncRequestObject) (apigen.RSSSyncResponseObject, error) {
-	out, err := h.svc.RSSSync(ctx)
+	out, err := h.svc.Acquire.RSSSync(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return apigen.RSSSync200JSONResponse(toAPIRSSResult(out)), nil
 }
 
-func toAPIDownload(d library.Download) apigen.Download {
+func toAPIDownload(d acquire.Download) apigen.Download {
 	return apigen.Download{
 		ID:           d.ID,
 		MovieID:      d.MovieID,
@@ -56,7 +57,7 @@ func toAPIDownload(d library.Download) apigen.Download {
 	}
 }
 
-func toAPIProgress(p *torrent.Progress, countries []library.CountryCount) *apigen.Progress {
+func toAPIProgress(p *torrent.Progress, countries []acquire.CountryCount) *apigen.Progress {
 	if p == nil {
 		return nil
 	}
@@ -77,11 +78,11 @@ func toAPIProgress(p *torrent.Progress, countries []library.CountryCount) *apige
 	}
 }
 
-func toAPICountryCount(c library.CountryCount) apigen.CountryCount {
+func toAPICountryCount(c acquire.CountryCount) apigen.CountryCount {
 	return apigen.CountryCount{Country: c.Country, Count: c.Count}
 }
 
-func toAPIRelease(r library.ReleaseResult) apigen.ReleaseResult {
+func toAPIRelease(r acquire.ReleaseResult) apigen.ReleaseResult {
 	return apigen.ReleaseResult{
 		Title:       r.Title,
 		IndexerID:   r.IndexerID,
@@ -103,8 +104,8 @@ func toAPIRelease(r library.ReleaseResult) apigen.ReleaseResult {
 	}
 }
 
-func fromAPIRelease(in apigen.ReleaseInput) library.ReleaseResult {
-	return library.ReleaseResult{
+func fromAPIRelease(in apigen.ReleaseInput) acquire.ReleaseResult {
+	return acquire.ReleaseResult{
 		Title:       in.Title,
 		IndexerID:   in.IndexerID,
 		Indexer:     deref(in.Indexer),
@@ -125,18 +126,18 @@ func fromAPIRelease(in apigen.ReleaseInput) library.ReleaseResult {
 	}
 }
 
-func toAPIIndexerFailure(f library.IndexerFailure) apigen.IndexerFailure {
+func toAPIIndexerFailure(f indexers.IndexerFailure) apigen.IndexerFailure {
 	return apigen.IndexerFailure{IndexerID: f.IndexerID, Indexer: f.Indexer, Error: f.Error}
 }
 
-func toAPISearchResult(r library.SearchResult) apigen.SearchResult {
+func toAPISearchResult(r acquire.SearchResult) apigen.SearchResult {
 	return apigen.SearchResult{
 		Releases:        mapSlice(r.Releases, toAPIRelease),
 		IndexerFailures: mapSlice(r.Failures, toAPIIndexerFailure),
 	}
 }
 
-func toAPIAutoSearchResult(r library.AutoSearchResult) apigen.AutoSearchResult {
+func toAPIAutoSearchResult(r acquire.AutoSearchResult) apigen.AutoSearchResult {
 	out := apigen.AutoSearchResult{
 		ReleasesConsidered: r.Searched,
 		IndexerFailures:    mapSlice(r.Failures, toAPIIndexerFailure),
@@ -148,7 +149,7 @@ func toAPIAutoSearchResult(r library.AutoSearchResult) apigen.AutoSearchResult {
 	return out
 }
 
-func toAPIRSSResult(r library.RSSResult) apigen.RSSResult {
+func toAPIRSSResult(r acquire.RSSResult) apigen.RSSResult {
 	return apigen.RSSResult{
 		ReleasesSeen:    r.Releases,
 		Grabbed:         mapSlice(r.Grabbed, toAPIDownload),
@@ -157,21 +158,21 @@ func toAPIRSSResult(r library.RSSResult) apigen.RSSResult {
 }
 
 func (h *handlers) PauseDownload(ctx context.Context, req apigen.PauseDownloadRequestObject) (apigen.PauseDownloadResponseObject, error) {
-	if err := h.svc.PauseDownload(ctx, req.ID); err != nil {
+	if err := h.svc.Acquire.PauseDownload(ctx, req.ID); err != nil {
 		return nil, err
 	}
 	return apigen.PauseDownload204Response{}, nil
 }
 
 func (h *handlers) ResumeDownload(ctx context.Context, req apigen.ResumeDownloadRequestObject) (apigen.ResumeDownloadResponseObject, error) {
-	if err := h.svc.ResumeDownload(ctx, req.ID); err != nil {
+	if err := h.svc.Acquire.ResumeDownload(ctx, req.ID); err != nil {
 		return nil, err
 	}
 	return apigen.ResumeDownload204Response{}, nil
 }
 
 func (h *handlers) ListDownloadPeers(ctx context.Context, req apigen.ListDownloadPeersRequestObject) (apigen.ListDownloadPeersResponseObject, error) {
-	peers, err := h.svc.DownloadPeers(ctx, req.ID)
+	peers, err := h.svc.Acquire.DownloadPeers(ctx, req.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +180,7 @@ func (h *handlers) ListDownloadPeers(ctx context.Context, req apigen.ListDownloa
 }
 
 func (h *handlers) GetThroughput(ctx context.Context, _ apigen.GetThroughputRequestObject) (apigen.GetThroughputResponseObject, error) {
-	t, err := h.svc.Throughput(ctx)
+	t, err := h.svc.Acquire.Throughput(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +197,7 @@ func toAPIThroughputSample(s torrent.Sample) apigen.ThroughputSample {
 	return apigen.ThroughputSample{At: s.At.UTC(), DownloadRate: s.Down, UploadRate: s.Up}
 }
 
-func toAPIPeer(p library.Peer) apigen.Peer {
+func toAPIPeer(p acquire.Peer) apigen.Peer {
 	return apigen.Peer{
 		IP:           p.Addr.String(),
 		Port:         int(p.Port),

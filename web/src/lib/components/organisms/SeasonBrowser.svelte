@@ -2,13 +2,13 @@
 	import { createQuery } from '@tanstack/svelte-query';
 	import { Badge, Button, Heading, Icon, Spinner, Text } from '#lib/components/atoms/index.js';
 	import { EmptyState, EpisodeCard, ErrorMessage, MonitorToggle, Tabs } from '#lib/components/molecules/index.js';
-	import { stillURL } from '#lib/api.js';
-	import { episodeCode } from '#lib/format.js';
-	import { queries, useMutation } from '#lib/query.js';
-	import type { ReleaseSource, SourcesRequest } from '#lib/releases.js';
-	import type { Tone } from '#lib/status.js';
-	import { toasts } from '#lib/toast.svelte.js';
-	import type { Episode, LookupEpisode } from '#lib/types.js';
+	import { stillURL } from '#lib/api/client.js';
+	import { episodeCode } from '#lib/utils/format.js';
+	import { queries, useMutation } from '#lib/api/query.js';
+	import type { ReleaseSource, SourcesRequest } from '#lib/domain/releases.js';
+	import type { Tone } from '#lib/domain/status.js';
+	import { toasts } from '#lib/stores/toast.svelte.js';
+	import type { Episode, LookupEpisode } from '#lib/api/types.js';
 
 	interface Props {
 		/** The TMDB series to show... */

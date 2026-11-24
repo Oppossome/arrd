@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { Tone } from '#lib/status.js';
+	import type { Tone } from '#lib/domain/status.js';
 
 	interface Props {
 		tone?: Tone;

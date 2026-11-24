@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 	import { MovieActions, QueueTable, ReleaseTable, TitleHero } from '#lib/components/organisms/index.js';
 	import { DetailLayout, Section, SourcesDialog } from '#lib/components/templates/index.js';
-	import type { SourcesRequest } from '#lib/releases.js';
+	import type { SourcesRequest } from '#lib/domain/releases.js';
 
 	const id = $derived(Number(page.params.id));
 	let sources = $state<SourcesRequest | null>(null);

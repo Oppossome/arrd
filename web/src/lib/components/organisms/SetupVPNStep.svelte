@@ -2,10 +2,10 @@
 	import { createQuery } from '@tanstack/svelte-query';
 	import { Button, Select, Spinner, Text } from '#lib/components/atoms/index.js';
 	import { ErrorMessage, FormField, SettingsForm } from '#lib/components/molecules/index.js';
-	import { ApiError } from '#lib/api.js';
-	import { queries, useMutation, useVPNOptions } from '#lib/query.js';
-	import { vpnProblem, type SetupDraft } from '#lib/setup.js';
-	import { initialValues, missingField, toVPNInput } from '#lib/settingsForm.js';
+	import { ApiError } from '#lib/api/client.js';
+	import { queries, useMutation, useVPNOptions } from '#lib/api/query.js';
+	import { vpnProblem, type SetupDraft } from '#lib/domain/setup.js';
+	import { initialValues, missingField, toVPNInput } from '#lib/domain/settingsForm.js';
 
 	let { draft }: { draft: SetupDraft } = $props();
 	const providers = createQuery(() => queries.vpnProviders());

@@ -2,10 +2,10 @@
 	import { createQuery, useQueryClient } from '@tanstack/svelte-query';
 	import { Button, Select, Spinner, Text } from '#lib/components/atoms/index.js';
 	import { DirInput, ErrorMessage, FormField } from '#lib/components/molecules/index.js';
-	import { fieldError } from '#lib/api.js';
-	import { queries, useMutation } from '#lib/query.js';
-	import { toasts } from '#lib/toast.svelte.js';
-	import type { DownloadSettings, ImportMode } from '#lib/types.js';
+	import { fieldError } from '#lib/api/client.js';
+	import { queries, useMutation } from '#lib/api/query.js';
+	import { toasts } from '#lib/stores/toast.svelte.js';
+	import type { DownloadSettings, ImportMode } from '#lib/api/types.js';
 
 	const qc = useQueryClient();
 	const settings = createQuery(() => queries.downloadSettings());

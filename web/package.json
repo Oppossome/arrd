@@ -12,7 +12,7 @@
 		"build": "vite build && touch dist/.gitkeep",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
-		"gen:api": "openapi-typescript ../tools/openapi.yaml -o src/lib/api.gen.ts",
+		"gen:api": "openapi-typescript ../tools/openapi.yaml -o src/lib/api/api.gen.ts",
 		"check": "npm run gen:api && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"lint": "eslint .",

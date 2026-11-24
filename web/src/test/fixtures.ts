@@ -1,7 +1,7 @@
 // Builders for API objects in tests. Titles, hashes and addresses are
 // invented (addresses from the documentation ranges).
 
-import type { Download, Peer, Progress, Throughput } from '#lib/types.js';
+import type { Download, Peer, Progress, Throughput } from '#lib/api/types.js';
 
 let nextId = 100;
 

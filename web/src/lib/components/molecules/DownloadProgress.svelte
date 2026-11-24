@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ProgressBar, Text } from '#lib/components/atoms/index.js';
-	import { formatBytes, formatRate, percent } from '#lib/format.js';
-	import type { Progress } from '#lib/types.js';
+	import { formatBytes, formatRate, percent } from '#lib/utils/format.js';
+	import type { Progress } from '#lib/api/types.js';
 
 	let { progress }: { progress?: Progress } = $props();
 	const pct = $derived(progress ? percent(progress.bytes_completed, progress.bytes_total) : 0);
