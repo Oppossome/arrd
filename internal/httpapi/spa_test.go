@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+
+	"generic-arr-project/internal/testutil"
 )
 
 func TestSPA(t *testing.T) {
@@ -23,7 +25,7 @@ func TestSPA(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer resp.Body.Close()
+		defer testutil.Close(t, resp.Body)
 		b, _ := io.ReadAll(resp.Body)
 		return resp, string(b)
 	}
@@ -61,7 +63,7 @@ func TestSPA(t *testing.T) {
 		t.Fatal(err)
 	}
 	b, _ := io.ReadAll(resp.Body)
-	resp.Body.Close()
+	testutil.Close(t, resp.Body)
 	if resp.StatusCode != http.StatusServiceUnavailable || !strings.Contains(string(b), "go generate ./web") {
 		t.Errorf("unbuilt UI = %d %q", resp.StatusCode, b)
 	}

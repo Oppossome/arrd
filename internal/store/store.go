@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"errors"
 	"fmt"
 	"io/fs"
 	"sort"
@@ -56,12 +57,10 @@ func Open(ctx context.Context, path string) (*Store, error) {
 	// SQLite allows a single writer; one connection avoids SQLITE_BUSY churn.
 	conn.SetMaxOpenConns(1)
 	if err := conn.PingContext(ctx); err != nil {
-		conn.Close()
-		return nil, fmt.Errorf("connect database %q: %w", path, err)
+		return nil, errors.Join(fmt.Errorf("connect database %q: %w", path, err), conn.Close())
 	}
 	if err := migrate(ctx, conn); err != nil {
-		conn.Close()
-		return nil, err
+		return nil, errors.Join(err, conn.Close())
 	}
 	return &Store{DB: conn, Queries: db.New(conn)}, nil
 }

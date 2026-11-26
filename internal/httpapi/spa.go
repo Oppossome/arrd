@@ -47,7 +47,10 @@ func spaHandler(ui fs.FS) http.Handler {
 		if name != "" && name != "index.html" {
 			if f, err := ui.Open(name); err == nil {
 				info, statErr := f.Stat()
-				f.Close()
+				if err := f.Close(); err != nil {
+					http.Error(w, "internal error", http.StatusInternalServerError)
+					return
+				}
 				if statErr == nil && !info.IsDir() {
 					switch {
 					case strings.HasPrefix(name, "_app/immutable/"):

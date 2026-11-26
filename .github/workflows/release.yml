@@ -5,7 +5,7 @@ name: Release
 # builds the same archives as workflow artifacts without publishing a release.
 on:
   push:
-    tags: ['v*']
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
@@ -48,7 +48,7 @@ jobs:
     env:
       # arrd is pure Go (modernc.org/sqlite, no cgo), so every target
       # cross-compiles from one Linux runner into a static binary.
-      CGO_ENABLED: '0'
+      CGO_ENABLED: "0"
       GOOS: ${{ matrix.goos }}
       GOARCH: ${{ matrix.goarch }}
     steps:
@@ -103,9 +103,6 @@ jobs:
           pattern: arrd_*
           path: dist/
           merge-multiple: true
-      - name: Checksums
-        working-directory: dist
-        run: sha256sum -- arrd_* > SHA256SUMS
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}

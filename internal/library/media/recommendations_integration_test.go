@@ -6,6 +6,7 @@ import (
 	"generic-arr-project/internal/library/libtest"
 	"generic-arr-project/internal/library/media"
 	"generic-arr-project/internal/metadata"
+	"generic-arr-project/internal/testutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,7 +17,7 @@ func withTMDBRoutes(t *testing.T, next *httptest.Server, routes map[string]strin
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if body, ok := routes[r.URL.Path]; ok {
-			fmt.Fprint(w, body)
+			testutil.Write(t, w, body)
 			return
 		}
 		http.Redirect(w, r, next.URL+r.URL.String(), http.StatusTemporaryRedirect)

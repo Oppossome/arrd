@@ -34,6 +34,7 @@ import (
 	"strings"
 	"time"
 
+	"generic-arr-project/internal/closer"
 	"generic-arr-project/internal/netx"
 	"generic-arr-project/internal/vpn"
 )
@@ -93,7 +94,7 @@ func NewClient(direct netx.Network) (*Client, error) {
 
 // Token signs in and returns a token valid for about a day. Keep it in
 // memory only.
-func (c *Client) Token(ctx context.Context, username, password string) (string, error) {
+func (c *Client) Token(ctx context.Context, username, password string) (_ string, err error) {
 	var body bytes.Buffer
 	mw := multipart.NewWriter(&body)
 	if err := mw.WriteField("username", username); err != nil {
@@ -114,7 +115,7 @@ func (c *Client) Token(ctx context.Context, username, password string) (string, 
 	if err != nil {
 		return "", fmt.Errorf("pia sign-in: %w", err)
 	}
-	defer resp.Body.Close()
+	defer closer.Join(&err, resp.Body)
 	switch {
 	case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden:
 		return "", ErrInvalidCredentials
@@ -168,7 +169,7 @@ type serverListJSON struct {
 
 // Regions returns the online regions that have WireGuard servers, sorted
 // by name.
-func (c *Client) Regions(ctx context.Context) ([]Region, error) {
+func (c *Client) Regions(ctx context.Context) (_ []Region, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.ServerListURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("pia server list request: %w", err)
@@ -177,7 +178,7 @@ func (c *Client) Regions(ctx context.Context) ([]Region, error) {
 	if err != nil {
 		return nil, fmt.Errorf("pia server list: %w", err)
 	}
-	defer resp.Body.Close()
+	defer closer.Join(&err, resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("pia server list: unexpected status %s", resp.Status)
 	}
@@ -293,7 +294,7 @@ func (r addKeyJSON) peer(srv Server, pub vpn.Key) (Peer, error) {
 // pinnedGet calls a VPN server's API at srv.IP:port, trusting only
 // c.RootCAs for the name srv.CN, and decodes a JSON reply into out. Errors
 // never include the query string: it carries the token.
-func (c *Client) pinnedGet(ctx context.Context, dial DialFunc, srv Server, port int, path string, q url.Values, out any) error {
+func (c *Client) pinnedGet(ctx context.Context, dial DialFunc, srv Server, port int, path string, q url.Values, out any) (err error) {
 	target := netip.AddrPortFrom(srv.IP, uint16(port)).String()
 	hc := &http.Client{
 		Timeout: requestTimeout,
@@ -325,7 +326,7 @@ func (c *Client) pinnedGet(ctx context.Context, dial DialFunc, srv Server, port 
 		}
 		return fmt.Errorf("pia %s (%s) %s: %w", srv.CN, srv.IP, path, err)
 	}
-	defer resp.Body.Close()
+	defer closer.Join(&err, resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("pia %s %s: unexpected status %s", srv.CN, path, resp.Status)
 	}

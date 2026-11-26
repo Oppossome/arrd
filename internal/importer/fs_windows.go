@@ -10,7 +10,7 @@ import (
 )
 
 // device returns the serial number of the volume holding path.
-func device(path string) (uint64, error) {
+func device(path string) (_ uint64, err error) {
 	p, err := windows.UTF16PtrFromString(path)
 	if err != nil {
 		return 0, fmt.Errorf("%q: %w", path, err)
@@ -22,7 +22,7 @@ func device(path string) (uint64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("open %q: %w", path, err)
 	}
-	defer windows.CloseHandle(h)
+	defer func() { err = errors.Join(err, windows.CloseHandle(h)) }()
 	var info windows.ByHandleFileInformation
 	if err := windows.GetFileInformationByHandle(h, &info); err != nil {
 		return 0, fmt.Errorf("stat %q: %w", path, err)

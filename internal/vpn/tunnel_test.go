@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"generic-arr-project/internal/testutil"
 	"generic-arr-project/internal/vpn/vpntest"
 )
 
@@ -18,14 +19,19 @@ func TestTunnelTCPRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer testutil.Close(t, l)
 	remote := make(chan net.Addr, 1)
+	served := make(chan struct{})
+	// Runs after the deferred closes below, which end the echo loop, so the
+	// server goroutine finishes before the test does.
+	t.Cleanup(func() { <-served })
 	go func() {
+		defer close(served)
 		c, err := l.Accept()
 		if err != nil {
 			return
 		}
-		defer c.Close()
+		defer testutil.Close(t, c)
 		remote <- c.RemoteAddr()
 		_, _ = io.Copy(c, c)
 	}()
@@ -36,7 +42,7 @@ func TestTunnelTCPRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("dial through tunnel: %v", err)
 	}
-	defer c.Close()
+	defer testutil.Close(t, c)
 	if _, err := c.Write([]byte("ping")); err != nil {
 		t.Fatal(err)
 	}
@@ -72,11 +78,11 @@ func TestTunnelCannotReachHostNetwork(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer hostListener.Close()
+	defer testutil.Close(t, hostListener)
 	accepted := make(chan struct{}, 1)
 	go func() {
 		if c, err := hostListener.Accept(); err == nil {
-			c.Close()
+			testutil.Close(t, c)
 			accepted <- struct{}{}
 		}
 	}()
@@ -84,7 +90,7 @@ func TestTunnelCannotReachHostNetwork(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	if c, err := a.DialContext(ctx, "tcp4", hostListener.Addr().String()); err == nil {
-		c.Close()
+		testutil.Close(t, c)
 		t.Fatal("tunnel dial to a host-only address succeeded")
 	}
 	select {
@@ -101,13 +107,13 @@ func TestTunnelDownFailsClosed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	l.Close()
+	testutil.Close(t, l)
 	b.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	if c, err := a.DialContext(ctx, "tcp4", netip.AddrPortFrom(vpntest.AddrB, 8081).String()); err == nil {
-		c.Close()
+		testutil.Close(t, c)
 		t.Fatal("dial succeeded with the remote tunnel down")
 	}
 }

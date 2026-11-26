@@ -9,6 +9,7 @@ import (
 	"generic-arr-project/internal/library/indexers"
 	"generic-arr-project/internal/library/libtest"
 	"generic-arr-project/internal/library/media"
+	"generic-arr-project/internal/testutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -92,10 +93,10 @@ func newPrivateSite(t *testing.T, torrentFile []byte) *privateSite {
 				http.Redirect(w, r, "/index.php", http.StatusFound)
 				return
 			}
-			fmt.Fprint(w, `<div class="error">Wrong password</div>`)
+			testutil.Write(t, w, `<div class="error">Wrong password</div>`)
 		case "/index.php":
 			if authed(r) {
-				fmt.Fprint(w, `<a href="logout.php">Log out</a>`)
+				testutil.Write(t, w, `<a href="logout.php">Log out</a>`)
 			}
 		case "/browse.php":
 			if !authed(r) {
@@ -103,14 +104,14 @@ func newPrivateSite(t *testing.T, torrentFile []byte) *privateSite {
 				return
 			}
 			s.queries <- r.URL.RawQuery
-			fmt.Fprintf(w, `<table><tr class="row"><td><a class="title" href="details.php?id=7">%s</a></td>
-<td><a class="dl" href="download.php?id=7">get</a></td><td class="size">60 MB</td><td class="seeders">9</td><td class="leechers">1</td></tr></table>`, libtest.ReleaseName)
+			testutil.Write(t, w, fmt.Sprintf(`<table><tr class="row"><td><a class="title" href="details.php?id=7">%s</a></td>
+<td><a class="dl" href="download.php?id=7">get</a></td><td class="size">60 MB</td><td class="seeders">9</td><td class="leechers">1</td></tr></table>`, libtest.ReleaseName))
 		case "/download.php":
 			if !authed(r) {
 				http.Error(w, "forbidden", http.StatusForbidden)
 				return
 			}
-			w.Write(torrentFile)
+			testutil.Write(t, w, string(torrentFile))
 		default:
 			http.NotFound(w, r)
 		}

@@ -13,6 +13,8 @@ import (
 	"net/netip"
 	"strings"
 	"time"
+
+	"generic-arr-project/internal/closer"
 )
 
 // Network creates connections, listeners and DNS lookups on one routing
@@ -77,7 +79,7 @@ func (Direct) HasIPv6() bool { return true }
 // PublicIP asks an IP echo service that returns the caller's address as
 // plain text (e.g. https://api.ipify.org) which address traffic on n
 // appears to come from.
-func PublicIP(ctx context.Context, n Network, echoURL string) (netip.Addr, error) {
+func PublicIP(ctx context.Context, n Network, echoURL string) (_ netip.Addr, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, echoURL, nil)
 	if err != nil {
 		return netip.Addr{}, fmt.Errorf("public ip: %w", err)
@@ -86,7 +88,7 @@ func PublicIP(ctx context.Context, n Network, echoURL string) (netip.Addr, error
 	if err != nil {
 		return netip.Addr{}, fmt.Errorf("public ip via %s: %w", n.Name(), err)
 	}
-	defer resp.Body.Close()
+	defer closer.Join(&err, resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		return netip.Addr{}, fmt.Errorf("public ip via %s: %s returned %s", n.Name(), echoURL, resp.Status)
 	}

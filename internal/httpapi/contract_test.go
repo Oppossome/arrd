@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"slices"
@@ -43,8 +44,7 @@ func (c *contractChecker) RoundTrip(req *http.Request) (*http.Response, error) {
 		return resp, nil
 	}
 	body, err := io.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
+	if err := errors.Join(err, resp.Body.Close()); err != nil {
 		return nil, err
 	}
 	resp.Body = io.NopCloser(bytes.NewReader(body))

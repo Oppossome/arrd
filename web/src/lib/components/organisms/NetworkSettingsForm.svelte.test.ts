@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mockFetch, renderWithClient } from '../../../test/helpers';
+import type { NetworkSettingsInput } from '#lib/api/types.js';
 import NetworkSettingsForm from './NetworkSettingsForm.svelte';
 
 afterEach(() => vi.unstubAllGlobals());
@@ -17,7 +18,7 @@ function routes(opts: { failPut?: boolean } = {}) {
 		'GET /api/v1/settings/network': () => Response.json(state()),
 		'PUT /api/v1/settings/network': (_url, init) => {
 			if (opts.failPut) return Response.json({ error: 'listen on 0.0.0.0:8484: address already in use' }, { status: 500 });
-			exposeLAN = JSON.parse(String(init.body)).expose_lan;
+			exposeLAN = (JSON.parse(init.body as string) as NetworkSettingsInput).expose_lan;
 			return Response.json(state());
 		}
 	});

@@ -5,12 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"generic-arr-project/internal/library"
 	"generic-arr-project/internal/library/apperr"
 	"generic-arr-project/internal/library/libtest"
 	"generic-arr-project/internal/library/setup"
 	"generic-arr-project/internal/library/vpnconfig"
+	"generic-arr-project/internal/testutil"
 	"generic-arr-project/internal/vpn/pia"
 	"generic-arr-project/internal/vpn/pia/piatest"
 	"generic-arr-project/internal/vpn/provider"
@@ -304,10 +304,10 @@ func TestTestVPNThroughRealTunnel(t *testing.T) {
 	}
 	echo := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		host, _, _ := net.SplitHostPort(r.RemoteAddr)
-		fmt.Fprint(w, host)
+		testutil.Write(t, w, host)
 	})}
 	go func() { _ = echo.Serve(l) }()
-	t.Cleanup(func() { echo.Close() })
+	t.Cleanup(func() { testutil.Close(t, echo) })
 
 	base := t.TempDir()
 	env := libtest.NewEnv(t, base, "http://unused", nil, nil, func(d *library.Deps) { d.IPEchoURL = "http://" + vpntest.AddrB.String() + "/" })

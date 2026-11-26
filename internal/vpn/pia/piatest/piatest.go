@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"generic-arr-project/internal/testutil"
 	"generic-arr-project/internal/vpn"
 	"generic-arr-project/internal/vpn/pia"
 	"generic-arr-project/internal/vpn/vpntest"
@@ -39,6 +40,7 @@ const (
 
 // Fake is a running fake PIA.
 type Fake struct {
+	t      testing.TB // reports failed writes from the fake servers
 	client *pia.Client
 
 	mu      sync.Mutex
@@ -50,7 +52,7 @@ type Fake struct {
 // New starts a fake PIA; everything stops when the test ends.
 func New(t testing.TB) *Fake {
 	t.Helper()
-	f := &Fake{}
+	f := &Fake{t: t}
 	pool, cert := newCA(t)
 
 	api := httptest.NewUnstartedServer(http.HandlerFunc(f.addKey))
@@ -121,7 +123,7 @@ func (f *Fake) web(w http.ResponseWriter, r *http.Request) {
 			region(Region, "Fictional Bay", true),
 			region(RegionNoPF, "Fictional Ridge", false),
 		}})
-		fmt.Fprintln(w, "ZmFrZSBzaWduYXR1cmU=")
+		testutil.Write(f.t, w, "ZmFrZSBzaWduYXR1cmU=\n")
 	case "/token":
 		if f.isDown() {
 			w.WriteHeader(http.StatusServiceUnavailable)
@@ -135,7 +137,7 @@ func (f *Fake) web(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		fmt.Fprintf(w, `{"token":%q}`, token)
+		testutil.Write(f.t, w, fmt.Sprintf(`{"token":%q}`, token))
 	default:
 		http.NotFound(w, r)
 	}
@@ -149,7 +151,7 @@ func (f *Fake) addKey(w http.ResponseWriter, r *http.Request) {
 	}
 	pub, err := vpn.ParseKey(q.Get("pubkey"))
 	if err != nil {
-		fmt.Fprint(w, `{"status":"ERROR","message":"bad pubkey"}`)
+		testutil.Write(f.t, w, `{"status":"ERROR","message":"bad pubkey"}`)
 		return
 	}
 	server, serverPub, port, err := vpntest.NewServer(r.Context(), pub)

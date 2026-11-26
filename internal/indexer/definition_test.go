@@ -16,6 +16,7 @@ import (
 	cdef "github.com/Kcchouette/cardigann-go/definition"
 
 	"generic-arr-project/internal/formspec"
+	"generic-arr-project/internal/testutil"
 )
 
 // fictionalDefinition is an invented private tracker. SITE is replaced
@@ -122,14 +123,14 @@ func newSite(t *testing.T) *site {
 				return
 			}
 		}
-		fmt.Fprint(w, `<html><body><div class="error">Wrong username or password</div></body></html>`)
+		testutil.Write(t, w, `<html><body><div class="error">Wrong username or password</div></body></html>`)
 	})
 	mux.HandleFunc("/index.php", func(w http.ResponseWriter, r *http.Request) {
 		if !authed(r) {
-			fmt.Fprint(w, `<html><body><a href="login.php">Log in</a></body></html>`)
+			testutil.Write(t, w, `<html><body><a href="login.php">Log in</a></body></html>`)
 			return
 		}
-		fmt.Fprint(w, `<html><body><a href="logout.php">Log out</a></body></html>`)
+		testutil.Write(t, w, `<html><body><a href="logout.php">Log out</a></body></html>`)
 	})
 	mux.HandleFunc("/browse.php", func(w http.ResponseWriter, r *http.Request) {
 		if !authed(r) {
@@ -139,7 +140,7 @@ func newSite(t *testing.T) *site {
 		s.mu.Lock()
 		s.queries = append(s.queries, r.URL.RawQuery)
 		s.mu.Unlock()
-		fmt.Fprint(w, `<html><body><table class="torrents">
+		testutil.Write(t, w, `<html><body><table class="torrents">
 <tr class="row"><td class="cat">11</td><td><a class="title" href="details.php?id=1">Example.Film.2001.1080p.BluRay.x264-NOGRP</a></td>
 <td><a class="dl" href="download.php?id=1">get</a></td><td class="size">1.5 GB</td><td class="seeders">12</td><td class="leechers">3</td></tr>
 <tr class="row"><td class="cat">11</td><td><a class="title" href="details.php?id=2">Example.Film.2001.720p.WEB-DL-NOGRP</a></td>
@@ -152,7 +153,7 @@ func newSite(t *testing.T) *site {
 			return
 		}
 		w.Header().Set("Content-Type", "application/x-bittorrent")
-		fmt.Fprint(w, fictionalTorrent)
+		testutil.Write(t, w, fictionalTorrent)
 	})
 	s.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s.mu.Lock()

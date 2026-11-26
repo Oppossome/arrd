@@ -2,9 +2,9 @@ package settings_test
 
 import (
 	"context"
-	"fmt"
 	"generic-arr-project/internal/library/libtest"
 	"generic-arr-project/internal/library/settings"
+	"generic-arr-project/internal/testutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,11 +14,11 @@ func TestGeneralSettingsValidateTMDBKey(t *testing.T) {
 	ctx := context.Background()
 	tmdb := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/configuration" && r.URL.Query().Get("api_key") == "good" {
-			fmt.Fprint(w, `{}`)
+			testutil.Write(t, w, `{}`)
 			return
 		}
 		w.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprint(w, `{"status_message":"Invalid API key"}`)
+		testutil.Write(t, w, `{"status_message":"Invalid API key"}`)
 	}))
 	defer tmdb.Close()
 	base := t.TempDir()

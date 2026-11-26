@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"generic-arr-project/internal/testutil"
 )
 
 func TestTVListsAndRSS(t *testing.T) {
@@ -17,7 +19,7 @@ func TestTVListsAndRSS(t *testing.T) {
 			t.Fatal(err)
 		}
 		raw, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		testutil.Close(t, resp.Body)
 		if resp.StatusCode != http.StatusOK || strings.TrimSpace(string(raw)) != "[]" {
 			t.Errorf("GET %s = %d %s, want 200 []", path, resp.StatusCode, raw)
 		}

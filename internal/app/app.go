@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"generic-arr-project/internal/closer"
 	"generic-arr-project/internal/httpapi"
 	"generic-arr-project/internal/library"
 	"generic-arr-project/internal/store"
@@ -52,25 +53,24 @@ func openStore(ctx context.Context, dataDir string) (*store.Store, error) {
 		return nil, err
 	}
 	if err := os.Chmod(path, 0o600); err != nil {
-		st.Close()
-		return nil, fmt.Errorf("restrict database permissions: %w", err)
+		return nil, errors.Join(fmt.Errorf("restrict database permissions: %w", err), st.Close())
 	}
 	return st, nil
 }
 
 // Run starts arrd and blocks until ctx is cancelled or the HTTP server fails.
-func Run(ctx context.Context, opts Options, log *zerolog.Logger) error {
+func Run(ctx context.Context, opts Options, log *zerolog.Logger) (err error) {
 	release, err := lockDataDir(opts.DataDir)
 	if err != nil {
 		return err
 	}
-	defer release()
+	defer func() { err = errors.Join(err, release()) }()
 
 	st, err := openStore(ctx, opts.DataDir)
 	if err != nil {
 		return err
 	}
-	defer st.Close()
+	defer closer.Join(&err, st)
 
 	svc, err := library.New(library.Deps{
 		Store:          st,

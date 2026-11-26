@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 
+	"generic-arr-project/internal/closer"
+
 	cdef "github.com/Kcchouette/cardigann-go/definition"
 )
 
@@ -180,7 +182,7 @@ func folderVersion(name string) int {
 	return n
 }
 
-func readZipFile(f *zip.File) ([]byte, error) {
+func readZipFile(f *zip.File) (_ []byte, err error) {
 	if f.UncompressedSize64 > maxDefinitionBytes {
 		return nil, fmt.Errorf("larger than %d bytes", maxDefinitionBytes)
 	}
@@ -188,7 +190,7 @@ func readZipFile(f *zip.File) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rc.Close()
+	defer closer.Join(&err, rc)
 	// The header's size is not trusted: read one byte past the limit.
 	body, err := io.ReadAll(io.LimitReader(rc, maxDefinitionBytes+1))
 	if err != nil {
@@ -230,19 +232,21 @@ func writeDefinitions(dir string, defs []uploadedDefinition, errs []error) (Impo
 }
 
 // writeFileAtomic replaces path with data, so a reload never sees half a file.
-func writeFileAtomic(path string, data []byte) error {
+func writeFileAtomic(path string, data []byte) (err error) {
 	tmp, err := os.CreateTemp(filepath.Dir(path), ".upload-*")
 	if err != nil {
 		return err
 	}
-	defer os.Remove(tmp.Name()) // no-op after the rename
+	defer func() {
+		if err != nil { // after a successful rename there is nothing to remove
+			err = errors.Join(err, os.Remove(tmp.Name()))
+		}
+	}()
 	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
-		return err
+		return errors.Join(err, tmp.Close())
 	}
 	if err := tmp.Chmod(0o644); err != nil {
-		tmp.Close()
-		return err
+		return errors.Join(err, tmp.Close())
 	}
 	if err := tmp.Close(); err != nil {
 		return err

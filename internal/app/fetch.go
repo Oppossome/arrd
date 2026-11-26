@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"generic-arr-project/internal/closer"
 	"generic-arr-project/internal/library/engine"
 	"generic-arr-project/internal/netx"
 	"generic-arr-project/internal/store"
@@ -55,12 +56,12 @@ func fetchTunnel(ctx context.Context, st *store.Store, log *zerolog.Logger) (*pr
 // Fetch downloads a single magnet link through the saved VPN (never falling
 // back to direct when one is configured), or direct without one, printing the
 // network's public IP and progress to out. Onboarding must be complete.
-func Fetch(ctx context.Context, log *zerolog.Logger, opts FetchOptions, out io.Writer) error {
+func Fetch(ctx context.Context, log *zerolog.Logger, opts FetchOptions, out io.Writer) (err error) {
 	st, err := openStore(ctx, opts.DataDir)
 	if err != nil {
 		return err
 	}
-	defer st.Close()
+	defer closer.Join(&err, st)
 	_, err = st.GetAppSettings(ctx)
 	if errors.Is(err, sql.ErrNoRows) {
 		return errors.New("setup is not complete: run arrd serve and finish onboarding first")
@@ -91,13 +92,17 @@ func Fetch(ctx context.Context, log *zerolog.Logger, opts FetchOptions, out io.W
 		n = conn.Tunnel
 	}
 
-	fmt.Fprintf(out, "network: %s\n", n.Name())
+	if _, err := fmt.Fprintf(out, "network: %s\n", n.Name()); err != nil {
+		return err
+	}
 	if opts.IPEchoURL != "" {
 		ip, err := netx.PublicIP(ctx, n, opts.IPEchoURL)
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(out, "public ip: %s\n", ip)
+		if _, err := fmt.Fprintf(out, "public ip: %s\n", ip); err != nil {
+			return err
+		}
 	}
 
 	// A separate state dir: a running "arrd serve" holds the main one.
@@ -111,7 +116,9 @@ func Fetch(ctx context.Context, log *zerolog.Logger, opts FetchOptions, out io.W
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "added %s, saving to %s\n", dl.InfoHash(), outDir)
+	if _, err := fmt.Fprintf(out, "added %s, saving to %s\n", dl.InfoHash(), outDir); err != nil {
+		return err
+	}
 
 	done := make(chan error, 1)
 	go func() { done <- dl.WaitComplete(ctx) }()
@@ -124,22 +131,25 @@ func Fetch(ctx context.Context, log *zerolog.Logger, opts FetchOptions, out io.W
 				return err
 			}
 			p := dl.Progress()
-			fmt.Fprintf(out, "complete: %s (%s)\n", p.Name, formatBytes(p.BytesTotal))
-			return nil
+			_, err = fmt.Fprintf(out, "complete: %s (%s)\n", p.Name, formatBytes(p.BytesTotal))
+			return err
 		case <-ticker.C:
-			printProgress(out, dl.Progress())
+			if err := printProgress(out, dl.Progress()); err != nil {
+				return err
+			}
 		}
 	}
 }
 
-func printProgress(out io.Writer, p torrent.Progress) {
+func printProgress(out io.Writer, p torrent.Progress) error {
 	if !p.HaveInfo {
-		fmt.Fprintf(out, "fetching metadata... peers %d/%d\n", p.ActivePeers, p.TotalPeers)
-		return
+		_, err := fmt.Fprintf(out, "fetching metadata... peers %d/%d\n", p.ActivePeers, p.TotalPeers)
+		return err
 	}
-	fmt.Fprintf(out, "%5.1f%%  %s / %s  peers %d (seeders %d)  %s\n",
+	_, err := fmt.Fprintf(out, "%5.1f%%  %s / %s  peers %d (seeders %d)  %s\n",
 		100*p.Fraction(), formatBytes(p.BytesCompleted), formatBytes(p.BytesTotal),
 		p.ActivePeers, p.Seeders, p.Name)
+	return err
 }
 
 func formatBytes(n int64) string {

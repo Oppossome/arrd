@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"generic-arr-project/internal/testutil"
 )
 
 func TestCuratedLists(t *testing.T) {
@@ -16,10 +18,10 @@ func TestCuratedLists(t *testing.T) {
 	c := newTMDB(t, "v3key", func(w http.ResponseWriter, r *http.Request) {
 		paths = append(paths, r.URL.Path)
 		if strings.Contains(r.URL.Path, "/tv/") {
-			fmt.Fprint(w, `{"page":1,"total_pages":3,"results":[{"id":800001,"name":"Harbor Watch","first_air_date":"2019-09-01"}]}`)
+			testutil.Write(t, w, `{"page":1,"total_pages":3,"results":[{"id":800001,"name":"Harbor Watch","first_air_date":"2019-09-01"}]}`)
 			return
 		}
-		fmt.Fprint(w, `{"page":1,"total_pages":3,"results":[{"id":900001,"title":"The Glass Orchard","release_date":"1999-03-31"}]}`)
+		testutil.Write(t, w, `{"page":1,"total_pages":3,"results":[{"id":900001,"title":"The Glass Orchard","release_date":"1999-03-31"}]}`)
 	})
 
 	for _, l := range []MovieList{MovieTrending, MoviePopular, MovieNowPlaying, MovieUpcoming, MovieTopRated} {
@@ -52,9 +54,9 @@ func TestGenres(t *testing.T) {
 	c := newTMDB(t, "v3key", func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/genre/movie/list":
-			fmt.Fprint(w, `{"genres":[{"id":101,"name":"Quiet Drama"},{"id":102,"name":"Loud Comedy"}]}`)
+			testutil.Write(t, w, `{"genres":[{"id":101,"name":"Quiet Drama"},{"id":102,"name":"Loud Comedy"}]}`)
 		case "/genre/tv/list":
-			fmt.Fprint(w, `{"genres":[{"id":201,"name":"Harbor Mysteries"}]}`)
+			testutil.Write(t, w, `{"genres":[{"id":201,"name":"Harbor Mysteries"}]}`)
 		default:
 			http.NotFound(w, r)
 		}
@@ -73,7 +75,7 @@ func TestLanguages(t *testing.T) {
 			http.NotFound(w, r)
 			return
 		}
-		fmt.Fprint(w, `[{"iso_639_1":"zz","english_name":"Zedish","name":""},{"iso_639_1":"xx","english_name":"No Language","name":""},`+
+		testutil.Write(t, w, `[{"iso_639_1":"zz","english_name":"Zedish","name":""},{"iso_639_1":"xx","english_name":"No Language","name":""},`+
 			`{"iso_639_1":"qq","english_name":"Quenish","name":"Q"},{"iso_639_1":"","english_name":"Blank"}]`)
 	})
 	got, err := c.Languages(context.Background())
@@ -89,10 +91,10 @@ func TestDiscover(t *testing.T) {
 	c := newTMDB(t, "v3key", func(w http.ResponseWriter, r *http.Request) {
 		lastPath, last = r.URL.Path, r.URL.Query()
 		if r.URL.Path == "/discover/tv" {
-			fmt.Fprint(w, `{"page":2,"total_pages":9,"results":[{"id":800001,"name":"Harbor Watch"}]}`)
+			testutil.Write(t, w, `{"page":2,"total_pages":9,"results":[{"id":800001,"name":"Harbor Watch"}]}`)
 			return
 		}
-		fmt.Fprint(w, `{"page":2,"total_pages":38000,"results":[{"id":900001,"title":"The Glass Orchard"},{"id":900002,"title":"Paper Lanterns"}]}`)
+		testutil.Write(t, w, `{"page":2,"total_pages":38000,"results":[{"id":900001,"title":"The Glass Orchard"},{"id":900002,"title":"Paper Lanterns"}]}`)
 	})
 	today := time.Date(2026, 11, 23, 15, 0, 0, 0, time.UTC)
 

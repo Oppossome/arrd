@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+
+	"generic-arr-project/internal/closer"
 )
 
 const maxTorrentBytes = 10 << 20
@@ -26,7 +28,7 @@ func (e *errMagnetRedirect) Error() string { return "redirect to magnet" }
 
 // Resolve turns a release into a TorrentSource, downloading the .torrent
 // with client when the release has no magnet link.
-func Resolve(ctx context.Context, client *http.Client, r Release) (TorrentSource, error) {
+func Resolve(ctx context.Context, client *http.Client, r Release) (_ TorrentSource, err error) {
 	if r.MagnetURI != "" {
 		return TorrentSource{Magnet: r.MagnetURI}, nil
 	}
@@ -60,7 +62,7 @@ func Resolve(ctx context.Context, client *http.Client, r Release) (TorrentSource
 		}
 		return TorrentSource{}, fmt.Errorf("download torrent: %w", err)
 	}
-	defer resp.Body.Close()
+	defer closer.Join(&err, resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		return TorrentSource{}, fmt.Errorf("download torrent: indexer returned %s", resp.Status)
 	}

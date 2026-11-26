@@ -9,6 +9,8 @@ import (
 	"github.com/pion/mdns/v2"
 	"github.com/rs/zerolog"
 	"golang.org/x/net/ipv4"
+
+	"generic-arr-project/internal/testutil"
 )
 
 func TestResponderAnswersQueries(t *testing.T) {
@@ -18,7 +20,7 @@ func TestResponderAnswersQueries(t *testing.T) {
 	if err != nil {
 		t.Skipf("mDNS unavailable here: %v", err)
 	}
-	defer r.Close()
+	defer testutil.Close(t, r)
 
 	lc := net.ListenConfig{Control: reuseAddr}
 	l, err := lc.ListenPacket(context.Background(), "udp4", net.JoinHostPort("0.0.0.0", mdnsPort))
@@ -29,7 +31,7 @@ func TestResponderAnswersQueries(t *testing.T) {
 	if err != nil {
 		t.Skipf("mDNS client unavailable: %v", err)
 	}
-	defer client.Close()
+	defer testutil.Close(t, client)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

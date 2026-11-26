@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"generic-arr-project/internal/store/db"
+	"generic-arr-project/internal/testutil"
 )
 
 func openTestStore(t *testing.T) *Store {
@@ -16,7 +17,7 @@ func openTestStore(t *testing.T) *Store {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { st.Close() })
+	t.Cleanup(func() { testutil.Close(t, st) })
 	return st
 }
 
@@ -143,7 +144,7 @@ func TestVPNSettingsMustBeJSONObject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer st.Close()
+	defer testutil.Close(t, st)
 	for _, bad := range []string{"not json", `["a"]`} {
 		if _, err := st.DB.ExecContext(ctx, `INSERT INTO vpn_settings (id, provider, settings) VALUES (1, 'x', ?)`, bad); err == nil {
 			t.Errorf("settings %q accepted", bad)

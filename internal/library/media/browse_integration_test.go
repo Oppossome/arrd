@@ -3,11 +3,11 @@ package media_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"generic-arr-project/internal/library/apperr"
 	"generic-arr-project/internal/library/libtest"
 	"generic-arr-project/internal/library/media"
 	"generic-arr-project/internal/metadata"
+	"generic-arr-project/internal/testutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -24,19 +24,19 @@ func fakeBrowseTMDB(t *testing.T, lastQuery *url.Values) *httptest.Server {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/genre/movie/list":
-			fmt.Fprint(w, `{"genres":[{"id":101,"name":"Quiet Drama"}]}`)
+			testutil.Write(t, w, `{"genres":[{"id":101,"name":"Quiet Drama"}]}`)
 		case "/genre/tv/list":
-			fmt.Fprint(w, `{"genres":[{"id":201,"name":"Harbor Mysteries"}]}`)
+			testutil.Write(t, w, `{"genres":[{"id":201,"name":"Harbor Mysteries"}]}`)
 		case "/discover/movie":
 			*lastQuery = r.URL.Query()
-			fmt.Fprint(w, `{"page":3,"total_pages":7,"results":[{"id":900001,"title":"The Glass Orchard"},{"id":900002,"title":"Paper Lanterns"}]}`)
+			testutil.Write(t, w, `{"page":3,"total_pages":7,"results":[{"id":900001,"title":"The Glass Orchard"},{"id":900002,"title":"Paper Lanterns"}]}`)
 		case "/discover/tv":
 			*lastQuery = r.URL.Query()
-			fmt.Fprint(w, `{"page":1,"total_pages":1,"results":[{"id":800002,"name":"Lantern Coast"}]}`)
+			testutil.Write(t, w, `{"page":1,"total_pages":1,"results":[{"id":800002,"name":"Lantern Coast"}]}`)
 		case "/movie/900001/recommendations":
-			fmt.Fprint(w, `{"page":1,"results":[{"id":900001,"title":"The Glass Orchard"},{"id":900010,"title":"Copper Tide"}]}`)
+			testutil.Write(t, w, `{"page":1,"results":[{"id":900001,"title":"The Glass Orchard"},{"id":900010,"title":"Copper Tide"}]}`)
 		case "/tv/800002/recommendations":
-			fmt.Fprint(w, `{"page":1,"results":[{"id":800003,"name":"Tidewater"}]}`)
+			testutil.Write(t, w, `{"page":1,"results":[{"id":800003,"name":"Tidewater"}]}`)
 		default:
 			http.Redirect(w, r, next.URL+r.URL.String(), http.StatusTemporaryRedirect)
 		}

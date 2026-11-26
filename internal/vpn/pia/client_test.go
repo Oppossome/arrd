@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"generic-arr-project/internal/testutil"
 	"generic-arr-project/internal/vpn"
 )
 
@@ -146,7 +147,7 @@ func TestToken(t *testing.T) {
 			t.Errorf("parse form: %v", err)
 		}
 		if r.FormValue("username") == "p0000001" && r.FormValue("password") == "hunter2-fictional" {
-			fmt.Fprint(w, `{"token":"`+testToken+`"}`)
+			testutil.Write(t, w, `{"token":"`+testToken+`"}`)
 			return
 		}
 		w.WriteHeader(http.StatusUnauthorized)
@@ -176,7 +177,7 @@ c2lnbmF0dXJlIGxpbmUgdHdv
 
 func TestRegions(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, serverListFixture)
+		testutil.Write(t, w, serverListFixture)
 	}))
 	defer ts.Close()
 	c := &Client{HTTP: ts.Client(), ServerListURL: ts.URL}
@@ -316,7 +317,7 @@ func TestProvisionFailsOverAndBuildsConfig(t *testing.T) {
 		return okAddKey(serverKey)(pub)
 	}))
 	tokens := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, `{"token":"`+testToken+`"}`)
+		testutil.Write(t, w, `{"token":"`+testToken+`"}`)
 	}))
 	defer tokens.Close()
 	c := testClient(ca, port)
@@ -374,14 +375,14 @@ func TestPortForward(t *testing.T) {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
-			fmt.Fprintf(w, `{"status":"OK","payload":%q,"signature":"sig"}`, payload)
+			testutil.Write(t, w, fmt.Sprintf(`{"status":"OK","payload":%q,"signature":"sig"}`, payload))
 		case "/bindPort":
 			if q.Get("payload") != payload || q.Get("signature") != "sig" {
-				fmt.Fprint(w, `{"status":"ERROR","message":"bad signature"}`)
+				testutil.Write(t, w, `{"status":"ERROR","message":"bad signature"}`)
 				return
 			}
 			binds++
-			fmt.Fprint(w, `{"status":"OK","message":"port scheduled for add"}`)
+			testutil.Write(t, w, `{"status":"OK","message":"port scheduled for add"}`)
 		default:
 			http.NotFound(w, r)
 		}
@@ -423,14 +424,14 @@ func TestPortKeeper(t *testing.T) {
 	srv, port := fakeVPNServer(t, ca, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/getSignature":
-			fmt.Fprintf(w, `{"status":"OK","payload":%q,"signature":"sig"}`, payload)
+			testutil.Write(t, w, fmt.Sprintf(`{"status":"OK","payload":%q,"signature":"sig"}`, payload))
 		case "/bindPort":
 			if failBind {
-				fmt.Fprint(w, `{"status":"ERROR","message":"port expired"}`)
+				testutil.Write(t, w, `{"status":"ERROR","message":"port expired"}`)
 				return
 			}
 			binds++
-			fmt.Fprint(w, `{"status":"OK"}`)
+			testutil.Write(t, w, `{"status":"OK"}`)
 		}
 	}))
 	c := testClient(ca, port)

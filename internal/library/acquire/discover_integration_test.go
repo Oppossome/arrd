@@ -3,12 +3,12 @@ package acquire_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"generic-arr-project/internal/library/acquire"
 	"generic-arr-project/internal/library/apperr"
 	"generic-arr-project/internal/library/libtest"
 	"generic-arr-project/internal/library/media"
 	"generic-arr-project/internal/metadata"
+	"generic-arr-project/internal/testutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -21,12 +21,12 @@ func withPopular(t *testing.T, next *httptest.Server) *httptest.Server {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/movie/popular":
-			fmt.Fprint(w, `{"page":1,"results":[{"id":900001,"title":"The Glass Orchard","original_title":"The Glass Orchard","release_date":"1999-03-31"},
+			testutil.Write(t, w, `{"page":1,"results":[{"id":900001,"title":"The Glass Orchard","original_title":"The Glass Orchard","release_date":"1999-03-31"},
 				{"id":900002,"title":"Paper Lanterns","original_title":"Paper Lanterns","release_date":"2031-01-01"}]}`)
 		case "/search/movie":
-			fmt.Fprint(w, `{"page":1,"results":[{"id":900001,"title":"The Glass Orchard","original_title":"The Glass Orchard","release_date":"1999-03-31","genre_ids":[101],"original_language":"qq"}]}`)
+			testutil.Write(t, w, `{"page":1,"results":[{"id":900001,"title":"The Glass Orchard","original_title":"The Glass Orchard","release_date":"1999-03-31","genre_ids":[101],"original_language":"qq"}]}`)
 		case "/tv/popular":
-			fmt.Fprint(w, `{"page":1,"results":[{"id":800001,"name":"Harbor Watch","first_air_date":"2019-09-01"}]}`)
+			testutil.Write(t, w, `{"page":1,"results":[{"id":800001,"name":"Harbor Watch","first_air_date":"2019-09-01"}]}`)
 		default:
 			http.Redirect(w, r, next.URL+r.URL.String(), http.StatusTemporaryRedirect)
 		}

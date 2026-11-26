@@ -3,10 +3,10 @@ package media_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"generic-arr-project/internal/library"
 	"generic-arr-project/internal/library/apperr"
 	"generic-arr-project/internal/library/libtest"
+	"generic-arr-project/internal/testutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -25,10 +25,10 @@ func TestPosterProxy(t *testing.T) {
 		case "/w342/poster1.jpg":
 			time.Sleep(50 * time.Millisecond) // let concurrent requests pile up
 			w.Header().Set("Content-Type", "image/jpeg")
-			fmt.Fprint(w, "JPEGDATA")
+			testutil.Write(t, w, "JPEGDATA")
 		case "/w342/html.jpg":
 			w.Header().Set("Content-Type", "text/html")
-			fmt.Fprint(w, "<html>")
+			testutil.Write(t, w, "<html>")
 		default:
 			http.NotFound(w, r)
 		}

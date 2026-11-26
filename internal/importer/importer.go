@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"generic-arr-project/internal/closer"
 )
 
 // Mode is how files get from the download dir into the library.
@@ -153,29 +155,25 @@ func Transfer(src, dst string, mode Mode) (Result, error) {
 
 // copyFile copies via a temporary name so a crash never leaves a partial
 // file at dst.
-func copyFile(src, dst string) error {
+func copyFile(src, dst string) (err error) {
 	in, err := os.Open(src)
 	if err != nil {
 		return fmt.Errorf("copy: %w", err)
 	}
-	defer in.Close()
+	defer closer.Join(&err, in)
 	tmp := dst + ".arrd-partial"
 	out, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 	if err != nil {
 		return fmt.Errorf("copy: %w", err)
 	}
 	if _, err := io.Copy(out, in); err != nil {
-		out.Close()
-		os.Remove(tmp)
-		return fmt.Errorf("copy: %w", err)
+		return errors.Join(fmt.Errorf("copy: %w", err), out.Close(), os.Remove(tmp))
 	}
 	if err := out.Close(); err != nil {
-		os.Remove(tmp)
-		return fmt.Errorf("copy: %w", err)
+		return errors.Join(fmt.Errorf("copy: %w", err), os.Remove(tmp))
 	}
 	if err := os.Rename(tmp, dst); err != nil {
-		os.Remove(tmp)
-		return fmt.Errorf("copy: %w", err)
+		return errors.Join(fmt.Errorf("copy: %w", err), os.Remove(tmp))
 	}
 	return nil
 }

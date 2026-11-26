@@ -55,9 +55,7 @@ func (s *Service) RSSSync(ctx context.Context) (RSSResult, error) {
 	}
 	var candidates []release.Ranked[rssCandidate]
 	for _, f := range found {
-		for _, c := range matcher.match(f) {
-			candidates = append(candidates, c)
-		}
+		candidates = append(candidates, matcher.match(f)...)
 	}
 	release.Rank(candidates)
 

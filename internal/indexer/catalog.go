@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 
+	"generic-arr-project/internal/closer"
+
 	cdef "github.com/Kcchouette/cardigann-go/definition"
 )
 
@@ -93,12 +95,12 @@ func isDefinitionFile(name string) bool {
 	return ext == ".yml" || ext == ".yaml"
 }
 
-func loadFile(path string) (cdef.IndexerDefinition, error) {
+func loadFile(path string) (_ cdef.IndexerDefinition, err error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return cdef.IndexerDefinition{}, err
 	}
-	defer f.Close()
+	defer closer.Join(&err, f)
 	st, err := f.Stat()
 	if err != nil {
 		return cdef.IndexerDefinition{}, err

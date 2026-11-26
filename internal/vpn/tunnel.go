@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"generic-arr-project/internal/closer"
 	"generic-arr-project/internal/netx"
 
 	"github.com/rs/zerolog"
@@ -126,10 +127,7 @@ func resolveEndpoint(ctx context.Context, resolver *net.Resolver, endpoint strin
 }
 
 // Close shuts the tunnel down. Sockets created from it stop working.
-func (t *Tunnel) Close() error {
-	t.dev.Close()
-	return nil
-}
+func (t *Tunnel) Close() { t.dev.Close() }
 
 // Name identifies this network in logs and status output.
 func (t *Tunnel) Name() string { return "vpn" }
@@ -298,7 +296,7 @@ func parseStatus(raw string) ([]PeerStatus, error) {
 func (t *Tunnel) WaitForHandshake(ctx context.Context) error {
 	ticker := time.NewTicker(200 * time.Millisecond)
 	defer ticker.Stop()
-	t.nudge()
+	nudgeErr := t.nudge()
 	for {
 		peers, err := t.Status()
 		if err != nil {
@@ -311,6 +309,9 @@ func (t *Tunnel) WaitForHandshake(ctx context.Context) error {
 		}
 		select {
 		case <-ctx.Done():
+			if nudgeErr != nil {
+				return fmt.Errorf("wait for wireguard handshake: %w (sending the first packet failed: %w)", context.Cause(ctx), nudgeErr)
+			}
 			return fmt.Errorf("wait for wireguard handshake: %w", context.Cause(ctx))
 		case <-ticker.C:
 		}
@@ -321,17 +322,20 @@ func (t *Tunnel) WaitForHandshake(ctx context.Context) error {
 // handshake. The destination is the first address of the first peer's
 // AllowedIPs (for 0.0.0.0/0 that is 0.0.0.0, which we replace with a
 // public resolver address that is routed through the tunnel).
-func (t *Tunnel) nudge() {
+// The error says why no packet was sent, which explains a handshake that
+// never comes.
+func (t *Tunnel) nudge() (err error) {
 	dst, err := t.nudgeTarget()
 	if err != nil {
-		return
+		return err
 	}
 	c, err := t.tnet.DialUDPAddrPort(netip.AddrPort{}, dst)
 	if err != nil {
-		return
+		return err
 	}
-	defer c.Close()
-	_, _ = c.Write([]byte{0})
+	defer closer.Join(&err, c)
+	_, err = c.Write([]byte{0})
+	return err
 }
 
 func (t *Tunnel) nudgeTarget() (netip.AddrPort, error) {

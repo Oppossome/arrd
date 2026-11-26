@@ -135,8 +135,7 @@ func New(cfg Config, log *zerolog.Logger) (*Engine, error) {
 	for i := 0; ; i++ {
 		cl, err := atorrent.NewClient(cc)
 		if err != nil {
-			pieces.Close()
-			return nil, fmt.Errorf("start torrent client: %w", err)
+			return nil, errors.Join(fmt.Errorf("start torrent client: %w", err), pieces.Close())
 		}
 		e.cl = cl
 		err = e.addTCP(cl.LocalPort())
@@ -145,8 +144,7 @@ func New(cfg Config, log *zerolog.Logger) (*Engine, error) {
 		}
 		e.closeClient()
 		if !errors.Is(err, syscall.EADDRINUSE) || i+1 >= attempts {
-			pieces.Close()
-			return nil, err
+			return nil, errors.Join(err, pieces.Close())
 		}
 		log.Debug().Err(err).Msg("tcp port taken, retrying with another port")
 	}

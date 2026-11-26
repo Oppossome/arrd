@@ -16,6 +16,7 @@ import (
 	"slices"
 	"strings"
 
+	"generic-arr-project/internal/closer"
 	"generic-arr-project/internal/formspec"
 )
 
@@ -95,7 +96,7 @@ func ParseBaseURL(field, raw string) (*url.URL, error) {
 // Do sends req and fails on a non-2xx status. The error names the method
 // and path but never the query, where some servers take tokens. If out is
 // non-nil the body is passed to it.
-func Do(client *http.Client, req *http.Request, out func(io.Reader) error) error {
+func Do(client *http.Client, req *http.Request, out func(io.Reader) error) (err error) {
 	resp, err := client.Do(req)
 	if err != nil {
 		var uerr *url.Error
@@ -104,7 +105,7 @@ func Do(client *http.Client, req *http.Request, out func(io.Reader) error) error
 		}
 		return fmt.Errorf("%s %s: %w", req.Method, req.URL.Path, err)
 	}
-	defer resp.Body.Close()
+	defer closer.Join(&err, resp.Body)
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64<<10))
 		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {

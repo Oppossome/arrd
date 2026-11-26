@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"generic-arr-project/internal/closer"
 	"generic-arr-project/internal/library/apperr"
 	"generic-arr-project/internal/netx"
 )
@@ -90,7 +91,7 @@ func (s *Service) Poster(ctx context.Context, size, file string) (string, error)
 	return path, call.err
 }
 
-func (s *Service) fetchPoster(ctx context.Context, size, file, path string) error {
+func (s *Service) fetchPoster(ctx context.Context, size, file, path string) (err error) {
 	url := fmt.Sprintf("%s/%s/%s", s.posterBaseURL, size, file)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -100,7 +101,7 @@ func (s *Service) fetchPoster(ctx context.Context, size, file, path string) erro
 	if err != nil {
 		return fmt.Errorf("fetch poster: %w", err)
 	}
-	defer resp.Body.Close()
+	defer closer.Join(&err, resp.Body)
 	if resp.StatusCode == http.StatusNotFound {
 		return fmt.Errorf("poster %s: %w", file, apperr.ErrNotFound)
 	}
@@ -128,12 +129,10 @@ func (s *Service) fetchPoster(ctx context.Context, size, file, path string) erro
 		err = errors.New("poster is larger than 10 MiB")
 	}
 	if err != nil {
-		os.Remove(tmp.Name())
-		return err
+		return errors.Join(err, os.Remove(tmp.Name()))
 	}
 	if err := os.Rename(tmp.Name(), path); err != nil {
-		os.Remove(tmp.Name())
-		return fmt.Errorf("poster cache: %w", err)
+		return errors.Join(fmt.Errorf("poster cache: %w", err), os.Remove(tmp.Name()))
 	}
 	return nil
 }

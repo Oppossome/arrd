@@ -2,7 +2,6 @@ package app
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -10,6 +9,8 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+
+	"generic-arr-project/internal/testutil"
 )
 
 // stubMDNS counts responder starts and stops; it fails to start while err is set.
@@ -33,7 +34,7 @@ func (f closerFunc) Close() error { return f() }
 func newTestExposer(t *testing.T, baseAddr string, mdns *stubMDNS) *exposer {
 	t.Helper()
 	srv := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		fmt.Fprint(w, "ok")
+		testutil.Write(t, w, "ok")
 	})}
 	e := newExposer(srv, baseAddr, mdns.start, new(zerolog.Nop()))
 	t.Cleanup(func() {
@@ -64,7 +65,7 @@ func assertServes(t *testing.T, port string) {
 	if err != nil {
 		t.Fatalf("GET: %v", err)
 	}
-	defer resp.Body.Close()
+	defer testutil.Close(t, resp.Body)
 	if body, _ := io.ReadAll(resp.Body); string(body) != "ok" {
 		t.Fatalf("body = %q", body)
 	}
@@ -137,7 +138,7 @@ func TestExposerBindFailureRestoresListener(t *testing.T) {
 		t.Fatal(err)
 	}
 	port := portOf(probe.Addr())
-	probe.Close()
+	testutil.Close(t, probe)
 
 	e := newTestExposer(t, net.JoinHostPort("127.0.0.1", port), &stubMDNS{})
 	if err := e.ApplyLAN(false); err != nil {
@@ -148,7 +149,7 @@ func TestExposerBindFailureRestoresListener(t *testing.T) {
 	if err != nil {
 		t.Skipf("127.0.0.2 unavailable: %v", err)
 	}
-	defer blocker.Close()
+	defer testutil.Close(t, blocker)
 
 	if err := e.ApplyLAN(true); err == nil {
 		t.Fatal("ApplyLAN(true) succeeded although the port is taken")

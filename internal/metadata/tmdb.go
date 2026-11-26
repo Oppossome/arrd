@@ -11,6 +11,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"generic-arr-project/internal/closer"
 )
 
 // DefaultTMDBBaseURL is the TMDB v3 API root.
@@ -113,7 +115,7 @@ func (m tmdbMovie) toMovie() Movie {
 	}
 }
 
-func (c *TMDB) get(ctx context.Context, path string, params url.Values, out any) error {
+func (c *TMDB) get(ctx context.Context, path string, params url.Values, out any) (err error) {
 	if c.APIKey == "" {
 		return errors.New("tmdb: metadata.tmdb_api_key is not configured")
 	}
@@ -140,7 +142,7 @@ func (c *TMDB) get(ctx context.Context, path string, params url.Values, out any)
 	if err != nil {
 		return fmt.Errorf("tmdb %s: %s", path, strings.ReplaceAll(err.Error(), c.APIKey, "REDACTED"))
 	}
-	defer resp.Body.Close()
+	defer closer.Join(&err, resp.Body)
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
 	if err != nil {
 		return fmt.Errorf("tmdb %s: read body: %w", path, err)

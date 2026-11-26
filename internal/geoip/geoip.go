@@ -17,6 +17,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"generic-arr-project/internal/closer"
+
 	"github.com/oschwald/maxminddb-golang/v2"
 	"github.com/rs/zerolog"
 )
@@ -157,7 +159,7 @@ func (d *DB) download(ctx context.Context) error {
 
 var errNotPublished = errors.New("not published")
 
-func (d *DB) fetch(ctx context.Context, url string) error {
+func (d *DB) fetch(ctx context.Context, url string) (err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return err
@@ -166,7 +168,7 @@ func (d *DB) fetch(ctx context.Context, url string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer closer.Join(&err, resp.Body)
 	if resp.StatusCode == http.StatusNotFound {
 		return fmt.Errorf("%s: %w", url, errNotPublished)
 	}
@@ -177,7 +179,7 @@ func (d *DB) fetch(ctx context.Context, url string) error {
 	if err != nil {
 		return fmt.Errorf("%s: %w", url, err)
 	}
-	defer gz.Close()
+	defer closer.Join(&err, gz)
 
 	if err := os.MkdirAll(d.dir, 0o700); err != nil {
 		return err
@@ -206,12 +208,10 @@ func (d *DB) fetch(ctx context.Context, url string) error {
 		}
 	}
 	if err != nil {
-		os.Remove(tmp.Name())
-		return err
+		return errors.Join(err, os.Remove(tmp.Name()))
 	}
 	if err := os.Rename(tmp.Name(), d.path()); err != nil {
-		os.Remove(tmp.Name())
-		return err
+		return errors.Join(err, os.Remove(tmp.Name()))
 	}
 	return nil
 }

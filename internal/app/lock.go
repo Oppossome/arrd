@@ -17,7 +17,7 @@ const lockFileName = "arrd.lock"
 // only one server uses a data directory at a time. The operating system drops
 // the lock when the process exits, however it exits, so it never goes stale.
 // The returned func releases it.
-func lockDataDir(dataDir string) (release func(), err error) {
+func lockDataDir(dataDir string) (release func() error, err error) {
 	if dataDir == "" {
 		return nil, errors.New("data directory is required")
 	}
@@ -30,20 +30,20 @@ func lockDataDir(dataDir string) (release func(), err error) {
 		return nil, fmt.Errorf("open lock file: %w", err)
 	}
 	if err := tryLock(f); err != nil {
-		f.Close()
 		if errors.Is(err, ErrAlreadyRunning) {
-			return nil, fmt.Errorf("%w (%s)", ErrAlreadyRunning, path)
+			err = fmt.Errorf("%w (%s)", ErrAlreadyRunning, path)
+		} else {
+			err = fmt.Errorf("lock %s: %w", path, err)
 		}
-		return nil, fmt.Errorf("lock %s: %w", path, err)
+		return nil, errors.Join(err, f.Close())
 	}
 	if err := writePID(f); err != nil {
 		unlock(f)
-		f.Close()
-		return nil, fmt.Errorf("write %s: %w", path, err)
+		return nil, errors.Join(fmt.Errorf("write %s: %w", path, err), f.Close())
 	}
-	return func() {
+	return func() error {
 		unlock(f)
-		f.Close()
+		return f.Close()
 	}, nil
 }
 

@@ -1,6 +1,7 @@
 package importer
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,9 +24,7 @@ func CheckWritableDir(path string) error {
 	if err != nil {
 		return fmt.Errorf("%q is not writable: %w", path, err)
 	}
-	name := f.Name()
-	f.Close()
-	return os.Remove(name)
+	return errors.Join(f.Close(), os.Remove(f.Name()))
 }
 
 // SameFilesystem reports whether a and b are on the same device, i.e.

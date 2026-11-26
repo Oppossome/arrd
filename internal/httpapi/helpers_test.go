@@ -20,6 +20,7 @@ import (
 	"generic-arr-project/internal/library/engine"
 	"generic-arr-project/internal/netx"
 	"generic-arr-project/internal/store"
+	"generic-arr-project/internal/testutil"
 	"generic-arr-project/internal/torrent"
 )
 
@@ -57,7 +58,7 @@ func newUnconfiguredServerUI(t *testing.T, ui fs.FS) *testServer {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { st.Close() })
+	t.Cleanup(func() { testutil.Close(t, st) })
 	factory := func(context.Context, engine.Settings) (*engine.Runtime, error) {
 		eng, err := torrent.New(torrent.Config{StateDir: filepath.Join(dataDir, "state"), Network: v4Only{}}, log)
 		if err != nil {
@@ -120,7 +121,7 @@ func doWith(t *testing.T, srv *testServer, method, path, body string, headers ma
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer testutil.Close(t, resp.Body)
 	raw, _ := io.ReadAll(resp.Body)
 	var out map[string]any
 	if len(raw) > 0 && raw[0] == '{' {
@@ -154,7 +155,7 @@ func rawDo(t *testing.T, srv *testServer, method, path, body string, headers map
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer testutil.Close(t, resp.Body)
 	raw, _ := io.ReadAll(resp.Body)
 	return resp.StatusCode, string(raw)
 }
@@ -196,7 +197,7 @@ func (b *browser) do(method, path, body string, headers map[string]string) *http
 		b.t.Fatal(err)
 	}
 	_, _ = io.Copy(io.Discard, resp.Body)
-	resp.Body.Close()
+	testutil.Close(b.t, resp.Body)
 	return resp
 }
 
