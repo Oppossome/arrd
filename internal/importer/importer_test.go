@@ -3,6 +3,7 @@ package importer
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -121,7 +122,9 @@ func TestCheckWritableDir(t *testing.T) {
 	if err := os.Mkdir(ro, 0o555); err != nil {
 		t.Fatal(err)
 	}
-	if os.Geteuid() != 0 { // root ignores permissions
+	// Mode bits cannot make a directory unwritable on Windows (only ACLs
+	// can), and root ignores them.
+	if runtime.GOOS != "windows" && os.Geteuid() != 0 {
 		if err := CheckWritableDir(ro); err == nil {
 			t.Error("read-only dir accepted")
 		}

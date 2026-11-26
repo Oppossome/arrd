@@ -126,13 +126,20 @@ func (d *DB) Close() error {
 	return nil
 }
 
+// load reads the database into memory rather than memory-mapping it: a
+// mapped file cannot be replaced on Windows, so the next update's rename
+// would fail. The file is ~8 MiB.
 func (d *DB) load() error {
-	r, err := maxminddb.Open(d.path())
+	data, err := os.ReadFile(d.path())
+	if err != nil {
+		return fmt.Errorf("read ip geolocation database: %w", err)
+	}
+	r, err := maxminddb.OpenBytes(data)
 	if err != nil {
 		return fmt.Errorf("open ip geolocation database: %w", err)
 	}
-	// The previous reader is not closed: in-flight lookups may still use
-	// its memory map. It is replaced at most monthly.
+	// The previous reader is not closed, since in-flight lookups may still
+	// use it; the garbage collector frees it once they finish.
 	d.reader.Store(r)
 	return nil
 }

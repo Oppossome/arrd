@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"testing"
@@ -19,7 +20,7 @@ func TestErrorMapping(t *testing.T) {
 		{"POST", "/api/v1/movies", `{"bogus": 1}`, http.StatusBadRequest, ""},
 		{"POST", "/api/v1/indexers", `{"name":"a","definition":"examplesite","settings":{"base_url":"http://elsewhere.invalid/"}}`, http.StatusBadRequest, "settings.base_url"},
 		{"POST", "/api/v1/indexers", `{"name":"a","definition":"nowhere","settings":{}}`, http.StatusBadRequest, "definition"},
-		{"POST", "/api/v1/rootfolders", `{"media_type":"movie","path":"` + filepath.Join(base, "Movies") + `"}`, http.StatusConflict, ""},
+		{"POST", "/api/v1/rootfolders", fmt.Sprintf(`{"media_type":"movie","path":%q}`, filepath.Join(base, "Movies")), http.StatusConflict, ""},
 		{"DELETE", "/api/v1/indexers/5", "", http.StatusNotFound, ""},
 		{"PUT", "/api/v1/settings/quality", `{"min_resolution":1080,"max_resolution":720}`, http.StatusBadRequest, "min_resolution"},
 		{"GET", "/api/v1/series/999", "", http.StatusNotFound, ""},

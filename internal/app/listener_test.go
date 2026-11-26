@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"runtime"
 	"testing"
 	"time"
 
@@ -144,10 +145,10 @@ func TestExposerBindFailureRestoresListener(t *testing.T) {
 	if err := e.ApplyLAN(false); err != nil {
 		t.Fatal(err)
 	}
-	// Another address holding the port blocks the wildcard bind.
-	blocker, err := net.Listen("tcp", net.JoinHostPort("127.0.0.2", port))
+	blockerAddr := wildcardBlocker(port)
+	blocker, err := net.Listen("tcp", blockerAddr)
 	if err != nil {
-		t.Skipf("127.0.0.2 unavailable: %v", err)
+		t.Skipf("cannot hold %s to block the wildcard bind: %v", blockerAddr, err)
 	}
 	defer testutil.Close(t, blocker)
 
@@ -158,6 +159,19 @@ func TestExposerBindFailureRestoresListener(t *testing.T) {
 		t.Errorf("after failure: %s:%s, LANURL %q", boundHost(e), boundPort(e), e.LANURL())
 	}
 	assertServes(t, port)
+}
+
+// wildcardBlocker is an address another socket can hold, while the exposer
+// serves on 127.0.0.1:port, that makes binding 0.0.0.0:port fail.
+func wildcardBlocker(port string) string {
+	if runtime.GOOS == "windows" {
+		// Windows lets a wildcard bind share a port with a specific address
+		// (connections go to the most specific match), but not with another
+		// wildcard bind.
+		return net.JoinHostPort("0.0.0.0", port)
+	}
+	// Linux refuses a wildcard bind while any address holds the port.
+	return net.JoinHostPort("127.0.0.2", port)
 }
 
 func TestExposerLANAddr(t *testing.T) {

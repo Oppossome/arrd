@@ -14,7 +14,7 @@ func TestSettingsRoundTrip(t *testing.T) {
 		t.Fatalf("get = %d %v", code, body)
 	}
 	dir := filepath.Join(base, "data", "dl", "complete")
-	put := `{"incomplete_dir":"` + filepath.Join(base, "data", "dl", "incomplete") + `","complete_dir":"` + dir + `","import_mode":"copy"}`
+	put := fmt.Sprintf(`{"incomplete_dir":%q,"complete_dir":%q,"import_mode":"copy"}`, filepath.Join(base, "data", "dl", "incomplete"), dir)
 	code, body = do(t, srv, "PUT", "/api/v1/settings/downloads", put, true)
 	if code != http.StatusOK || body["settings"].(map[string]any)["import_mode"] != "copy" {
 		t.Fatalf("put = %d %v", code, body)
