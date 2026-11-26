@@ -6,6 +6,7 @@
 		GeneralSettingsForm,
 		IndexerDefinitionsPanel,
 		IndexersPanel,
+		MediaServersPanel,
 		NetworkSettingsForm,
 		QualitySettingsForm,
 		RootFoldersPanel,
@@ -20,6 +21,7 @@
 		{ key: 'quality', label: 'Quality' },
 		{ key: 'folders', label: 'Folders' },
 		{ key: 'indexers', label: 'Indexers' },
+		{ key: 'mediaservers', label: 'Media Servers' },
 		{ key: 'vpn', label: 'VPN' }
 	] as const;
 	type Tab = (typeof tabs)[number]['key'];
@@ -39,5 +41,6 @@
 	{:else if active === 'indexers'}
 		<IndexerDefinitionsPanel />
 		<IndexersPanel />
+	{:else if active === 'mediaservers'}<MediaServersPanel />
 	{:else}<VPNPanel />{/if}
 </SettingsLayout>

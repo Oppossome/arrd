@@ -20,6 +20,7 @@ func TestMovieEndToEnd(t *testing.T) {
 	base := t.TempDir()
 	env := libtest.NewEnv(t, base, tmdb.URL, libtest.BasicSetup(base), nil)
 	svc := env.Svc
+	jellyfin := libtest.AddJellyfin(t, svc)
 
 	env.UseSites(t, idx.URL+"/", "http://127.0.0.1:1/")
 	good, err := svc.Indexers.CreateIndexer(ctx, libtest.SiteIndexer("good", idx.URL+"/"))
@@ -75,6 +76,9 @@ func TestMovieEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Nothing imported yet: media servers are not told.
+	libtest.WantRescans(t, svc, jellyfin, 0)
+
 	// Drive the scheduler's work until the movie is imported.
 	deadline := time.Now().Add(60 * time.Second)
 	for {
@@ -100,6 +104,7 @@ func TestMovieEndToEnd(t *testing.T) {
 	if movie.Status != media.MovieDownloaded || *movie.FilePath != wantFile {
 		t.Fatalf("imported movie = %+v", movie)
 	}
+	libtest.WantRescans(t, svc, jellyfin, 1)
 	libInfo, err := os.Stat(wantFile)
 	if err != nil {
 		t.Fatal(err)

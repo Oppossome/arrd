@@ -129,6 +129,7 @@ func (s *Service) importSeriesDownload(ctx context.Context, eng *torrent.Engine,
 		return fmt.Errorf("record import: %w", err)
 	}
 	s.log.Info().Str("series", series.Title).Int("files", len(plan)).Int64("download", r.ID).Msg("imported episodes")
+	s.notifier.LibraryChanged()
 
 	// Report expected episodes the download turned out not to contain.
 	expected, err := s.store.ListDownloadEpisodes(ctx, r.ID)

@@ -32,7 +32,7 @@ var (
 // fileIDPattern is the ids that are safe to use as a file name.
 var fileIDPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 
-// versionDirPattern matches Prowlarr's per-schema folders (definitions/v11).
+// versionDirPattern matches per-schema folders (definitions/v11).
 var versionDirPattern = regexp.MustCompile(`^v(\d+)$`)
 
 // ImportResult reports an upload of definitions.
@@ -43,8 +43,8 @@ type ImportResult struct {
 
 // Import adds the definitions in data to dir: either one definition file,
 // or a zip whose *.yml / *.yaml files (at any depth) are definitions. When
-// the zip has versioned folders (definitions/v11, v12 … as in Prowlarr's
-// Indexers repository), only files in those are used, and a site in
+// the zip has versioned folders (definitions/v11, v12 …), only files in
+// those are used, and a site in
 // several versions comes from the newest that parses. Each definition
 // is written as its own file, replacing the file that already defines its
 // id. Problems with single files in a zip are returned in Errors; an

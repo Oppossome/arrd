@@ -66,7 +66,7 @@ func run(args []string) error {
 		fs.StringVar(&fetchOpts.IPEchoURL, "ip-echo", vpnconfig.DefaultIPEchoURL, "plain-text IP echo URL queried through the download network; empty to skip")
 	default:
 		listen = fs.String("listen", envOr("ARRD_LISTEN", "127.0.0.1:8484"), "HTTP listen address (env ARRD_LISTEN)")
-		definitionsDir = fs.String("definitions-dir", os.Getenv("ARRD_DEFINITIONS_DIR"), "directory of Cardigann indexer definitions (*.yml), e.g. a checkout of Prowlarr's definitions/v11 (default DATA-DIR/definitions; env ARRD_DEFINITIONS_DIR)")
+		definitionsDir = fs.String("definitions-dir", os.Getenv("ARRD_DEFINITIONS_DIR"), "directory of Cardigann indexer definitions (*.yml) (default DATA-DIR/definitions; env ARRD_DEFINITIONS_DIR)")
 	}
 	if err := fs.Parse(args); err != nil {
 		return err

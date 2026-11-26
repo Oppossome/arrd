@@ -32,8 +32,8 @@ const shutdownTimeout = 10 * time.Second
 type Options struct {
 	DataDir string // database, torrent state and suggested default paths
 	Listen  string // HTTP listen address
-	// DefinitionsDir holds Cardigann indexer definitions (*.yml), e.g. a
-	// checkout of Prowlarr's definitions/v11. Missing means none.
+	// DefinitionsDir holds Cardigann indexer definitions (*.yml). Missing
+	// means none.
 	DefinitionsDir string
 }
 

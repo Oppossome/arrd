@@ -1,7 +1,7 @@
 //go:build sweep
 
-// The sweep loads a real definitions directory, e.g. a checkout of
-// github.com/Prowlarr/Indexers/definitions/v11, to measure compatibility.
+// The sweep loads a real definitions directory (e.g. a v11 schema folder)
+// to measure compatibility.
 // It makes no network requests. Run:
 //
 //	CARDIGANN_SWEEP_DIR=/path/to/definitions/v11 go test -tags sweep -run Sweep -v ./internal/indexer/

@@ -12,6 +12,7 @@ export { default as FacetSearchBar, type FacetItem } from './FacetSearchBar.svel
 export { default as FormField } from './FormField.svelte';
 export { default as IndexerForm } from './IndexerForm.svelte';
 export { default as MediaHero } from './MediaHero.svelte';
+export { default as MediaServerForm } from './MediaServerForm.svelte';
 export { default as Modal } from './Modal.svelte';
 export { default as MonitorToggle } from './MonitorToggle.svelte';
 export { default as PeerSummary } from './PeerSummary.svelte';

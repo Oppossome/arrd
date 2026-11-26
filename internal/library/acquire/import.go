@@ -98,5 +98,6 @@ func (s *Service) importMovieDownload(ctx context.Context, eng *torrent.Engine, 
 		return fmt.Errorf("record import: %w", err)
 	}
 	s.log.Info().Int64("movie", movie.ID).Str("title", movie.Title).Str("file", dst).Str("method", string(res.Method)).Msg("imported movie")
+	s.notifier.LibraryChanged()
 	return nil
 }

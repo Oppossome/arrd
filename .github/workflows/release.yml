@@ -1,0 +1,120 @@
+name: Release
+
+# Pushing a tag like v1.2.3 builds arrd for Linux and Windows and publishes a
+# GitHub release with the archives. Running it manually (workflow_dispatch)
+# builds the same archives as workflow artifacts without publishing a release.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: Build web UI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: npm run build
+        working-directory: web
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist/
+          include-hidden-files: true
+          if-no-files-found: error
+
+  build:
+    name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
+    needs: web
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { goos: linux, goarch: amd64 }
+          - { goos: linux, goarch: arm64 }
+          - { goos: windows, goarch: amd64 }
+          - { goos: windows, goarch: arm64 }
+    env:
+      # arrd is pure Go (modernc.org/sqlite, no cgo), so every target
+      # cross-compiles from one Linux runner into a static binary.
+      CGO_ENABLED: '0'
+      GOOS: ${{ matrix.goos }}
+      GOARCH: ${{ matrix.goarch }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist/
+      - name: Check the web UI is present
+        run: test -f web/dist/index.html
+
+      - name: Build
+        run: |
+          ext=""
+          if [ "$GOOS" = windows ]; then ext=".exe"; fi
+          name="arrd_${GITHUB_REF_NAME//\//-}_${GOOS}_${GOARCH}"
+          mkdir -p "dist/$name"
+          go build -trimpath -ldflags "-s -w" -o "dist/$name/arrd$ext" ./cmd/arrd
+          cp LICENSE README.md "dist/$name/"
+          echo "PKG_NAME=$name" >> "$GITHUB_ENV"
+
+      - name: Package
+        working-directory: dist
+        run: |
+          if [ "$GOOS" = windows ]; then
+            zip -r "$PKG_NAME.zip" "$PKG_NAME"
+          else
+            tar -czf "$PKG_NAME.tar.gz" "$PKG_NAME"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PKG_NAME }}
+          path: |
+            dist/*.zip
+            dist/*.tar.gz
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: arrd_*
+          path: dist/
+          merge-multiple: true
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum -- arrd_* > SHA256SUMS
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Tags with a suffix (v1.2.0-rc.1) are published as pre-releases.
+          flags=()
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then flags+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            "${flags[@]}"

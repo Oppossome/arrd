@@ -39,6 +39,7 @@ func TestSeriesEndToEnd(t *testing.T) {
 	env := libtest.NewEnv(t, base, tmdb.URL, libtest.BasicSetup(base), nil)
 	svc := env.Svc
 	env.SetNow(func() time.Time { return time.Date(2024, 6, 15, 12, 0, 0, 0, time.UTC) })
+	jellyfin := libtest.AddJellyfin(t, svc)
 
 	env.UseSites(t, idx.URL+"/")
 	ix, err := svc.Indexers.CreateIndexer(ctx, libtest.SiteIndexer("tv", idx.URL+"/"))
@@ -89,6 +90,7 @@ func TestSeriesEndToEnd(t *testing.T) {
 		return out
 	}
 	waitFor(t, svc, "season pack import", func() bool { return episodes()["S01E03"].FilePath != nil })
+	libtest.WantRescans(t, svc, jellyfin, 1)
 
 	showDir := filepath.Join(base, "TV", "Harbor Watch (2019)")
 	eps := episodes()
@@ -123,6 +125,7 @@ func TestSeriesEndToEnd(t *testing.T) {
 		t.Errorf("second rss sync grabbed %+v", again.Grabbed)
 	}
 	waitFor(t, svc, "single episode import", func() bool { return episodes()["S02E01"].FilePath != nil })
+	libtest.WantRescans(t, svc, jellyfin, 2)
 
 	eps = episodes()
 	want := filepath.Join(showDir, "Season 02", "Harbor Watch - S02E01 - Return [WEBDL-1080p].mkv")

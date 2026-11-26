@@ -197,7 +197,7 @@ func toggleDefault(v string) string {
 }
 
 // normalizeCategories rewrites category mappings written as Newznab names
-// ("Movies/HD", as Prowlarr's definitions do) to numeric IDs, which is
+// ("Movies/HD", as many definitions do) to numeric IDs, which is
 // what the engine matches requested categories against.
 func normalizeCategories(def cdef.IndexerDefinition) cdef.IndexerDefinition {
 	mappings := slices.Clone(def.Caps.CategoryMappings)

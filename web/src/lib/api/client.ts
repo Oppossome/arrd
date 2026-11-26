@@ -288,6 +288,16 @@ export const api = {
 			body(http().PUT('/api/v1/indexers/{id}', { ...id(indexerId), body: input })),
 		remove: (indexerId: number) => done(http().DELETE('/api/v1/indexers/{id}', id(indexerId))),
 		test: (indexerId: number) => body(http().POST('/api/v1/indexers/{id}/test', id(indexerId)))
+	},
+
+	mediaServers: {
+		list: () => body(http().GET('/api/v1/mediaservers')),
+		definitions: () => body(http().GET('/api/v1/mediaservers/definitions')),
+		create: (input: T.MediaServerInput) => body(http().POST('/api/v1/mediaservers', { body: input })),
+		update: (serverId: number, input: T.MediaServerInput) =>
+			body(http().PUT('/api/v1/mediaservers/{id}', { ...id(serverId), body: input })),
+		remove: (serverId: number) => done(http().DELETE('/api/v1/mediaservers/{id}', id(serverId))),
+		test: (serverId: number) => body(http().POST('/api/v1/mediaservers/{id}/test', id(serverId)))
 	}
 };
 

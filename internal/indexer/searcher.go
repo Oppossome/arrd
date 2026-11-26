@@ -236,8 +236,7 @@ func (s *Searcher) Resolve(ctx context.Context, r Release) (TorrentSource, error
 	return Resolve(ctx, s.client, Release{DownloadURL: resolved.DownloadLink})
 }
 
-// Test signs in (if the site needs it) and runs a query, as Prowlarr does:
-// recent releases where the site lists them, else a keyword search.
+// Test signs in (if the site needs it) and runs a query: recent releases where the site lists them, else a keyword search.
 func (s *Searcher) Test(ctx context.Context) error {
 	q := Query{Type: SearchGeneric}
 	if !s.def.Caps.AllowRawSearch {

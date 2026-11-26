@@ -72,6 +72,12 @@ export type IndexerInput = Schemas['IndexerInput'];
 /** A site arrd can search (from a Cardigann definition) and the settings it needs. */
 export type IndexerDefinition = Schemas['IndexerDefinition'];
 
+/** A media server (Plex, Jellyfin, ...) asked to rescan after imports. */
+export type MediaServer = Schemas['MediaServer'];
+export type MediaServerInput = Schemas['MediaServerInput'];
+/** A kind of media server arrd can notify and the settings it needs. */
+export type MediaServerDefinition = Schemas['MediaServerDefinition'];
+
 /** How an integration setting is entered. */
 export type SettingFieldKind = Schemas['SettingFieldKind'];
 /** One setting an integration (VPN provider, indexer site) needs, declared by the server. */

@@ -155,7 +155,9 @@ export const keys = {
 		list: (mt: T.MediaType) => ['rootFolders', mt] as const
 	},
 	indexers: ['indexers'] as const,
-	indexerDefinitions: ['indexerDefinitions'] as const
+	indexerDefinitions: ['indexerDefinitions'] as const,
+	mediaServers: ['mediaServers'] as const,
+	mediaServerDefinitions: ['mediaServerDefinitions'] as const
 };
 
 // ---------------------------------------------------------------- queries
@@ -365,7 +367,10 @@ export const queries = {
 	rootFolders: (mt: T.MediaType) => ({ queryKey: keys.rootFolders.list(mt), queryFn: () => api.rootFolders.list(mt) }),
 	indexers: () => ({ queryKey: keys.indexers, queryFn: api.indexers.list }),
 	// Definitions change only when their files are reloaded, uploaded or deleted.
-	indexerDefinitions: () => ({ queryKey: keys.indexerDefinitions, queryFn: api.indexers.definitions, staleTime: Infinity })
+	indexerDefinitions: () => ({ queryKey: keys.indexerDefinitions, queryFn: api.indexers.definitions, staleTime: Infinity }),
+	mediaServers: () => ({ queryKey: keys.mediaServers, queryFn: api.mediaServers.list }),
+	// The server types are built into arrd.
+	mediaServerDefinitions: () => ({ queryKey: keys.mediaServerDefinitions, queryFn: api.mediaServers.definitions, staleTime: Infinity })
 };
 
 // ---------------------------------------------------------------- mutations
@@ -618,6 +623,20 @@ export const mutations = {
 	deleteIndexerDefinition: (qc: QueryClient) => ({
 		mutationFn: (id: string) => api.indexers.removeDefinition(id),
 		onSuccess: () => invalidate(qc, keys.indexerDefinitions)
+	}),
+	saveMediaServer: (qc: QueryClient) => ({
+		mutationFn: (v: { id?: number; input: T.MediaServerInput }) =>
+			v.id ? api.mediaServers.update(v.id, v.input) : api.mediaServers.create(v.input),
+		onSuccess: () => invalidate(qc, keys.mediaServers)
+	}),
+	deleteMediaServer: (qc: QueryClient) => ({
+		mutationFn: (id: number) => api.mediaServers.remove(id),
+		onSuccess: () => invalidate(qc, keys.mediaServers)
+	}),
+	testMediaServer: (qc: QueryClient) => ({
+		mutationFn: (id: number) => api.mediaServers.test(id),
+		// A failed test is recorded on the server too, so refresh either way.
+		onSettled: () => invalidate(qc, keys.mediaServers)
 	})
 };
 

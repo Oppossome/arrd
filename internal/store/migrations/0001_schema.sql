@@ -65,6 +65,20 @@ CREATE TABLE indexers (
     last_error_at    TEXT
 );
 
+-- Media servers (Plex, Jellyfin, ...) asked to rescan their libraries
+-- after imports. definition is a server type id (see internal/mediaserver);
+-- settings is a JSON object of its field values, secrets included; the API
+-- never returns secret values.
+CREATE TABLE media_servers (
+    id            INTEGER PRIMARY KEY,
+    name          TEXT    NOT NULL UNIQUE CHECK (name <> ''),
+    definition    TEXT    NOT NULL CHECK (definition <> ''),  -- e.g. "plex"
+    settings      TEXT    NOT NULL DEFAULT '{}' CHECK (json_valid(settings) AND json_type(settings) = 'object'),
+    enabled       BOOLEAN NOT NULL DEFAULT 1 CHECK (enabled IN (0, 1)),
+    last_error    TEXT,
+    last_error_at TEXT
+);
+
 -- Global quality limits used when choosing a release: exactly one row.
 CREATE TABLE quality_settings (
     id              INTEGER PRIMARY KEY CHECK (id = 1),

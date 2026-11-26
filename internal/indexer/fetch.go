@@ -19,7 +19,7 @@ type TorrentSource struct {
 }
 
 // errMagnetRedirect stops the HTTP client at a redirect to a magnet link,
-// which Prowlarr and Jackett return for magnet-only trackers.
+// which some download links answer with for magnet-only trackers.
 type errMagnetRedirect struct{ uri string }
 
 func (e *errMagnetRedirect) Error() string { return "redirect to magnet" }

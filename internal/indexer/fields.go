@@ -14,8 +14,8 @@ import (
 )
 
 // bytesFilter is registered with the library: the engine reads a release's
-// size as a plain integer, but sites (and Jackett, whose definitions these
-// are) show sizes like "1.5 GB".
+// size as a plain integer, but sites (and the definitions written for
+// them) show sizes like "1.5 GB".
 const bytesFilter = "arrd_bytes"
 
 // Registered at init, before any searcher runs: the registry is a plain
@@ -38,7 +38,7 @@ var sizeRE = regexp.MustCompile(`(?i)^([0-9][0-9.,]*)\s*([kmgtp]?i?b|bytes?)?$`)
 // thousandsRE matches a comma used as a thousands separator ("1,234").
 var thousandsRE = regexp.MustCompile(`,\d{3}$`)
 
-// parseSize reads a size the way Jackett does: units are binary
+// parseSize reads a size the way Cardigann definitions expect: units are binary
 // (1 GB = 1024³ bytes); "," is a thousands separator, unless it is the only
 // separator and followed by other than three digits ("1,5 GB").
 func parseSize(s string) (int64, error) {

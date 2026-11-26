@@ -29,6 +29,7 @@ tags:
   - name: settings
   - name: rootfolders
   - name: indexers
+  - name: mediaservers
   - name: movies
   - name: discover
   - name: series
@@ -650,6 +651,102 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Indexer" }
+        "502":
+          description: The test failed (a normal outcome, not a server error).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        default: { $ref: "#/components/responses/Error" }
+
+  # ------------------------------------------------------------ media servers
+  /api/v1/mediaservers:
+    get:
+      operationId: listMediaServers
+      tags: [mediaservers]
+      responses:
+        "200":
+          description: All media servers.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/MediaServer" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: createMediaServer
+      tags: [mediaservers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MediaServerInput" }
+      responses:
+        "201":
+          description: The new media server.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MediaServer" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/mediaservers/definitions:
+    get:
+      operationId: mediaServerDefinitions
+      tags: [mediaservers]
+      responses:
+        "200":
+          description: The kinds of media server that can be added and the settings each needs.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/MediaServerDefinition" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/mediaservers/{id}:
+    parameters: [{ $ref: "#/components/parameters/ID" }]
+    get:
+      operationId: getMediaServer
+      tags: [mediaservers]
+      responses:
+        "200":
+          description: The media server.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MediaServer" }
+        default: { $ref: "#/components/responses/Error" }
+    put:
+      operationId: updateMediaServer
+      tags: [mediaservers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MediaServerInput" }
+      responses:
+        "200":
+          description: The updated media server.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MediaServer" }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deleteMediaServer
+      tags: [mediaservers]
+      responses:
+        "204": { description: Removed. }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/mediaservers/{id}/test:
+    post:
+      operationId: testMediaServer
+      tags: [mediaservers]
+      parameters: [{ $ref: "#/components/parameters/ID" }]
+      responses:
+        "200":
+          description: The server answered and accepted the credentials.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MediaServer" }
         "502":
           description: The test failed (a normal outcome, not a server error).
           content:
@@ -2257,6 +2354,40 @@ components:
         fields: { type: array, items: { $ref: "#/components/schemas/SettingField" } }
         unsupported: { type: string, description: Why arrd cannot use this site (e.g. it needs a captcha). Absent for usable sites. }
         rss: { type: boolean, description: "Can list recent releases, which RSS sync needs; indexers of other sites have RSS off." }
+    MediaServer:
+      type: object
+      additionalProperties: false
+      description: A media server (Plex, Jellyfin, ...) asked to rescan its libraries after imports.
+      required: [id, name, definition, settings, enabled]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        definition: { type: string, description: A MediaServerDefinition id. }
+        settings: { $ref: "#/components/schemas/SettingValues" }
+        secrets_set: { type: array, items: { type: string }, description: Secret settings that have a saved value. }
+        enabled: { type: boolean }
+        last_error: { type: string, description: Why the last test or rescan failed; absent after a success. }
+        last_error_at: { type: string }
+    MediaServerInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, description: "Defaults to the server type's name on create; omitted on update, the saved one is kept." }
+        definition: { type: string, description: "A MediaServerDefinition id. Required on create; omitted on update, the saved one is kept." }
+        settings:
+          $ref: "#/components/schemas/SettingValues"
+          description: The definition's settings. Omitted on update, the saved settings are kept; a secret left empty keeps the saved value when the definition is unchanged.
+        enabled: { type: boolean }
+    MediaServerDefinition:
+      type: object
+      additionalProperties: false
+      description: A kind of media server arrd can notify, and the settings it needs.
+      required: [id, name, fields]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        fields: { type: array, items: { $ref: "#/components/schemas/SettingField" } }
     IndexerDefinitionsReload:
       type: object
       additionalProperties: false

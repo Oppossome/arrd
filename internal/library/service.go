@@ -8,6 +8,7 @@
 //   - indexers: configured indexers, site definitions and searching them
 //   - media: the movie and TV library, TMDB browsing and artwork
 //   - acquire: searching, grabbing, downloading and importing releases
+//   - mediaservers: Plex, Jellyfin, ... told to rescan after imports
 //   - setup: onboarding
 //   - apperr: the error kinds the services return
 package library
@@ -24,10 +25,12 @@ import (
 	"generic-arr-project/internal/library/engine"
 	"generic-arr-project/internal/library/indexers"
 	"generic-arr-project/internal/library/media"
+	"generic-arr-project/internal/library/mediaservers"
 	"generic-arr-project/internal/library/settings"
 	"generic-arr-project/internal/library/setup"
 	"generic-arr-project/internal/library/tmdb"
 	"generic-arr-project/internal/library/vpnconfig"
+	"generic-arr-project/internal/mediaserver"
 	"generic-arr-project/internal/netx"
 	"generic-arr-project/internal/store"
 	"generic-arr-project/internal/vpn/provider"
@@ -41,15 +44,16 @@ const geoIPTimeout = 5 * time.Minute
 // Services are the application services used by the HTTP API, plus what
 // the scheduler needs.
 type Services struct {
-	Auth     *auth.Service
-	Settings *settings.Service
-	Engine   *engine.Manager
-	VPN      *vpnconfig.Service
-	Indexers *indexers.Service
-	TMDB     *tmdb.Provider
-	Media    *media.Service
-	Acquire  *acquire.Service
-	Setup    *setup.Service
+	Auth         *auth.Service
+	Settings     *settings.Service
+	Engine       *engine.Manager
+	VPN          *vpnconfig.Service
+	Indexers     *indexers.Service
+	TMDB         *tmdb.Provider
+	Media        *media.Service
+	MediaServers *mediaservers.Service
+	Acquire      *acquire.Service
+	Setup        *setup.Service
 
 	geo *geoip.DB
 	log *zerolog.Logger
@@ -69,13 +73,14 @@ type Deps struct {
 	Log            *zerolog.Logger
 
 	// Optional overrides, mainly for tests.
-	Direct        netx.Network       // default netx.Direct{}
-	TMDBBaseURL   string             // default TMDB API
-	IPEchoURL     string             // default vpnconfig.DefaultIPEchoURL
-	PosterBaseURL string             // default media.DefaultPosterBaseURL
-	GeoIPBaseURL  string             // default geoip.DefaultBaseURL
-	VPNProviders  *provider.Registry // default engine.DefaultVPNProviders(Direct)
-	Now           func() time.Time   // default time.Now
+	Direct        netx.Network          // default netx.Direct{}
+	TMDBBaseURL   string                // default TMDB API
+	IPEchoURL     string                // default vpnconfig.DefaultIPEchoURL
+	PosterBaseURL string                // default media.DefaultPosterBaseURL
+	GeoIPBaseURL  string                // default geoip.DefaultBaseURL
+	VPNProviders  *provider.Registry    // default engine.DefaultVPNProviders(Direct)
+	MediaServers  *mediaserver.Registry // default mediaservers.DefaultRegistry()
+	Now           func() time.Time      // default time.Now
 }
 
 // New builds the services. Call Start before use.
@@ -95,6 +100,13 @@ func New(d Deps) (*Services, error) {
 			return nil, err
 		}
 		d.VPNProviders = reg
+	}
+	if d.MediaServers == nil {
+		reg, err := mediaservers.DefaultRegistry()
+		if err != nil {
+			return nil, err
+		}
+		d.MediaServers = reg
 	}
 	logger := d.Log.With().Str("component", "library").Logger()
 	log := &logger
@@ -129,8 +141,14 @@ func New(d Deps) (*Services, error) {
 	}); err != nil {
 		return nil, err
 	}
+	if s.MediaServers, err = mediaservers.New(mediaservers.Deps{
+		Store: d.Store, Registry: d.MediaServers, Direct: d.Direct, Log: log,
+	}); err != nil {
+		return nil, err
+	}
 	if s.Acquire, err = acquire.New(acquire.Deps{
-		Store: d.Store, Engine: s.Engine, Settings: s.Settings, Indexers: s.Indexers, Media: s.Media, Geo: s.geo, Log: log,
+		Store: d.Store, Engine: s.Engine, Settings: s.Settings, Indexers: s.Indexers, Media: s.Media, Geo: s.geo,
+		Notifier: s.MediaServers, Log: log,
 	}); err != nil {
 		return nil, err
 	}

@@ -512,6 +512,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mediaservers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listMediaServers"];
+        put?: never;
+        post: operations["createMediaServer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mediaservers/definitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["mediaServerDefinitions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mediaservers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        get: operations["getMediaServer"];
+        put: operations["updateMediaServer"];
+        post?: never;
+        delete: operations["deleteMediaServer"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mediaservers/{id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["testMediaServer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/movies/lookup": {
         parameters: {
             query?: never;
@@ -1931,6 +1997,37 @@ export interface components {
             /** @description Can list recent releases, which RSS sync needs; indexers of other sites have RSS off. */
             rss: boolean;
         };
+        /** @description A media server (Plex, Jellyfin, ...) asked to rescan its libraries after imports. */
+        MediaServer: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+            /** @description A MediaServerDefinition id. */
+            definition: string;
+            settings: components["schemas"]["SettingValues"];
+            /** @description Secret settings that have a saved value. */
+            secrets_set?: string[];
+            enabled: boolean;
+            /** @description Why the last test or rescan failed; absent after a success. */
+            last_error?: string;
+            last_error_at?: string;
+        };
+        MediaServerInput: {
+            /** @description Defaults to the server type's name on create; omitted on update, the saved one is kept. */
+            name?: string;
+            /** @description A MediaServerDefinition id. Required on create; omitted on update, the saved one is kept. */
+            definition?: string;
+            /** @description The definition's settings. Omitted on update, the saved settings are kept; a secret left empty keeps the saved value when the definition is unchanged. */
+            settings?: components["schemas"]["SettingValues"];
+            enabled?: boolean;
+        };
+        /** @description A kind of media server arrd can notify, and the settings it needs. */
+        MediaServerDefinition: {
+            id: string;
+            name: string;
+            description?: string;
+            fields: components["schemas"]["SettingField"][];
+        };
         IndexerDefinitionsReload: {
             definitions: components["schemas"]["IndexerDefinition"][];
             /** @description Definition files that could not be read. */
@@ -3050,6 +3147,176 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Indexer"];
+                };
+            };
+            /** @description The test failed (a normal outcome, not a server error). */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    listMediaServers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All media servers. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaServer"][];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    createMediaServer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaServerInput"];
+            };
+        };
+        responses: {
+            /** @description The new media server. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaServer"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    mediaServerDefinitions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The kinds of media server that can be added and the settings each needs. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaServerDefinition"][];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getMediaServer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The media server. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaServer"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    updateMediaServer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaServerInput"];
+            };
+        };
+        responses: {
+            /** @description The updated media server. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaServer"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteMediaServer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    testMediaServer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The server answered and accepted the credentials. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaServer"];
                 };
             };
             /** @description The test failed (a normal outcome, not a server error). */

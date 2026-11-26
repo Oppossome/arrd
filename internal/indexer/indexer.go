@@ -1,6 +1,5 @@
 // Package indexer searches tracker sites directly, driven by Cardigann YAML
-// definitions: the format Prowlarr and Jackett use
-// (github.com/Prowlarr/Indexers). Each definition describes one site — how
+// definitions. Each definition describes one site — how
 // to sign in, search and read results — and becomes a Definition in the
 // Catalog; a configured indexer is a definition plus the user's settings.
 //

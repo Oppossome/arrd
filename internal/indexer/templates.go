@@ -8,14 +8,14 @@ import (
 	cdef "github.com/Kcchouette/cardigann-go/definition"
 )
 
-// Prowlarr reads a double-quoted argument in a template action verbatim
+// Definitions expect a double-quoted argument in a template action read verbatim
 // ({{ re_replace .Keywords "\b0(\d{1})\b" "$1" }} is a regex with word
 // boundaries), but the library parses templates with Go's text/template,
 // which reads it as a Go string literal: "\d" fails to parse, and "\b"
 // would become a backspace. adaptTemplates rewrites such arguments as Go
 // raw strings (`\b0(\d{1})\b`), which keep every character as written.
 //
-// Only search paths and inputs are rewritten: across Prowlarr's
+// Only search paths and inputs are rewritten: across the published
 // definitions, that is the only place such arguments appear.
 // TODO: remove once cardigann-go's template preprocessing does this.
 func adaptTemplates(def cdef.IndexerDefinition) cdef.IndexerDefinition {

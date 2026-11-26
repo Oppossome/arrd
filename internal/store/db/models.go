@@ -75,6 +75,16 @@ type Indexer struct {
 	LastErrorAt     *string
 }
 
+type MediaServer struct {
+	ID          int64
+	Name        string
+	Definition  string
+	Settings    string
+	Enabled     bool
+	LastError   *string
+	LastErrorAt *string
+}
+
 type Movie struct {
 	ID            int64
 	TMDBID        int64

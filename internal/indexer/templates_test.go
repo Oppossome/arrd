@@ -27,8 +27,7 @@ func TestRawStringLiterals(t *testing.T) {
 }
 
 // A search input whose regex argument Go cannot read as a string literal
-// (Prowlarr's Nyaa definition strips a leading zero this way) renders,
-// with the regex applied as written.
+// renders, with the regex applied as written.
 func TestRegexArgumentInSearchInput(t *testing.T) {
 	s := newSite(t)
 	yml := strings.ReplaceAll(fictionalDefinition, "SITE", s.URL)

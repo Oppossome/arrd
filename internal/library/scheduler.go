@@ -15,6 +15,7 @@ type Schedule struct {
 	RefreshSeries    time.Duration // pick up new episodes and air dates
 	WantedSearch     time.Duration // active search for missing movies and episodes
 	UpdateGeoIP      time.Duration // refresh the peer geolocation database; 0 disables
+	NotifyServers    time.Duration // ask media servers to rescan after imports
 	// FirstRun delays the first RSS, refresh and wanted runs after startup
 	// so indexers and the VPN have time to settle.
 	FirstRun time.Duration
@@ -30,6 +31,7 @@ var DefaultSchedule = Schedule{
 	RefreshSeries:    12 * time.Hour,
 	WantedSearch:     6 * time.Hour,
 	UpdateGeoIP:      24 * time.Hour,
+	NotifyServers:    30 * time.Second,
 	FirstRun:         2 * time.Minute,
 }
 
@@ -44,6 +46,8 @@ func (s *Services) RunScheduler(ctx context.Context, sch Schedule) {
 	defer checkVPN.Stop()
 	purge := time.NewTicker(sch.PurgeSessions)
 	defer purge.Stop()
+	notify := time.NewTicker(sch.NotifyServers)
+	defer notify.Stop()
 	rss := time.NewTimer(sch.FirstRun)
 	defer rss.Stop()
 	// Refresh before the wanted search so it sees newly aired episodes.
@@ -71,6 +75,8 @@ func (s *Services) RunScheduler(ctx context.Context, sch Schedule) {
 			s.retryRuntime(ctx)
 		case <-checkVPN.C:
 			logErr("check vpn", s.VPN.CheckVPN(ctx))
+		case <-notify.C:
+			logErr("notify media servers", s.MediaServers.FlushPending(ctx))
 		case <-purge.C:
 			logErr("purge sessions", s.Auth.PurgeExpiredSessions(ctx))
 		case <-rss.C:

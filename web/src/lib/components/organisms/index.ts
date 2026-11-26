@@ -11,6 +11,7 @@ export { default as GenreChips } from './GenreChips.svelte';
 export { default as IndexerDefinitionsPanel } from './IndexerDefinitionsPanel.svelte';
 export { default as IndexersPanel } from './IndexersPanel.svelte';
 export { default as LoginForm } from './LoginForm.svelte';
+export { default as MediaServersPanel } from './MediaServersPanel.svelte';
 export { default as MovieActions } from './MovieActions.svelte';
 export { default as MoreLikeThis } from './MoreLikeThis.svelte';
 export { default as PeerPopover } from './PeerPopover.svelte';

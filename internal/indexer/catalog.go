@@ -45,8 +45,8 @@ func (c *Catalog) Get(id string) (Definition, error) {
 // List returns all definitions, sorted by name.
 func (c *Catalog) List() []Definition { return slices.Clone(c.defs) }
 
-// LoadDir reads every *.yml / *.yaml definition in dir (not recursing),
-// e.g. a checkout of Prowlarr's definitions/v11. Files that cannot be
+// LoadDir reads every *.yml / *.yaml definition in dir (not recursing).
+// Files that cannot be
 // parsed are returned as LoadErrors alongside the catalog; a missing dir
 // gives an empty catalog.
 func LoadDir(dir string) (*Catalog, []error) {
