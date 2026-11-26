@@ -7,7 +7,6 @@ export { default as DiscoverResults } from './DiscoverResults.svelte';
 export { default as DownloadSettingsForm } from './DownloadSettingsForm.svelte';
 export { default as GeneralSettingsForm } from './GeneralSettingsForm.svelte';
 export { default as NetworkSettingsForm } from './NetworkSettingsForm.svelte';
-export { default as GenreChips } from './GenreChips.svelte';
 export { default as IndexerDefinitionsPanel } from './IndexerDefinitionsPanel.svelte';
 export { default as IndexersPanel } from './IndexersPanel.svelte';
 export { default as LoginForm } from './LoginForm.svelte';

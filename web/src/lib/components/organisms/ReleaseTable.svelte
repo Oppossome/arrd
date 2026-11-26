@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { createQuery, keepPreviousData } from '@tanstack/svelte-query';
-	import { Button, Heading, IconButton, Select, Spinner, Text, ToggleChip } from '#lib/components/atoms/index.js';
-	import { EmptyState, ErrorMessage, ReleaseRow, SearchBox } from '#lib/components/molecules/index.js';
+	import { Button, Heading, Spinner, Text, ToggleChip } from '#lib/components/atoms/index.js';
+	import { ChoiceMenu, EmptyState, ErrorMessage, FacetMenu, ReleaseRow, SearchBox } from '#lib/components/molecules/index.js';
 	import { queries, useMutation } from '#lib/api/query.js';
 	import {
 		emptyReleaseFilter,
@@ -83,11 +83,6 @@
 		text = ownQuery ?? '';
 	}
 
-	function searchAgain() {
-		if (enabled) void releases.refetch();
-		else started = true;
-	}
-
 	function grab(r: ReleaseResult) {
 		grabbing = keyOf(r);
 		const opts = {
@@ -115,47 +110,24 @@
 	<header class="head">
 		{#if heading !== undefined}<Heading level={3}>{heading}</Heading>{/if}
 
-		<div class="toolbar">
-			<form
-				class="query"
-				role="search"
-				onsubmit={(e) => {
-					e.preventDefault();
-					search();
-				}}
-			>
-				<div class="box">
-					<SearchBox bind:value={text} label="Search indexers for" placeholder="Search indexers for…" />
-				</div>
-				<Button type="submit" size="sm">Search</Button>
-				{#if activeText !== ''}
-					<Button size="sm" variant="ghost" onclick={resetSearch}>Reset</Button>
-				{/if}
-			</form>
-			<div class="controls">
-				{#if releases.data}
-					<label class="sort">
-						<Text as="span" size="sm" tone="muted">Sort</Text>
-						<Select
-							bind:value={sort}
-							options={[
-								{ value: 'rank', label: 'Best match' },
-								{ value: 'quality', label: 'Quality' },
-								{ value: 'seeders', label: 'Seeders' },
-								{ value: 'size', label: 'Size' },
-								{ value: 'age', label: 'Newest' }
-							]}
-						/>
-					</label>
-				{/if}
-				<IconButton
-					icon="refresh"
-					label={releases.data ? 'Search again' : 'Search indexers'}
-					spinning={releases.isFetching}
-					onclick={searchAgain}
-				/>
+		<!-- Search runs the indexer search; pressed again with the same text,
+		     it searches again. -->
+		<form
+			class="query"
+			role="search"
+			onsubmit={(e) => {
+				e.preventDefault();
+				search();
+			}}
+		>
+			<div class="box">
+				<SearchBox bind:value={text} label="Search indexers for" placeholder="Search indexers for…" />
 			</div>
-		</div>
+			<Button type="submit" size="sm" loading={releases.isFetching}>Search</Button>
+			{#if activeText !== ''}
+				<Button size="sm" variant="ghost" onclick={resetSearch}>Reset</Button>
+			{/if}
+		</form>
 
 		{#if all.length > 0}
 			<div class="filters" role="group" aria-label="Filters">
@@ -164,42 +136,49 @@
 					count={acceptedCount}
 					onclick={() => (filter.acceptedOnly = !filter.acceptedOnly)}
 				>
-					Accepted only
+					Accepted
 				</ToggleChip>
 				{#if facets.qualities.length > 1 || filter.qualities.length > 0}
-					<span class="sep" aria-hidden="true"></span>
-					{#each facets.qualities as f (f.value)}
-						<ToggleChip
-							pressed={filter.qualities.includes(f.value)}
-							count={f.count}
-							onclick={() => (filter.qualities = toggleValue(filter.qualities, f.value))}
-						>
-							{f.value}
-						</ToggleChip>
-					{/each}
+					<FacetMenu
+						label="Quality"
+						facets={facets.qualities}
+						selected={filter.qualities}
+						ontoggle={(v) => (filter.qualities = toggleValue(filter.qualities, v))}
+						onclear={() => (filter.qualities = [])}
+					/>
 				{/if}
 				{#if facets.indexers.length > 1 || filter.indexers.length > 0}
-					<span class="sep" aria-hidden="true"></span>
-					{#each facets.indexers as f (f.value)}
-						<ToggleChip
-							pressed={filter.indexers.includes(f.value)}
-							count={f.count}
-							onclick={() => (filter.indexers = toggleValue(filter.indexers, f.value))}
-						>
-							{f.value}
-						</ToggleChip>
-					{/each}
+					<FacetMenu
+						label="Indexer"
+						facets={facets.indexers}
+						selected={filter.indexers}
+						ontoggle={(v) => (filter.indexers = toggleValue(filter.indexers, v))}
+						onclear={() => (filter.indexers = [])}
+					/>
 				{/if}
-				<span class="summary">
-					<Text as="span" size="xs" tone="muted">
-						{filtered ? `Showing ${rows.length} of ${all.length}` : `${all.length} results · ${acceptedCount} accepted`}
-					</Text>
+				<span class="sort">
+					<ChoiceMenu
+						label="Sort"
+						bind:value={sort}
+						options={[
+							{ value: 'rank', label: 'Best match' },
+							{ value: 'quality', label: 'Best quality' },
+							{ value: 'seeders', label: 'Most seeders' },
+							{ value: 'size', label: 'Largest' },
+							{ value: 'age', label: 'Newest' }
+						]}
+					/>
 				</span>
 			</div>
 		{/if}
 	</header>
 
 	<div class="results" class:stale={releases.isPlaceholderData}>
+		{#if all.length > 0}
+			<Text size="xs" tone="muted">
+				{filtered ? `Showing ${rows.length} of ${all.length} results` : `${all.length} results`}
+			</Text>
+		{/if}
 		{#if (releases.data?.indexer_failures ?? []).length > 0}
 			<div class="failures">
 				{#each releases.data?.indexer_failures ?? [] as f (f.indexer_id)}
@@ -237,15 +216,8 @@
 		display: grid;
 		gap: var(--space-3);
 	}
-	.toolbar {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: var(--space-3);
-	}
 	.query {
 		display: flex;
-		flex: 1 1 20rem;
 		align-items: center;
 		gap: var(--space-2);
 		min-width: 0;
@@ -254,29 +226,23 @@
 		flex: 1;
 		min-width: 0;
 	}
-	.controls {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
-		margin-left: auto;
-	}
-	.sort {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
-	}
+	/* One line that scrolls sideways when narrow. The menus' panels open in
+	   the top layer, so the scroll box does not clip them. The vertical
+	   padding keeps focus rings inside the box. */
 	.filters {
 		display: flex;
-		flex-wrap: wrap;
 		align-items: center;
 		gap: var(--space-2);
+		margin: calc(-1 * var(--space-1));
+		padding: var(--space-1);
+		overflow-x: auto;
+		scrollbar-width: none;
 	}
-	.sep {
-		width: 1px;
-		height: 1.25rem;
-		background: var(--color-border);
+	.filters > :global(*) {
+		flex-shrink: 0;
 	}
-	.summary {
+	/* Sort sits at the row's end. */
+	.sort {
 		margin-left: auto;
 	}
 	.failures {

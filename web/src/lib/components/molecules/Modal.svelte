@@ -105,4 +105,47 @@
 		right: var(--space-4);
 		z-index: 2;
 	}
+
+	/* On phones the dialog becomes a bottom drawer: full width, pinned to the
+	   bottom edge, sliding up when opened. */
+	@media (max-width: 40rem) {
+		dialog {
+			width: 100%;
+			max-width: 100%;
+			margin: auto 0 0;
+			border-bottom: none;
+			border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+			max-height: 92dvh;
+		}
+		dialog[open] {
+			animation: drawer-in 240ms cubic-bezier(0.32, 0.72, 0, 1);
+		}
+		dialog[open]::backdrop {
+			animation: backdrop-in 240ms ease-out;
+		}
+		.frame {
+			max-height: 92dvh;
+		}
+		.body {
+			padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
+		}
+		.bare .body {
+			padding-bottom: env(safe-area-inset-bottom, 0px);
+		}
+	}
+	@media (max-width: 40rem) and (prefers-reduced-motion: reduce) {
+		dialog[open] {
+			animation: none;
+		}
+	}
+	@keyframes drawer-in {
+		from {
+			transform: translateY(100%);
+		}
+	}
+	@keyframes backdrop-in {
+		from {
+			opacity: 0;
+		}
+	}
 </style>

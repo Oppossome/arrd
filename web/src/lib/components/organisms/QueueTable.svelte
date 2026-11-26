@@ -112,6 +112,9 @@
 
 <style>
 	.table-wrap {
+		/* Contains the visually-hidden "Actions" header, which is absolutely
+		   positioned and would otherwise escape the scroll box and widen the page. */
+		position: relative;
 		overflow-x: auto;
 	}
 	table {

@@ -6,7 +6,6 @@
 		DiscoverFilterBar,
 		DiscoverListRow,
 		DiscoverResults,
-		GenreChips,
 		RecommendationRows
 	} from '#lib/components/organisms/index.js';
 	import { ListLayout } from '#lib/components/templates/index.js';
@@ -32,7 +31,6 @@
 	{:else if hasFilter(facets)}
 		<BrowseGrid kind="series" filter={facets} {sort} onsortchange={(next) => show(facets, next)} />
 	{:else}
-		<GenreChips kind="series" />
 		<RecommendationRows kind="series" />
 		{#each discoverRows('series') as row (row.list)}
 			<DiscoverListRow kind="series" list={row.list} title={row.title} />

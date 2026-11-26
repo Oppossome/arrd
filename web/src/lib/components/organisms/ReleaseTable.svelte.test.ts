@@ -35,7 +35,7 @@ describe('ReleaseTable', () => {
 
 		// Nothing is fetched until the user asks.
 		expect(fetch).not.toHaveBeenCalled();
-		await fireEvent.click(screen.getByRole('button', { name: 'Search indexers' }));
+		await fireEvent.click(screen.getByRole('button', { name: 'Search' }));
 
 		expect(await screen.findByText('CAM/telesync source')).toBeInTheDocument();
 		expect(screen.getByText('broken: connection refused')).toBeInTheDocument();
@@ -65,7 +65,7 @@ describe('ReleaseTable', () => {
 		);
 	});
 
-	it('puts its heading, sort and search-again controls in one header', async () => {
+	it('puts its heading, search and sort controls in one header', async () => {
 		let searches = 0;
 		mockFetch({
 			'GET /api/v1/discover/series/800001/seasons/1/episodes/2/releases': () => {
@@ -85,8 +85,8 @@ describe('ReleaseTable', () => {
 
 		const header = await screen.findByRole('heading', { name: 'Sources · Harbor Watch · S01E02' });
 		const toolbar = header.parentElement!;
-		const again = await within(toolbar).findByRole('button', { name: 'Search again' });
-		expect(within(toolbar).getByRole('combobox')).toBeInTheDocument();
+		expect(await within(toolbar).findByRole('button', { name: 'Sort: Best match' })).toBeInTheDocument();
+		const again = within(toolbar).getByRole('button', { name: 'Search' });
 
 		await fireEvent.click(again);
 		await waitFor(() => expect(searches).toBe(2));
@@ -120,7 +120,7 @@ describe('ReleaseTable', () => {
 		expect(asked).toEqual([null, 'Harbor Watch complete']);
 	});
 
-	it('narrows the results with filter chips, and clears them', async () => {
+	it('narrows the results with filter menus, and clears them', async () => {
 		mockFetch({
 			'GET /api/v1/movies/5/releases': () =>
 				Response.json({
@@ -140,16 +140,19 @@ describe('ReleaseTable', () => {
 		// Every reason on one line.
 		expect(screen.getByText('CAM/telesync source · unknown resolution')).toBeInTheDocument();
 
-		await fireEvent.click(screen.getByRole('button', { name: /^Accepted only/ }));
+		await fireEvent.click(screen.getByRole('button', { name: /^Accepted/ }));
 		expect(within(list).getAllByRole('listitem')).toHaveLength(2);
-		expect(screen.getByText('Showing 2 of 3')).toBeInTheDocument();
+		expect(screen.getByText('Showing 2 of 3 results')).toBeInTheDocument();
 
-		await fireEvent.click(screen.getByRole('button', { name: /^alpha/ }));
+		await fireEvent.click(screen.getByRole('button', { name: /^Indexer/ }));
+		await fireEvent.click(screen.getByRole('checkbox', { name: /^alpha/ }));
 		expect(within(list).getAllByRole('listitem')).toHaveLength(1);
-		expect(screen.getByRole('button', { name: /^alpha/ })).toHaveAttribute('aria-pressed', 'true');
+		expect(screen.getByRole('checkbox', { name: /^alpha/ })).toBeChecked();
+		expect(screen.getByRole('button', { name: /^Indexer/ })).toHaveTextContent('(1)');
 
 		// Nothing left: offer to clear the filters.
-		await fireEvent.click(screen.getByRole('button', { name: /^WEBDL-720p/ }));
+		await fireEvent.click(screen.getByRole('button', { name: /^Quality/ }));
+		await fireEvent.click(screen.getByRole('checkbox', { name: /^WEBDL-720p/ }));
 		expect(screen.getByText('No releases match these filters.')).toBeInTheDocument();
 		await fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
 		expect(within(await screen.findByRole('list', { name: 'Releases' })).getAllByRole('listitem')).toHaveLength(3);
