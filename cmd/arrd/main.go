@@ -17,6 +17,12 @@
 // Only one server may use a data directory at a time (DATA-DIR/arrd.lock).
 // On Linux and Windows desktops serve shows a tray icon to open the web UI or
 // quit; build with -tags notray for containers and other headless installs.
+// Until onboarding is complete, the tray also opens the setup page in the
+// browser at startup.
+//
+// Windows releases are built with -ldflags -H=windowsgui so no console window
+// opens. Started from a terminal, arrd logs to it; otherwise it logs to
+// DATA-DIR/arrd.log and shows a fatal error in a dialog.
 package main
 
 import (
@@ -35,17 +41,26 @@ import (
 	"github.com/rs/zerolog"
 
 	"generic-arr-project/internal/app"
+	"generic-arr-project/internal/closer"
+	"generic-arr-project/internal/console"
 	"generic-arr-project/internal/library/vpnconfig"
 )
 
 func main() {
-	if err := run(os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, "arrd:", err)
+	hasStderr := console.AttachParent()
+	if err := run(os.Args[1:], hasStderr); err != nil {
+		if hasStderr {
+			fmt.Fprintln(os.Stderr, "arrd:", err)
+		} else {
+			console.ShowError("arrd could not start or stopped unexpectedly:\n\n" + err.Error())
+		}
 		os.Exit(1)
 	}
 }
 
-func run(args []string) error {
+// run executes the command in args. Without a usable stderr (a Windows GUI
+// build started outside a terminal) logs go to DATA-DIR/arrd.log.
+func run(args []string, hasStderr bool) (err error) {
 	cmd := "serve"
 	if len(args) > 0 && (args[0] == "serve" || args[0] == "fetch") {
 		cmd, args = args[0], args[1:]
@@ -76,11 +91,18 @@ func run(args []string) error {
 	if err != nil {
 		return fmt.Errorf("-log-level: %w", err)
 	}
-	log := newLogger(os.Stderr, level)
 	absData, err := filepath.Abs(*dataDir)
 	if err != nil {
 		return fmt.Errorf("-data-dir: %w", err)
 	}
+	logOut := os.Stderr
+	if !hasStderr {
+		if logOut, err = openLogFile(absData); err != nil {
+			return err
+		}
+		defer closer.Join(&err, logOut)
+	}
+	log := newLogger(logOut, level)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -139,6 +161,21 @@ func parseLogLevel(s string) (zerolog.Level, error) {
 		return zerolog.ErrorLevel, nil
 	}
 	return zerolog.NoLevel, fmt.Errorf("unknown level %q: want debug, info, warn or error", s)
+}
+
+// openLogFile opens DATA-DIR/arrd.log for appending, creating the (private)
+// data directory if needed. Appending keeps the log of a running instance
+// intact when a second start fails on the data-directory lock.
+func openLogFile(dataDir string) (*os.File, error) {
+	if err := os.MkdirAll(dataDir, 0o700); err != nil {
+		return nil, fmt.Errorf("create data dir %q: %w", dataDir, err)
+	}
+	path := filepath.Join(dataDir, "arrd.log")
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	if err != nil {
+		return nil, fmt.Errorf("open log file: %w", err)
+	}
+	return f, nil
 }
 
 // newLogger writes readable console lines to a terminal and JSON lines

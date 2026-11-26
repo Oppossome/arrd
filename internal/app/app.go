@@ -89,7 +89,8 @@ func Run(ctx context.Context, opts Options, log *zerolog.Logger) (err error) {
 
 	setupToken := ""
 	openURL := tray.BrowseURL(opts.Listen)
-	if !svc.Auth.SetupComplete() {
+	firstRun := !svc.Auth.SetupComplete()
+	if firstRun {
 		if setupToken, err = newSetupToken(); err != nil {
 			return err
 		}
@@ -124,7 +125,7 @@ func Run(ctx context.Context, opts Options, log *zerolog.Logger) (err error) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		tray.Run(runCtx, tray.Options{URL: openURL, Quit: cancel, Log: log})
+		tray.Run(runCtx, tray.Options{URL: openURL, Quit: cancel, Log: log, OpenOnStart: firstRun})
 	}()
 
 	var runErr error

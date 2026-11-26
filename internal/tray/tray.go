@@ -14,6 +14,9 @@ type Options struct {
 	URL  string          // page opened by "Open arrd"
 	Quit func()          // called by "Quit"; should trigger graceful shutdown
 	Log  *zerolog.Logger // required
+	// OpenOnStart opens URL in the default browser as soon as the tray is
+	// up, e.g. to start first-run setup. Ignored without a desktop session.
+	OpenOnStart bool
 }
 
 // BrowseURL is the http:// URL a local browser should use to reach a server

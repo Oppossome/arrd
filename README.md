@@ -19,7 +19,7 @@ You need Go and Node.js 22.
 make run
 ```
 
-This builds the web UI and starts arrd on <http://127.0.0.1:8484>. On first start, arrd prints a one-time **setup token** in its log. Open the web UI and enter it to start onboarding, where you set an admin password, your library folders, TMDB access, a VPN (optional) and indexers.
+This builds the web UI and starts arrd on <http://127.0.0.1:8484>. On first start on a desktop, arrd opens the setup page in your browser. It also prints a one-time **setup token** in its log; on a headless machine, open the web UI and enter the token to start onboarding, where you set an admin password, your library folders, TMDB access, a VPN (optional) and indexers.
 
 There is no config file. Everything else is configured in the web UI. Only these startup options exist:
 
@@ -36,6 +36,8 @@ For a headless or container build without the tray icon:
 cd web && npm ci && npm run build && cd ..
 go build -tags notray ./cmd/arrd
 ```
+
+Windows release builds use `-ldflags -H=windowsgui`, so arrd runs without a console window. Started from a terminal, it still logs to that terminal. Otherwise it logs to `DATA-DIR/arrd.log` and shows startup errors in a dialog.
 
 ## Development
 
