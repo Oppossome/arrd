@@ -22,24 +22,26 @@
 
 <nav class="nav" aria-label="Main">
 	<a class="brand" href={HOME}>arrd</a>
-	<ul>
-		{#each links as link (link.href)}
-			<li>
-				<a href={link.href} class:active={active(link.href)} aria-current={active(link.href) ? 'page' : undefined}>
-					<Icon name={link.icon} />
-					{link.label}
-					{#if link.href === LIBRARY && activeCount > 0}
-						<span class="count" aria-label="{activeCount} downloading">{activeCount}</span>
-					{/if}
-				</a>
-			</li>
-		{/each}
-	</ul>
-	<div class="footer">
-		<ThroughputWidget />
-		<button class="logout" type="button" onclick={() => logout.mutate(undefined, { onSuccess: () => void goto('/login') })}>
-			<Icon name="logout" /> Log out
-		</button>
+	<div class="scroller">
+		<ul>
+			{#each links as link (link.href)}
+				<li>
+					<a href={link.href} class:active={active(link.href)} aria-current={active(link.href) ? 'page' : undefined}>
+						<Icon name={link.icon} />
+						{link.label}
+						{#if link.href === LIBRARY && activeCount > 0}
+							<span class="count" aria-label="{activeCount} downloading">{activeCount}</span>
+						{/if}
+					</a>
+				</li>
+			{/each}
+		</ul>
+		<div class="footer">
+			<div class="throughput"><ThroughputWidget /></div>
+			<button class="logout" type="button" onclick={() => logout.mutate(undefined, { onSuccess: () => void goto('/login') })}>
+				<Icon name="logout" /> Log out
+			</button>
+		</div>
 	</div>
 </nav>
 
@@ -87,6 +89,10 @@
 		color: var(--color-text);
 		background: var(--color-surface-raised);
 	}
+	/* Only a box on mobile, where links and logout share one scroll strip. */
+	.scroller {
+		display: contents;
+	}
 	.footer {
 		display: grid;
 		gap: var(--space-3);
@@ -113,16 +119,31 @@
 			position: static;
 			height: auto;
 			flex-direction: row;
-			flex-wrap: wrap;
 			align-items: center;
+			gap: var(--space-2);
+			padding: var(--space-3);
+		}
+		.scroller {
+			display: flex;
+			flex: 1;
+			min-width: 0;
+			align-items: center;
+			overflow-x: auto;
+			scrollbar-width: none;
 		}
 		ul {
 			display: flex;
 		}
+		ul a,
+		.logout {
+			white-space: nowrap;
+		}
 		.footer {
-			margin: 0 0 0 auto;
-			display: flex;
-			align-items: center;
+			margin: 0;
+		}
+		/* The Library badge already signals activity; the full widget doesn't fit a top bar. */
+		.throughput {
+			display: none;
 		}
 	}
 </style>

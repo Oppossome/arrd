@@ -40,7 +40,8 @@
 	}
 	@media (max-width: 48rem) {
 		.shell {
-			grid-template-columns: 1fr;
+			/* minmax(0, …) stops wide children like the nav from stretching the page past the viewport. */
+			grid-template-columns: minmax(0, 1fr);
 		}
 		.sidebar {
 			border-right: 0;
