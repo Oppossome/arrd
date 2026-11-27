@@ -42,6 +42,7 @@ func toAPIDownload(d acquire.Download) apigen.Download {
 		PosterPath:   d.PosterPath,
 		BackdropPath: d.BackdropPath,
 		Episodes:     optSlice(d.Episodes, identity[string]),
+		Movies:       optSlice(d.Movies, identity[string]),
 		IndexerID:    d.IndexerID,
 		InfoHash:     d.InfoHash,
 		ReleaseTitle: d.ReleaseTitle,
@@ -103,6 +104,7 @@ func toAPIRelease(r acquire.ReleaseResult) apigen.ReleaseResult {
 		SeasonPack:     optional(r.SeasonPack),
 		LastSeason:     r.LastSeason,
 		CompleteSeries: optional(r.CompleteSeries),
+		MoviePack:      optional(r.MoviePack),
 	}
 }
 
@@ -127,6 +129,7 @@ func fromAPIRelease(in apigen.ReleaseInput) acquire.ReleaseResult {
 		SeasonPack:     deref(in.SeasonPack),
 		LastSeason:     in.LastSeason,
 		CompleteSeries: deref(in.CompleteSeries),
+		MoviePack:      deref(in.MoviePack),
 	}
 }
 
@@ -143,15 +146,11 @@ func toAPISearchResult(r acquire.SearchResult) apigen.SearchResult {
 }
 
 func toAPIAutoSearchResult(r acquire.AutoSearchResult) apigen.AutoSearchResult {
-	out := apigen.AutoSearchResult{
+	return apigen.AutoSearchResult{
+		Grabbed:            mapSlice(r.Grabbed, toAPIDownload),
 		ReleasesConsidered: r.Searched,
 		IndexerFailures:    mapSlice(r.Failures, toAPIIndexerFailure),
 	}
-	if r.Grabbed != nil {
-		d := toAPIDownload(*r.Grabbed)
-		out.Grabbed = &d
-	}
-	return out
 }
 
 func toAPIRSSResult(r acquire.RSSResult) apigen.RSSResult {

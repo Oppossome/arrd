@@ -34,9 +34,10 @@ type Download struct {
 	ImportedAt    *string
 }
 
-type DownloadEpisode struct {
+type DownloadItem struct {
 	DownloadID int64
-	EpisodeID  int64
+	MovieID    *int64
+	EpisodeID  *int64
 }
 
 type DownloadSetting struct {

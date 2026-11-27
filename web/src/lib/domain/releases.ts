@@ -1,20 +1,11 @@
-import type { ReleaseResult } from '../api/types';
+import type { ReleaseResult, ReleaseTarget } from '../api/types';
 
-/** What a manual release search is for. */
-export type ReleaseSource =
-	| { kind: 'movie'; movieId: number }
-	| { kind: 'series'; seriesId: number }
-	| { kind: 'season'; seriesId: number; season: number }
-	| { kind: 'episode'; seriesId: number; episodeId: number }
-	| { kind: 'discoverMovie'; tmdbId: number }
-	| { kind: 'discoverSeries'; tmdbId: number }
-	| { kind: 'discoverSeason'; tmdbId: number; season: number }
-	| { kind: 'discoverEpisode'; tmdbId: number; season: number; episode: number };
+export type { ReleaseTarget };
 
-/** A request to show the sources (releases) for something, with a heading for them. */
+/** A request to show the sources (releases) for a target, with a heading for them. */
 export interface SourcesRequest {
 	title: string;
-	source: ReleaseSource;
+	target: ReleaseTarget;
 }
 
 export type ReleaseSortKey = 'rank' | 'quality' | 'size' | 'seeders' | 'age';
@@ -46,10 +37,11 @@ export function sortReleases(releases: ReleaseResult[], key: ReleaseSortKey): Re
 }
 
 /**
- * "Complete series", "S01-S03 pack", "S01 pack", "S01E02-E03", "S01E02" or
- * "" for a release's TV coverage.
+ * "Movie pack", "Complete series", "S01-S03 pack", "S01 pack",
+ * "S01E02-E03", "S01E02" or "" for what a release covers.
  */
 export function releaseCoverage(r: ReleaseResult): string {
+	if (r.movie_pack) return 'Movie pack';
 	if (r.complete_series) return 'Complete series';
 	if (r.season === undefined) return '';
 	const code = (n: number) => `S${String(n).padStart(2, '0')}`;

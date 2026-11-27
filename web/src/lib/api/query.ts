@@ -17,7 +17,6 @@ import { ApiError, api, filterQuery } from './client';
 import type * as T from './types';
 import type { DiscoverList } from '../domain/discover';
 import type { MediaKind } from '../nav/links';
-import type { ReleaseSource } from '../domain/releases';
 import { optionFields } from '../domain/settingsForm';
 
 // ---------------------------------------------------------------- client
@@ -110,18 +109,12 @@ export const keys = {
 		showDetails: ['discover', 'show'] as const,
 		movie: (tmdbId: number) => ['discover', 'movie', tmdbId] as const,
 		show: (tmdbId: number) => ['discover', 'show', tmdbId] as const,
-		movieReleases: (tmdbId: number) => ['discover', 'movieReleases', tmdbId] as const,
-		seriesReleases: (tmdbId: number) => ['discover', 'seriesReleases', tmdbId] as const,
-		seasonReleases: (tmdbId: number, season: number) => ['discover', 'seasonReleases', tmdbId, season] as const,
-		episodeReleases: (tmdbId: number, season: number, episode: number) =>
-			['discover', 'episodeReleases', tmdbId, season, episode] as const,
 		season: (tmdbId: number, season: number) => ['discover', 'season', tmdbId, season] as const
 	},
 	movies: {
 		all: ['movies'] as const,
 		list: ['movies', 'list'] as const,
 		detail: (id: number) => ['movies', 'detail', id] as const,
-		releases: (id: number) => ['movies', 'releases', id] as const,
 		lookup: (q: string, filter: T.TitleFilter = NO_FILTER) => ['movies', 'lookup', q, ...filterKey(filter)] as const
 	},
 	series: {
@@ -129,13 +122,10 @@ export const keys = {
 		list: ['series', 'list'] as const,
 		detail: (id: number) => ['series', 'detail', id] as const,
 		episodes: (id: number) => ['series', 'episodes', id] as const,
-		releases: (id: number) => ['series', 'releases', id] as const,
-		seasonReleases: (id: number, season: number) => ['series', 'seasonReleases', id, season] as const,
 		lookup: (q: string, filter: T.TitleFilter = NO_FILTER) => ['series', 'lookup', q, ...filterKey(filter)] as const
 	},
-	episodes: {
-		releases: (id: number) => ['episodes', 'releases', id] as const
-	},
+	/** A release search for one target (any kind, library or not). */
+	releases: (t: T.ReleaseTarget) => ['releases', t.kind, t.tmdb_id, t.season ?? null, t.episode ?? null] as const,
 	queue: {
 		all: ['queue'] as const,
 		list: (f: QueueFilter = {}) => ['queue', f] as const,
@@ -173,51 +163,6 @@ export function throughputRefetchInterval(t: T.Throughput | undefined): number {
 	return t && t.active > 0 ? 2_000 : 15_000;
 }
 
-export type { ReleaseSource };
-
-export function releaseKey(source: ReleaseSource): QueryKey {
-	switch (source.kind) {
-		case 'movie':
-			return keys.movies.releases(source.movieId);
-		case 'series':
-			return keys.series.releases(source.seriesId);
-		case 'season':
-			return keys.series.seasonReleases(source.seriesId, source.season);
-		case 'episode':
-			return keys.episodes.releases(source.episodeId);
-		case 'discoverMovie':
-			return keys.discover.movieReleases(source.tmdbId);
-		case 'discoverSeries':
-			return keys.discover.seriesReleases(source.tmdbId);
-		case 'discoverSeason':
-			return keys.discover.seasonReleases(source.tmdbId, source.season);
-		case 'discoverEpisode':
-			return keys.discover.episodeReleases(source.tmdbId, source.season, source.episode);
-	}
-}
-
-/** Searches for source; text, when given, replaces arrd's own query. */
-function searchReleases(source: ReleaseSource, text?: string): Promise<T.SearchResult> {
-	switch (source.kind) {
-		case 'movie':
-			return api.movies.releases(source.movieId, text);
-		case 'series':
-			return api.series.releases(source.seriesId, text);
-		case 'season':
-			return api.series.seasonReleases(source.seriesId, source.season, text);
-		case 'episode':
-			return api.episodes.releases(source.episodeId, text);
-		case 'discoverMovie':
-			return api.discover.movieReleases(source.tmdbId, text);
-		case 'discoverSeries':
-			return api.discover.seriesReleases(source.tmdbId, text);
-		case 'discoverSeason':
-			return api.discover.seasonReleases(source.tmdbId, source.season, text);
-		case 'discoverEpisode':
-			return api.discover.episodeReleases(source.tmdbId, source.season, source.episode, text);
-	}
-}
-
 const SEARCH_CACHE ={ staleTime: 5 * 60_000, gcTime: 10 * 60_000, enabled: false } as const;
 
 export const queries = {
@@ -236,11 +181,6 @@ export const queries = {
 
 	movies: () => ({ queryKey: keys.movies.list, queryFn: api.movies.list }),
 	movie: (id: number) => ({ queryKey: keys.movies.detail(id), queryFn: () => api.movies.get(id) }),
-	movieReleases: (id: number) => ({
-		queryKey: keys.movies.releases(id),
-		queryFn: () => api.movies.releases(id),
-		...SEARCH_CACHE
-	}),
 	movieLookup: (q: string) => ({
 		queryKey: keys.movies.lookup(q),
 		queryFn: () => api.movies.lookup(q),
@@ -261,16 +201,6 @@ export const queries = {
 	seriesList: () => ({ queryKey: keys.series.list, queryFn: api.series.list }),
 	series: (id: number) => ({ queryKey: keys.series.detail(id), queryFn: () => api.series.get(id) }),
 	episodes: (id: number) => ({ queryKey: keys.series.episodes(id), queryFn: () => api.series.episodes(id) }),
-	seasonReleases: (id: number, season: number) => ({
-		queryKey: keys.series.seasonReleases(id, season),
-		queryFn: () => api.series.seasonReleases(id, season),
-		...SEARCH_CACHE
-	}),
-	episodeReleases: (id: number) => ({
-		queryKey: keys.episodes.releases(id),
-		queryFn: () => api.episodes.releases(id),
-		...SEARCH_CACHE
-	}),
 	seriesLookup: (q: string) => ({
 		queryKey: keys.series.lookup(q),
 		queryFn: () => api.series.lookup(q),
@@ -280,9 +210,9 @@ export const queries = {
 
 	// Manual release search for any target; started explicitly with refetch().
 	// text, when given, replaces arrd's own query and is cached on its own.
-	releases: (source: ReleaseSource, text = '') => ({
-		queryKey: [...releaseKey(source), text] as QueryKey,
-		queryFn: (): Promise<T.SearchResult> => searchReleases(source, text || undefined),
+	releases: (target: T.ReleaseTarget, text = '') => ({
+		queryKey: [...keys.releases(target), text] as QueryKey,
+		queryFn: (): Promise<T.SearchResult> => api.releases.search(target, text || undefined),
 		...SEARCH_CACHE
 	}),
 
@@ -422,14 +352,6 @@ export const mutations = {
 			return invalidate(qc, keys.movies.list, ...libraryMarks);
 		}
 	}),
-	searchMovie: (qc: QueryClient) => ({
-		mutationFn: (id: number) => api.movies.search(id),
-		onSuccess: (_: T.AutoSearchResult, id: number) => invalidate(qc, keys.queue.all, keys.movies.detail(id), keys.movies.list)
-	}),
-	grabMovie: (qc: QueryClient) => ({
-		mutationFn: (v: { id: number; release: T.ReleaseResult }) => api.movies.grab(v.id, v.release),
-		onSuccess: (_: T.Download, v: { id: number }) => invalidate(qc, keys.queue.all, keys.movies.detail(v.id), keys.movies.list)
-	}),
 	setMovieMonitored: (qc: QueryClient) => ({
 		mutationFn: (v: { id: number; monitored: boolean }) => api.movies.update(v.id, { monitored: v.monitored }),
 		onMutate: async (v: { id: number; monitored: boolean }) => {
@@ -473,32 +395,15 @@ export const mutations = {
 		mutationFn: (id: number) => api.series.refresh(id),
 		onSuccess: (_: T.Series, id: number) => invalidate(qc, keys.series.detail(id), keys.series.episodes(id), keys.series.list)
 	}),
-	searchSeriesWanted: (qc: QueryClient) => ({
-		mutationFn: (id: number) => api.series.searchWanted(id),
-		onSuccess: (_: void, id: number) => invalidate(qc, keys.queue.all, keys.series.episodes(id))
+	// A grab may add titles to the library (a discovered title, a collection's
+	// other movies), and changes the status of every item it brings in.
+	grab: (qc: QueryClient) => ({
+		mutationFn: (v: { target: T.ReleaseTarget; release: T.ReleaseResult }) => api.releases.grab(v.target, v.release),
+		onSuccess: () => invalidate(qc, keys.queue.all, keys.movies.all, keys.series.all, ...libraryMarks)
 	}),
-	searchSeason: (qc: QueryClient) => ({
-		mutationFn: (v: { id: number; season: number }) => api.series.searchSeason(v.id, v.season),
-		onSuccess: (_: T.AutoSearchResult[], v: { id: number }) => invalidate(qc, keys.queue.all, keys.series.episodes(v.id))
-	}),
-	searchEpisode: (qc: QueryClient) => ({
-		mutationFn: (v: { episodeId: number; seriesId: number }) => api.episodes.search(v.episodeId),
-		onSuccess: (_: T.AutoSearchResult, v: { seriesId: number }) => invalidate(qc, keys.queue.all, keys.series.episodes(v.seriesId))
-	}),
-	// Grabbing a discovered title may add it to the library.
-	grabDiscoverMovie: (qc: QueryClient) => ({
-		mutationFn: (v: { tmdbId: number; release: T.ReleaseResult }) => api.discover.grabMovie(v.tmdbId, v.release),
-		onSuccess: () => invalidate(qc, keys.queue.all, keys.movies.list, ...libraryMarks)
-	}),
-	grabDiscoverSeries: (qc: QueryClient) => ({
-		mutationFn: (v: { tmdbId: number; release: T.ReleaseResult }) => api.discover.grabSeries(v.tmdbId, v.release),
-		// The series may already be in the library: its episodes change too.
-		onSuccess: () =>
-			invalidate(qc, keys.queue.all, keys.series.list, ['series', 'episodes'], ['series', 'detail'], ...libraryMarks)
-	}),
-	grabSeries: (qc: QueryClient) => ({
-		mutationFn: (v: { id: number; release: T.ReleaseResult }) => api.series.grab(v.id, v.release),
-		onSuccess: (_: T.Download, v: { id: number }) => invalidate(qc, keys.queue.all, keys.series.episodes(v.id), keys.series.detail(v.id))
+	autoSearch: (qc: QueryClient) => ({
+		mutationFn: (target: T.ReleaseTarget) => api.releases.autoSearch(target),
+		onSuccess: () => invalidate(qc, keys.queue.all, keys.movies.all, keys.series.all)
 	}),
 	setEpisodeMonitored: (qc: QueryClient) => ({
 		mutationFn: (v: { seriesId: number; episodeId: number; monitored: boolean }) =>

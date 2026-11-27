@@ -5,8 +5,9 @@ SELECT * FROM movies ORDER BY title, year;
 SELECT * FROM movies
 WHERE monitored = 1 AND file_path IS NULL
   AND NOT EXISTS (
-      SELECT 1 FROM downloads d
-      WHERE d.movie_id = movies.id AND d.status IN ('downloading', 'completed')
+      SELECT 1 FROM download_items di
+      JOIN downloads d ON d.id = di.download_id
+      WHERE di.movie_id = movies.id AND d.status IN ('downloading', 'completed')
   )
 ORDER BY added_at;
 

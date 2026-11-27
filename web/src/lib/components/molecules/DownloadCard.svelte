@@ -3,6 +3,7 @@
 	import PeerSummary from './PeerSummary.svelte';
 	import { backdropURL, posterURL } from '#lib/api/client.js';
 	import { formatBytes, formatETA, formatRate, percent } from '#lib/utils/format.js';
+	import { downloadContents } from '#lib/domain/downloads.js';
 	import type { Download } from '#lib/api/types.js';
 
 	interface Props {
@@ -29,11 +30,7 @@
 		if (!p.have_info) return 'Fetching metadata…';
 		return `${formatRate(p.download_rate)} · ${formatETA(p.eta_seconds)} left`;
 	});
-	const episodes = $derived(
-		d.episodes && d.episodes.length > 3
-			? `${d.episodes[0]} … ${d.episodes[d.episodes.length - 1]}`
-			: (d.episodes ?? []).join(', ')
-	);
+	const episodes = $derived(downloadContents(d));
 </script>
 
 <article class="card" aria-label={name}>

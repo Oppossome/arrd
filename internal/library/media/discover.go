@@ -145,8 +145,16 @@ func (s *Service) DiscoveredSeason(ctx context.Context, tmdbID int64, season int
 	return *out, nil
 }
 
-// EnsureMovie returns the library id of a TMDB movie, adding it unmonitored.
+// EnsureMovie returns the library id of a TMDB movie, adding it unmonitored
+// in the default movie root folder.
 func (s *Service) EnsureMovie(ctx context.Context, tmdbID int64) (int64, error) {
+	return s.EnsureMovieIn(ctx, tmdbID, nil)
+}
+
+// EnsureMovieIn returns the library id of a TMDB movie, adding it
+// unmonitored in rootFolderID (nil: the default movie root folder). A movie
+// already in the library stays where it is.
+func (s *Service) EnsureMovieIn(ctx context.Context, tmdbID int64, rootFolderID *int64) (int64, error) {
 	row, err := s.store.GetMovieByTMDBID(ctx, tmdbID)
 	if err == nil {
 		return row.ID, nil
@@ -155,7 +163,7 @@ func (s *Service) EnsureMovie(ctx context.Context, tmdbID int64) (int64, error) 
 		return 0, fmt.Errorf("check library: %w", err)
 	}
 	monitored := false
-	m, err := s.AddMovie(ctx, AddMovieInput{TMDBID: tmdbID, Monitored: &monitored})
+	m, err := s.AddMovie(ctx, AddMovieInput{TMDBID: tmdbID, RootFolderID: rootFolderID, Monitored: &monitored})
 	var ce *apperr.ConflictError
 	if errors.As(err, &ce) {
 		// Added concurrently (e.g. a double click): use that one.
@@ -202,6 +210,19 @@ func (s *Service) TMDBMovie(ctx context.Context, tmdbID int64) (*metadata.Movie,
 		return nil, fmt.Errorf("movie with TMDB id %d: %w", tmdbID, apperr.ErrNotFound)
 	}
 	return m, err
+}
+
+// TMDBCollection fetches a movie collection (franchise) from TMDB.
+func (s *Service) TMDBCollection(ctx context.Context, id int64) (*metadata.Collection, error) {
+	tm, err := s.tmdb.Client(ctx)
+	if err != nil {
+		return nil, err
+	}
+	c, err := tm.GetCollection(ctx, id)
+	if errors.Is(err, metadata.ErrNotFound) {
+		return nil, fmt.Errorf("collection with TMDB id %d: %w", id, apperr.ErrNotFound)
+	}
+	return c, err
 }
 
 // TMDBSeries fetches a series from TMDB.

@@ -224,8 +224,9 @@ const listWantedMovies = `-- name: ListWantedMovies :many
 SELECT id, tmdb_id, imdb_id, title, original_title, year, overview, poster_path, backdrop_path, root_folder_id, monitored, file_path, file_quality, added_at FROM movies
 WHERE monitored = 1 AND file_path IS NULL
   AND NOT EXISTS (
-      SELECT 1 FROM downloads d
-      WHERE d.movie_id = movies.id AND d.status IN ('downloading', 'completed')
+      SELECT 1 FROM download_items di
+      JOIN downloads d ON d.id = di.download_id
+      WHERE di.movie_id = movies.id AND d.status IN ('downloading', 'completed')
   )
 ORDER BY added_at
 `

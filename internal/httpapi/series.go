@@ -71,46 +71,11 @@ func (h *handlers) SeriesEpisodes(ctx context.Context, req apigen.SeriesEpisodes
 	return apigen.SeriesEpisodes200JSONResponse(mapSlice(out, toAPIEpisode)), nil
 }
 
-func (h *handlers) SearchSeriesWanted(ctx context.Context, req apigen.SearchSeriesWantedRequestObject) (apigen.SearchSeriesWantedResponseObject, error) {
-	if _, err := h.svc.Media.SeriesDetail(ctx, req.ID); err != nil {
-		return nil, err
-	}
-	id := req.ID
-	if err := h.svc.Acquire.SearchWantedEpisodes(ctx, &id); err != nil {
-		return nil, err
-	}
-	return apigen.SearchSeriesWanted204Response{}, nil
-}
-
-func (h *handlers) GrabSeries(ctx context.Context, req apigen.GrabSeriesRequestObject) (apigen.GrabSeriesResponseObject, error) {
-	out, err := h.svc.Acquire.GrabSeriesRelease(ctx, req.ID, fromAPIRelease(*req.Body))
-	if err != nil {
-		return nil, err
-	}
-	return apigen.GrabSeries201JSONResponse(toAPIDownload(out)), nil
-}
-
 func (h *handlers) UpdateSeason(ctx context.Context, req apigen.UpdateSeasonRequestObject) (apigen.UpdateSeasonResponseObject, error) {
 	if err := h.svc.Media.SetSeasonMonitored(ctx, req.ID, req.Season, req.Body.Monitored); err != nil {
 		return nil, err
 	}
 	return apigen.UpdateSeason204Response{}, nil
-}
-
-func (h *handlers) SeasonReleases(ctx context.Context, req apigen.SeasonReleasesRequestObject) (apigen.SeasonReleasesResponseObject, error) {
-	out, err := h.svc.Acquire.SearchSeason(ctx, req.ID, req.Season, deref(req.Params.Q))
-	if err != nil {
-		return nil, err
-	}
-	return apigen.SeasonReleases200JSONResponse(toAPISearchResult(out)), nil
-}
-
-func (h *handlers) SearchSeason(ctx context.Context, req apigen.SearchSeasonRequestObject) (apigen.SearchSeasonResponseObject, error) {
-	out, err := h.svc.Acquire.AutoSearchSeason(ctx, req.ID, req.Season)
-	if err != nil {
-		return nil, err
-	}
-	return apigen.SearchSeason200JSONResponse(mapSlice(out, toAPIAutoSearchResult)), nil
 }
 
 func (h *handlers) UpdateEpisode(ctx context.Context, req apigen.UpdateEpisodeRequestObject) (apigen.UpdateEpisodeResponseObject, error) {
@@ -119,30 +84,6 @@ func (h *handlers) UpdateEpisode(ctx context.Context, req apigen.UpdateEpisodeRe
 		return nil, err
 	}
 	return apigen.UpdateEpisode200JSONResponse(toAPIEpisode(out)), nil
-}
-
-func (h *handlers) EpisodeReleases(ctx context.Context, req apigen.EpisodeReleasesRequestObject) (apigen.EpisodeReleasesResponseObject, error) {
-	out, err := h.svc.Acquire.SearchEpisode(ctx, req.ID, deref(req.Params.Q))
-	if err != nil {
-		return nil, err
-	}
-	return apigen.EpisodeReleases200JSONResponse(toAPISearchResult(out)), nil
-}
-
-func (h *handlers) SearchEpisode(ctx context.Context, req apigen.SearchEpisodeRequestObject) (apigen.SearchEpisodeResponseObject, error) {
-	out, err := h.svc.Acquire.AutoSearchEpisode(ctx, req.ID)
-	if err != nil {
-		return nil, err
-	}
-	return apigen.SearchEpisode200JSONResponse(toAPIAutoSearchResult(out)), nil
-}
-
-func (h *handlers) GrabEpisode(ctx context.Context, req apigen.GrabEpisodeRequestObject) (apigen.GrabEpisodeResponseObject, error) {
-	out, err := h.svc.Acquire.GrabEpisodeRelease(ctx, req.ID, fromAPIRelease(*req.Body))
-	if err != nil {
-		return nil, err
-	}
-	return apigen.GrabEpisode201JSONResponse(toAPIDownload(out)), nil
 }
 
 func toAPISeries(s media.Series) apigen.Series {
@@ -226,10 +167,3 @@ func fromAPIUpdateSeries(in apigen.UpdateSeriesRequest) media.UpdateSeriesInput 
 	return media.UpdateSeriesInput{Monitored: in.Monitored, RootFolderID: in.RootFolderID}
 }
 
-func (h *handlers) SeriesReleases(ctx context.Context, req apigen.SeriesReleasesRequestObject) (apigen.SeriesReleasesResponseObject, error) {
-	out, err := h.svc.Acquire.SearchSeriesPacks(ctx, req.ID, deref(req.Params.Q))
-	if err != nil {
-		return nil, err
-	}
-	return apigen.SeriesReleases200JSONResponse(toAPISearchResult(out)), nil
-}

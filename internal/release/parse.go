@@ -52,6 +52,15 @@ type Info struct {
 	// CompleteSeries is a pack of every season that names no seasons
 	// ("Complete Series"). It is also a MultiSeason pack.
 	CompleteSeries bool
+
+	// Movie pack fields. MoviePack is set for several movies of one
+	// collection ("Trilogy", "Collection", "2011-2015", "1-3"); PackTitle
+	// is the franchise name before the pack marker, and the years are the
+	// span the release names (0 if none). Title and Year are unaffected.
+	MoviePack     bool
+	PackTitle     string
+	PackFirstYear int
+	PackLastYear  int
 }
 
 // Quality is a short human label such as "Bluray-1080p".
@@ -166,6 +175,7 @@ func Parse(name string) Info {
 		}
 	}
 	parseCompleteSeries(&info, tokens)
+	parseMoviePack(&info, tokens, titleEnd)
 	// Remux implies a Blu-ray source even when "BluRay" is listed after it.
 	if info.Source == SourceBluRay && containsFold(tokens, "remux") {
 		info.Source = SourceRemux

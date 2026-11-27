@@ -9,20 +9,6 @@ import (
 	"context"
 )
 
-const addDownloadEpisode = `-- name: AddDownloadEpisode :exec
-INSERT INTO download_episodes (download_id, episode_id) VALUES (?1, ?2)
-`
-
-type AddDownloadEpisodeParams struct {
-	DownloadID int64
-	EpisodeID  int64
-}
-
-func (q *Queries) AddDownloadEpisode(ctx context.Context, arg AddDownloadEpisodeParams) error {
-	_, err := q.db.ExecContext(ctx, addDownloadEpisode, arg.DownloadID, arg.EpisodeID)
-	return err
-}
-
 const countSeriesInRootFolder = `-- name: CountSeriesInRootFolder :one
 SELECT COUNT(*) FROM series WHERE root_folder_id = ?1
 `
@@ -176,75 +162,6 @@ func (q *Queries) GetSeriesByTMDBID(ctx context.Context, tmdbID int64) (Series, 
 		&i.LastRefreshedAt,
 	)
 	return i, err
-}
-
-const listActiveEpisodeIDs = `-- name: ListActiveEpisodeIDs :many
-SELECT de.episode_id FROM download_episodes de
-JOIN downloads d ON d.id = de.download_id
-WHERE d.status IN ('downloading', 'completed')
-`
-
-func (q *Queries) ListActiveEpisodeIDs(ctx context.Context) ([]int64, error) {
-	rows, err := q.db.QueryContext(ctx, listActiveEpisodeIDs)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []int64{}
-	for rows.Next() {
-		var episode_id int64
-		if err := rows.Scan(&episode_id); err != nil {
-			return nil, err
-		}
-		items = append(items, episode_id)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listDownloadEpisodes = `-- name: ListDownloadEpisodes :many
-SELECT e.id, e.series_id, e.season, e.episode, e.title, e.air_date, e.monitored, e.file_path, e.file_quality FROM episodes e
-JOIN download_episodes de ON de.episode_id = e.id
-WHERE de.download_id = ?1
-ORDER BY e.season, e.episode
-`
-
-func (q *Queries) ListDownloadEpisodes(ctx context.Context, downloadID int64) ([]Episode, error) {
-	rows, err := q.db.QueryContext(ctx, listDownloadEpisodes, downloadID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []Episode{}
-	for rows.Next() {
-		var i Episode
-		if err := rows.Scan(
-			&i.ID,
-			&i.SeriesID,
-			&i.Season,
-			&i.Episode,
-			&i.Title,
-			&i.AirDate,
-			&i.Monitored,
-			&i.FilePath,
-			&i.FileQuality,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const listEpisodes = `-- name: ListEpisodes :many
@@ -461,9 +378,9 @@ JOIN series s ON s.id = e.series_id
 WHERE s.monitored = 1 AND e.monitored = 1 AND e.file_path IS NULL
   AND e.air_date IS NOT NULL AND e.air_date <= CAST(?1 AS TEXT)
   AND NOT EXISTS (
-      SELECT 1 FROM download_episodes de
-      JOIN downloads d ON d.id = de.download_id
-      WHERE de.episode_id = e.id AND d.status IN ('downloading', 'completed')
+      SELECT 1 FROM download_items di
+      JOIN downloads d ON d.id = di.download_id
+      WHERE di.episode_id = e.id AND d.status IN ('downloading', 'completed')
   )
 ORDER BY e.series_id, e.season, e.episode
 `

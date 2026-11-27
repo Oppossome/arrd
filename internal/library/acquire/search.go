@@ -1,16 +1,13 @@
 package acquire
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"time"
 
 	"generic-arr-project/internal/indexer"
-	"generic-arr-project/internal/library/apperr"
 	"generic-arr-project/internal/library/indexers"
 	"generic-arr-project/internal/release"
-	"generic-arr-project/internal/store/db"
 )
 
 // ReleaseResult is a search result with the decision about it.
@@ -38,6 +35,9 @@ type ReleaseResult struct {
 	// first); CompleteSeries is a pack of every season that names none.
 	LastSeason     *int `json:"last_season,omitempty"`
 	CompleteSeries bool `json:"complete_series,omitempty"`
+
+	// MoviePack is a release of several movies of one collection.
+	MoviePack bool `json:"movie_pack,omitempty"`
 }
 
 // SearchResult is the outcome of searching all indexers for one item.
@@ -47,44 +47,6 @@ type SearchResult struct {
 	Query    string                    `json:"query"`
 	Releases []ReleaseResult           `json:"releases"`
 	Failures []indexers.IndexerFailure `json:"indexer_failures"`
-}
-
-// SearchMovie queries all search-enabled indexers for a movie and ranks the
-// results, best acceptable release first. text replaces arrd's own query
-// when not blank.
-func (s *Service) SearchMovie(ctx context.Context, movieID int64, text string) (SearchResult, error) {
-	movie, err := s.store.GetMovie(ctx, movieID)
-	if err != nil {
-		return SearchResult{}, apperr.NotFound(err, "movie", movieID)
-	}
-	return s.searchMovie(ctx, movie, text)
-}
-
-// searchMovie searches for movie, which need not be in the library: only
-// its title, year and IMDb id are used. text replaces arrd's own query
-// when not blank.
-func (s *Service) searchMovie(ctx context.Context, movie db.Movie, text string) (SearchResult, error) {
-	q, err := s.settings.QualitySettings(ctx)
-	if err != nil {
-		return SearchResult{}, err
-	}
-	text, custom := searchText(text, movieText(movie))
-	found, failures, err := s.indexers.Search(ctx, func(ix indexers.Indexer) (indexer.Query, bool) {
-		if custom {
-			return textQuery(text, ix, false)
-		}
-		return movieQuery(movie, ix)
-	})
-	if err != nil {
-		return SearchResult{}, err
-	}
-	target := release.MovieTarget{Title: movie.Title, OriginalTitle: movie.OriginalTitle, Year: int(movie.Year)}
-	limits := q.Limits()
-	res := rankReleases(found, failures, func(c release.Candidate) release.Decision {
-		return release.EvaluateMovie(c, target, limits)
-	})
-	res.Query = text
-	return res, nil
 }
 
 // searchText is the text to search for: the user's own when not blank
@@ -141,6 +103,7 @@ func rankReleases(found []indexers.FoundRelease, failures []indexers.IndexerFail
 			Title: f.Title, IndexerID: f.IndexerID, Indexer: f.Indexer, DownloadURL: f.DownloadURL,
 			MagnetURI: f.MagnetURI, InfoHash: f.InfoHash, Size: f.Size, Seeders: f.Seeders, Peers: f.Peers,
 			PublishDate: f.PublishDate, Quality: info.Quality(), Accepted: d.Accepted, Rejections: d.Rejects, Score: d.Score,
+			MoviePack: info.MoviePack,
 		}
 		if info.IsTV {
 			season := info.Season
@@ -164,98 +127,3 @@ func rankReleases(found []indexers.FoundRelease, failures []indexers.IndexerFail
 	return out
 }
 
-// grabBest grabs the first accepted release in ranked results, trying the
-// next one when a grab fails.
-func (s *Service) grabBest(ctx context.Context, res SearchResult, grab func(ReleaseResult) (Download, error)) (*Download, error) {
-	var grabErrs []error
-	for _, r := range res.Releases {
-		if !r.Accepted {
-			break // ranked: everything after is rejected too
-		}
-		dl, err := grab(r)
-		if err != nil {
-			s.log.Warn().Str("release", r.Title).Err(err).Msg("grab failed, trying next release")
-			grabErrs = append(grabErrs, fmt.Errorf("%s: %w", r.Title, err))
-			continue
-		}
-		return &dl, nil
-	}
-	if len(grabErrs) > 0 {
-		return nil, fmt.Errorf("every acceptable release failed to grab: %v", grabErrs)
-	}
-	return nil, nil
-}
-
-// movieQuery builds the best query the indexer supports: an IMDb lookup if
-// possible, otherwise a title + year text search.
-func movieQuery(m db.Movie, ix indexers.Indexer) (indexer.Query, bool) {
-	text := movieText(m)
-	q := indexer.Query{Categories: ix.MovieCategories}
-	switch {
-	case ix.Caps == nil:
-		// Not tested yet: a generic text search works everywhere.
-		q.Type, q.Q = indexer.SearchGeneric, text
-	case ix.Caps.MovieSearch.Available && m.IMDBID != nil && ix.Caps.MovieSearch.Supports("imdbid"):
-		q.Type, q.IMDBID = indexer.SearchMovie, *m.IMDBID
-	case ix.Caps.MovieSearch.Available:
-		q.Type, q.Q = indexer.SearchMovie, text
-	case ix.Caps.Search.Available:
-		q.Type, q.Q = indexer.SearchGeneric, text
-	default:
-		return indexer.Query{}, false
-	}
-	return q, true
-}
-
-// movieText is a text search for m: its title and year.
-func movieText(m db.Movie) string {
-	if m.Year > 0 {
-		return fmt.Sprintf("%s %d", m.Title, m.Year)
-	}
-	return m.Title
-}
-
-// AutoSearchResult reports what an automatic search did.
-type AutoSearchResult struct {
-	Grabbed  *Download                 `json:"grabbed,omitempty"`
-	Searched int                       `json:"releases_considered"`
-	Failures []indexers.IndexerFailure `json:"indexer_failures"`
-}
-
-// AutoSearchMovie searches for a movie and grabs the best acceptable
-// release, trying the next one if a grab fails.
-
-// SearchWantedMovies runs AutoSearchMovie for every monitored movie
-// without a file or active download.
-func (s *Service) SearchWantedMovies(ctx context.Context) error {
-	wanted, err := s.store.ListWantedMovies(ctx)
-	if err != nil {
-		return fmt.Errorf("list wanted movies: %w", err)
-	}
-	for _, m := range wanted {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		if _, err := s.AutoSearchMovie(ctx, m.ID); err != nil {
-			s.log.Warn().Int64("movie", m.ID).Str("title", m.Title).Err(err).Msg("wanted search")
-		}
-	}
-	return nil
-}
-
-// AutoSearchMovie searches for a movie and grabs the best acceptable
-// release, trying the next one if a grab fails.
-func (s *Service) AutoSearchMovie(ctx context.Context, movieID int64) (AutoSearchResult, error) {
-	res, err := s.SearchMovie(ctx, movieID, "")
-	if err != nil {
-		return AutoSearchResult{}, err
-	}
-	out := AutoSearchResult{Searched: len(res.Releases), Failures: res.Failures}
-	out.Grabbed, err = s.grabBest(ctx, res, func(r ReleaseResult) (Download, error) {
-		return s.GrabMovieRelease(ctx, movieID, r)
-	})
-	if err == nil && out.Grabbed == nil {
-		s.log.Info().Int64("movie", movieID).Int("considered", len(res.Releases)).Int("indexer_failures", len(res.Failures)).Msg("no acceptable release found")
-	}
-	return out, err
-}

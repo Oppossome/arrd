@@ -58,7 +58,7 @@ func TestDiscoverMovie(t *testing.T) {
 	}
 
 	// Searching does not add the movie.
-	res, err := svc.Acquire.SearchDiscoveredMovie(ctx, 900001, "")
+	res, err := svc.Acquire.Search(ctx, acquire.MovieTarget(900001), "")
 	if err != nil || len(res.Releases) == 0 || res.Releases[0].Title != libtest.ReleaseName || !res.Releases[0].Accepted {
 		t.Fatalf("search = %+v, %v", res, err)
 	}
@@ -67,7 +67,7 @@ func TestDiscoverMovie(t *testing.T) {
 	}
 
 	// Grabbing adds it, unmonitored, and starts the download.
-	dl, err := svc.Acquire.GrabDiscoveredMovie(ctx, 900001, res.Releases[0])
+	dl, err := svc.Acquire.Grab(ctx, acquire.MovieTarget(900001), res.Releases[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func TestDiscoverMovie(t *testing.T) {
 		t.Errorf("lookup with other language = %+v, %v", found, err)
 	}
 	// A second grab of the same torrent reuses the library movie and is refused as a duplicate.
-	if _, err := svc.Acquire.GrabDiscoveredMovie(ctx, 900001, res.Releases[0]); err == nil {
+	if _, err := svc.Acquire.Grab(ctx, acquire.MovieTarget(900001), res.Releases[0]); err == nil {
 		t.Error("grabbing the same torrent twice succeeded")
 	}
 	if movies, _ := svc.Media.Movies(ctx); len(movies) != 1 {
@@ -131,11 +131,11 @@ func TestDiscoverSeries(t *testing.T) {
 	}
 
 	// Season 1 is searched by TVDB id; the pack and a single episode are both accepted.
-	res, err := svc.Acquire.SearchDiscoveredSeason(ctx, 800001, 1, "")
+	res, err := svc.Acquire.Search(ctx, acquire.SeasonTarget(800001, 1), "")
 	if err != nil || len(res.Releases) != 2 || res.Releases[0].Title != libtest.PackName || !res.Releases[0].SeasonPack || !res.Releases[0].Accepted {
 		t.Fatalf("season search = %+v, %v", res, err)
 	}
-	if _, err := svc.Acquire.SearchDiscoveredSeason(ctx, 800001, 9, ""); !errors.Is(err, apperr.ErrNotFound) {
+	if _, err := svc.Acquire.Search(ctx, acquire.SeasonTarget(800001, 9), ""); !errors.Is(err, apperr.ErrNotFound) {
 		t.Errorf("missing season = %v", err)
 	}
 	season, err := svc.Media.DiscoveredSeason(ctx, 800001, 1)
@@ -147,7 +147,7 @@ func TestDiscoverSeries(t *testing.T) {
 	}
 
 	// One episode: only that episode is accepted, the season pack is not.
-	epRes, err := svc.Acquire.SearchDiscoveredEpisode(ctx, 800001, 1, 2, "")
+	epRes, err := svc.Acquire.Search(ctx, acquire.EpisodeTarget(800001, 1, 2), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,14 +158,14 @@ func TestDiscoverSeries(t *testing.T) {
 	if !accepted["Harbor.Watch.S01E02.720p.HDTV.x264-PIKA"] || accepted[libtest.PackName] {
 		t.Errorf("episode search = %+v", epRes.Releases)
 	}
-	if _, err := svc.Acquire.SearchDiscoveredEpisode(ctx, 800001, 1, 9, ""); !errors.Is(err, apperr.ErrNotFound) {
+	if _, err := svc.Acquire.Search(ctx, acquire.EpisodeTarget(800001, 1, 9), ""); !errors.Is(err, apperr.ErrNotFound) {
 		t.Errorf("missing episode = %v", err)
 	}
 	if list, _ := svc.Media.SeriesList(ctx); len(list) != 0 {
 		t.Fatalf("search added series: %+v", list)
 	}
 
-	dl, err := svc.Acquire.GrabDiscoveredSeries(ctx, 800001, res.Releases[0])
+	dl, err := svc.Acquire.Grab(ctx, acquire.SeriesTarget(800001), res.Releases[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,10 +177,10 @@ func TestDiscoverSeries(t *testing.T) {
 		t.Errorf("queue = %+v", q)
 	}
 	// Once in the library, the season is searched as a library season.
-	if _, err := svc.Acquire.SearchDiscoveredSeason(ctx, 800001, 1, ""); err != nil {
+	if _, err := svc.Acquire.Search(ctx, acquire.SeasonTarget(800001, 1), ""); err != nil {
 		t.Errorf("search of library series = %v", err)
 	}
-	if _, err := svc.Acquire.SearchDiscoveredEpisode(ctx, 800001, 1, 2, ""); err != nil {
+	if _, err := svc.Acquire.Search(ctx, acquire.EpisodeTarget(800001, 1, 2), ""); err != nil {
 		t.Errorf("episode search of library series = %v", err)
 	}
 	if show, _ := svc.Media.DiscoveredSeries(ctx, 800001); show.LibraryID == nil || *show.LibraryID != list[0].ID {

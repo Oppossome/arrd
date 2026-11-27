@@ -30,7 +30,7 @@ func TestSeriesPacks(t *testing.T) {
 	}
 
 	// Not in the library: searched from TMDB's seasons, by title.
-	res, err := svc.Acquire.SearchDiscoveredSeriesPacks(ctx, 800001, "")
+	res, err := svc.Acquire.Search(ctx, acquire.SeriesTarget(800001), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +56,7 @@ func TestSeriesPacks(t *testing.T) {
 
 	// The user's own text replaces arrd's query: sent as plain text (no
 	// TVDB id or season), and still judged as a release of season 1.
-	custom, err := svc.Acquire.SearchDiscoveredSeason(ctx, 800001, 1, "  "+libtest.CustomTVQuery+" ")
+	custom, err := svc.Acquire.Search(ctx, acquire.SeasonTarget(800001, 1), "  "+libtest.CustomTVQuery+" ")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,13 +64,13 @@ func TestSeriesPacks(t *testing.T) {
 		t.Errorf("custom search = %+v", custom)
 	}
 	// Blank text is arrd's own query.
-	if own, err := svc.Acquire.SearchDiscoveredSeason(ctx, 800001, 1, " "); err != nil || own.Query != "Harbor Watch S01" || len(own.Releases) != 2 {
+	if own, err := svc.Acquire.Search(ctx, acquire.SeasonTarget(800001, 1), " "); err != nil || own.Query != "Harbor Watch S01" || len(own.Releases) != 2 {
 		t.Errorf("blank-text search = %+v, %v", own, err)
 	}
 
 	// Grabbing adds the series and expects every regular episode of both
 	// seasons (not the special).
-	dl, err := svc.Acquire.GrabDiscoveredSeries(ctx, 800001, multi)
+	dl, err := svc.Acquire.Grab(ctx, acquire.SeriesTarget(800001), multi)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestSeriesPacks(t *testing.T) {
 	if dl.SeriesID == nil {
 		t.Fatal("download has no series")
 	}
-	lib, err := svc.Acquire.SearchSeriesPacks(ctx, *dl.SeriesID, "")
+	lib, err := svc.Acquire.Search(ctx, acquire.SeriesTarget(800001), "")
 	if err != nil || len(lib.Releases) != len(res.Releases) || lib.Releases[0].Title != libtest.MultiSeasonName {
 		t.Errorf("library search = %+v, %v", lib, err)
 	}

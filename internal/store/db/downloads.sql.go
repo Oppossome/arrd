@@ -9,6 +9,21 @@ import (
 	"context"
 )
 
+const addDownloadItem = `-- name: AddDownloadItem :exec
+INSERT INTO download_items (download_id, movie_id, episode_id) VALUES (?1, ?2, ?3)
+`
+
+type AddDownloadItemParams struct {
+	DownloadID int64
+	MovieID    *int64
+	EpisodeID  *int64
+}
+
+func (q *Queries) AddDownloadItem(ctx context.Context, arg AddDownloadItemParams) error {
+	_, err := q.db.ExecContext(ctx, addDownloadItem, arg.DownloadID, arg.MovieID, arg.EpisodeID)
+	return err
+}
+
 const countActiveDownloads = `-- name: CountActiveDownloads :one
 SELECT COUNT(*) FROM downloads WHERE status = 'downloading'
 `
@@ -155,6 +170,128 @@ func (q *Queries) GetDownloadByInfoHash(ctx context.Context, infoHash string) (D
 	return i, err
 }
 
+const listActiveItemIDs = `-- name: ListActiveItemIDs :many
+SELECT DISTINCT di.movie_id, di.episode_id FROM download_items di
+JOIN downloads d ON d.id = di.download_id
+WHERE d.status IN ('downloading', 'completed')
+`
+
+type ListActiveItemIDsRow struct {
+	MovieID   *int64
+	EpisodeID *int64
+}
+
+// Movies and episodes in a download that is downloading or awaiting import.
+func (q *Queries) ListActiveItemIDs(ctx context.Context) ([]ListActiveItemIDsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listActiveItemIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListActiveItemIDsRow{}
+	for rows.Next() {
+		var i ListActiveItemIDsRow
+		if err := rows.Scan(&i.MovieID, &i.EpisodeID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDownloadItemEpisodes = `-- name: ListDownloadItemEpisodes :many
+SELECT e.id, e.series_id, e.season, e.episode, e.title, e.air_date, e.monitored, e.file_path, e.file_quality FROM episodes e
+JOIN download_items di ON di.episode_id = e.id
+WHERE di.download_id = ?1
+ORDER BY e.season, e.episode
+`
+
+// Episodes a download is expected to contain.
+func (q *Queries) ListDownloadItemEpisodes(ctx context.Context, downloadID int64) ([]Episode, error) {
+	rows, err := q.db.QueryContext(ctx, listDownloadItemEpisodes, downloadID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Episode{}
+	for rows.Next() {
+		var i Episode
+		if err := rows.Scan(
+			&i.ID,
+			&i.SeriesID,
+			&i.Season,
+			&i.Episode,
+			&i.Title,
+			&i.AirDate,
+			&i.Monitored,
+			&i.FilePath,
+			&i.FileQuality,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDownloadItemMovies = `-- name: ListDownloadItemMovies :many
+SELECT m.id, m.tmdb_id, m.imdb_id, m.title, m.original_title, m.year, m.overview, m.poster_path, m.backdrop_path, m.root_folder_id, m.monitored, m.file_path, m.file_quality, m.added_at FROM movies m
+JOIN download_items di ON di.movie_id = m.id
+WHERE di.download_id = ?1
+ORDER BY m.year, m.title
+`
+
+// Movies a download is expected to contain.
+func (q *Queries) ListDownloadItemMovies(ctx context.Context, downloadID int64) ([]Movie, error) {
+	rows, err := q.db.QueryContext(ctx, listDownloadItemMovies, downloadID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Movie{}
+	for rows.Next() {
+		var i Movie
+		if err := rows.Scan(
+			&i.ID,
+			&i.TMDBID,
+			&i.IMDBID,
+			&i.Title,
+			&i.OriginalTitle,
+			&i.Year,
+			&i.Overview,
+			&i.PosterPath,
+			&i.BackdropPath,
+			&i.RootFolderID,
+			&i.Monitored,
+			&i.FilePath,
+			&i.FileQuality,
+			&i.AddedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listDownloads = `-- name: ListDownloads :many
 SELECT id, movie_id, series_id, indexer_id, info_hash, release_title, quality, size, magnet, metainfo, incomplete_dir, complete_dir, status, paused, error, added_at, completed_at, imported_at FROM downloads ORDER BY added_at DESC, id DESC
 `
@@ -248,9 +385,13 @@ func (q *Queries) ListDownloadsByStatus(ctx context.Context, status string) ([]D
 }
 
 const listDownloadsForMovie = `-- name: ListDownloadsForMovie :many
-SELECT id, movie_id, series_id, indexer_id, info_hash, release_title, quality, size, magnet, metainfo, incomplete_dir, complete_dir, status, paused, error, added_at, completed_at, imported_at FROM downloads WHERE movie_id = ?1 ORDER BY id DESC
+SELECT d.id, d.movie_id, d.series_id, d.indexer_id, d.info_hash, d.release_title, d.quality, d.size, d.magnet, d.metainfo, d.incomplete_dir, d.complete_dir, d.status, d.paused, d.error, d.added_at, d.completed_at, d.imported_at FROM downloads d
+WHERE d.movie_id = ?1
+   OR d.id IN (SELECT di.download_id FROM download_items di WHERE di.movie_id = ?1)
+ORDER BY d.id DESC
 `
 
+// Downloads for a movie: grabbed for it, or a pack expected to contain it.
 func (q *Queries) ListDownloadsForMovie(ctx context.Context, movieID *int64) ([]Download, error) {
 	rows, err := q.db.QueryContext(ctx, listDownloadsForMovie, movieID)
 	if err != nil {

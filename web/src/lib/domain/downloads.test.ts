@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activeDownloads, itemDownloads } from './downloads';
+import { activeDownloads, downloadContents, itemDownloads } from './downloads';
 import type { Download, Progress } from '../api/types';
 
 let nextId = 1;
@@ -84,5 +84,21 @@ describe('activeDownloads', () => {
 		const done = dl({ movie_id: 3, status: 'imported' });
 		const failed = dl({ movie_id: 4, status: 'failed' });
 		expect(activeDownloads([old, done, recent, failed])).toEqual([recent, old]);
+	});
+});
+
+describe('downloadContents', () => {
+	it('counts the movies of a pack', () => {
+		expect(downloadContents(dl({ movies: ['Skyfarer (2011)', 'Skyfarer: Ascent (2013)', 'Skyfarer: Homeward (2015)'] }))).toBe(
+			'3 movies'
+		);
+		expect(downloadContents(dl({ movies: ['Skyfarer (2011)'] }))).toBe('1 movie');
+	});
+	it('lists a few episodes and abbreviates many', () => {
+		expect(downloadContents(dl({ episodes: ['S01E01', 'S01E02'] }))).toBe('S01E01, S01E02');
+		expect(downloadContents(dl({ episodes: ['S01E01', 'S01E02', 'S01E03', 'S01E04'] }))).toBe('S01E01 … S01E04');
+	});
+	it('is empty for a single movie', () => {
+		expect(downloadContents(dl({}))).toBe('');
 	});
 });

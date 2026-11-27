@@ -60,13 +60,13 @@ describe('SeasonBrowser for a show not in the library', () => {
 		await fireEvent.click(within(lowTide).getByRole('button', { name: 'Download S01E02' }));
 		expect(ondownload).toHaveBeenLastCalledWith({
 			title: 'Harbor Watch · S01E02 Low Tide',
-			source: { kind: 'discoverEpisode', tmdbId: 800001, season: 1, episode: 2 }
+			target: { kind: 'episode', tmdb_id: 800001, season: 1, episode: 2 }
 		});
 
 		await fireEvent.click(screen.getByRole('button', { name: 'Download season' }));
 		expect(ondownload).toHaveBeenLastCalledWith({
 			title: 'Harbor Watch · Season 1',
-			source: { kind: 'discoverSeason', tmdbId: 800001, season: 1 }
+			target: { kind: 'season', tmdb_id: 800001, season: 1 }
 		});
 		// Library controls only appear for library shows.
 		expect(screen.queryByRole('button', { name: 'Search' })).not.toBeInTheDocument();
@@ -74,7 +74,7 @@ describe('SeasonBrowser for a show not in the library', () => {
 });
 
 describe('SeasonBrowser for a library show', () => {
-	it('merges library status into the episodes and downloads through the library', async () => {
+	it('merges library status into the episodes and downloads by TMDB id', async () => {
 		const series = {
 			id: 4,
 			tmdb_id: 800001,
@@ -115,12 +115,12 @@ describe('SeasonBrowser for a library show', () => {
 		await fireEvent.click(within(pilot).getByRole('button', { name: 'Download S01E01' }));
 		expect(ondownload).toHaveBeenLastCalledWith({
 			title: 'Harbor Watch · S01E01 Pilot',
-			source: { kind: 'episode', seriesId: 4, episodeId: 41 }
+			target: { kind: 'episode', tmdb_id: 800001, season: 1, episode: 1 }
 		});
 		await fireEvent.click(screen.getByRole('button', { name: 'Download season' }));
 		expect(ondownload).toHaveBeenLastCalledWith({
 			title: 'Harbor Watch · Season 1',
-			source: { kind: 'season', seriesId: 4, season: 1 }
+			target: { kind: 'season', tmdb_id: 800001, season: 1 }
 		});
 	});
 });

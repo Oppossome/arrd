@@ -7,6 +7,7 @@ import (
 	"generic-arr-project/internal/formspec"
 	"generic-arr-project/internal/library/apperr"
 	"generic-arr-project/internal/library/indexers"
+	"generic-arr-project/internal/library/acquire"
 	"generic-arr-project/internal/library/libtest"
 	"generic-arr-project/internal/library/media"
 	"generic-arr-project/internal/testutil"
@@ -203,7 +204,7 @@ func TestPrivateSiteEndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	res, err := svc.Acquire.SearchMovie(ctx, movie.ID, "")
+	res, err := svc.Acquire.Search(ctx, acquire.MovieTarget(movie.TMDBID), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +218,7 @@ func TestPrivateSiteEndToEnd(t *testing.T) {
 	}
 
 	// The .torrent needs the signed-in session the search used.
-	dl, err := svc.Acquire.GrabMovieRelease(ctx, movie.ID, res.Releases[0])
+	dl, err := svc.Acquire.Grab(ctx, acquire.MovieTarget(movie.TMDBID), res.Releases[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -231,7 +232,7 @@ func TestPrivateSiteEndToEnd(t *testing.T) {
 	// A changed definition gets a fresh searcher (and session).
 	writeDefinition(t, env, site, "Example Bay v2")
 	svc.Indexers.ReloadIndexerDefinitions()
-	if _, err := svc.Acquire.SearchMovie(ctx, movie.ID, ""); err != nil {
+	if _, err := svc.Acquire.Search(ctx, acquire.MovieTarget(movie.TMDBID), ""); err != nil {
 		t.Fatal(err)
 	}
 	if n := site.logins.Load(); n != 2 {

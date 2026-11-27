@@ -72,3 +72,14 @@ function summarizeItem(ds: Download[]): ItemDownload | undefined {
 export function activeDownloads(rows: Download[]): Download[] {
 	return rows.filter(isActive).sort((a, b) => b.added_at.localeCompare(a.added_at));
 }
+
+/**
+ * What a download holds beyond its title: "3 movies" for a multi-movie
+ * pack, its episode codes ("S01E01, S01E02" or "S01E01 … S01E08" when
+ * there are many) for TV, else "".
+ */
+export function downloadContents(d: Download): string {
+	if (d.movies?.length) return d.movies.length === 1 ? '1 movie' : `${d.movies.length} movies`;
+	const eps = d.episodes ?? [];
+	return eps.length > 3 ? `${eps[0]} … ${eps[eps.length - 1]}` : eps.join(', ');
+}

@@ -52,6 +52,7 @@ describe('releaseCoverage', () => {
 		expect(releaseCoverage(rel('x', { season: 2, episodes: [3, 4, 5] }))).toBe('S02E03-E05');
 		expect(releaseCoverage(rel('x', { season: 1, last_season: 3, season_pack: true }))).toBe('S01-S03 pack');
 		expect(releaseCoverage(rel('x', { season: 0, complete_series: true, season_pack: true }))).toBe('Complete series');
+		expect(releaseCoverage(rel('x', { movie_pack: true }))).toBe('Movie pack');
 	});
 });
 

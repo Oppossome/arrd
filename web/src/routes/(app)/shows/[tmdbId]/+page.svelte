@@ -22,6 +22,6 @@
 
 <SourcesDialog title={sources?.title} onclose={() => (sources = null)}>
 	{#snippet children(heading)}
-		{#if sources}<ReleaseTable source={sources.source} {heading} auto />{/if}
+		{#if sources}<ReleaseTable target={sources.target} {heading} auto />{/if}
 	{/snippet}
 </SourcesDialog>

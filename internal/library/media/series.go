@@ -109,6 +109,9 @@ func Aired(e db.Episode, today string) bool {
 // Today is the current date as stored in air dates (UTC, YYYY-MM-DD).
 func (s *Service) Today() string { return s.now().UTC().Format("2006-01-02") }
 
+// ThisYear is the current year (UTC), as movie years are compared.
+func (s *Service) ThisYear() int { return s.now().UTC().Year() }
+
 // LookupSeries searches TMDB for TV series, keeping those that pass filter and
 // marking those in the library. TMDB search takes no genre or language, so
 // the filter is applied to its results.
@@ -353,27 +356,13 @@ func (s *Service) SeriesEpisodes(ctx context.Context, id int64) ([]Episode, erro
 	if err != nil {
 		return nil, fmt.Errorf("list episodes: %w", err)
 	}
-	active, err := s.ActiveEpisodeIDs(ctx)
+	active, err := s.ActiveItems(ctx)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]Episode, len(eps))
 	for i, e := range eps {
-		out[i] = episodeFromRow(e, active[e.ID])
-	}
-	return out, nil
-}
-
-// ActiveEpisodeIDs returns the episodes with a download in progress or
-// awaiting import.
-func (s *Service) ActiveEpisodeIDs(ctx context.Context) (map[int64]bool, error) {
-	ids, err := s.store.ListActiveEpisodeIDs(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list active episodes: %w", err)
-	}
-	out := make(map[int64]bool, len(ids))
-	for _, id := range ids {
-		out[id] = true
+		out[i] = episodeFromRow(e, active.Episodes[e.ID])
 	}
 	return out, nil
 }

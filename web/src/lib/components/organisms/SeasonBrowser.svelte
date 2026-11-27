@@ -5,10 +5,10 @@
 	import { stillURL } from '#lib/api/client.js';
 	import { episodeCode } from '#lib/utils/format.js';
 	import { queries, useMutation } from '#lib/api/query.js';
-	import type { ReleaseSource, SourcesRequest } from '#lib/domain/releases.js';
+	import type { SourcesRequest } from '#lib/domain/releases.js';
 	import type { Tone } from '#lib/domain/status.js';
 	import { toasts } from '#lib/stores/toast.svelte.js';
-	import type { Episode, LookupEpisode } from '#lib/api/types.js';
+	import type { AutoSearchResult, Episode, LookupEpisode } from '#lib/api/types.js';
 
 	interface Props {
 		/** The TMDB series to show... */
@@ -98,51 +98,41 @@
 		return e.monitored ? { label: 'Missing', tone: 'warning' } : { label: 'Unmonitored', tone: 'neutral' };
 	}
 
+	// Targets are by TMDB id: a show in the library is searched as such.
 	function downloadSeason(n: number) {
-		const source: ReleaseSource =
-			librarySeriesId !== undefined
-				? { kind: 'season', seriesId: librarySeriesId, season: n }
-				: { kind: 'discoverSeason', tmdbId: resolvedTMDBId!, season: n };
-		ondownload({ title: `${title} · ${seasonLabel(n)}`, source });
+		ondownload({ title: `${title} · ${seasonLabel(n)}`, target: { kind: 'season', tmdb_id: resolvedTMDBId!, season: n } });
 	}
 	function downloadEpisode(n: number, row: Row) {
-		const source: ReleaseSource =
-			librarySeriesId !== undefined && row.library
-				? { kind: 'episode', seriesId: librarySeriesId, episodeId: row.library.id }
-				: { kind: 'discoverEpisode', tmdbId: resolvedTMDBId!, season: n, episode: row.number };
 		const name = row.meta?.title || row.library?.title;
-		ondownload({ title: `${title} · ${episodeCode(n, row.number)}${name ? ` ${name}` : ''}`, source });
+		ondownload({
+			title: `${title} · ${episodeCode(n, row.number)}${name ? ` ${name}` : ''}`,
+			target: { kind: 'episode', tmdb_id: resolvedTMDBId!, season: n, episode: row.number }
+		});
 	}
 
 	// Library-only controls: monitoring and automatic search.
 	const setSeasonMonitored = useMutation('setSeasonMonitored');
-	const searchSeason = useMutation('searchSeason');
+	const autoSearch = useMutation('autoSearch');
 	const setEpisodeMonitored = useMutation('setEpisodeMonitored');
-	const searchEpisode = useMutation('searchEpisode');
 	let searching = $state<string | null>(null);
 
-	function autoSearchSeason(id: number, n: number) {
+	function reportGrabs(r: AutoSearchResult) {
+		const n = r.grabbed.length;
+		if (n === 0) toasts.push('info', 'No acceptable release found');
+		else toasts.push('success', n === 1 ? `Grabbed ${r.grabbed[0].release_title}` : `Grabbed ${n} releases`);
+	}
+	function autoSearchSeason(n: number) {
 		searching = `s${n}`;
-		searchSeason.mutate(
-			{ id, season: n },
-			{
-				onSuccess: (results) => {
-					const grabbed = results.filter((r) => r.grabbed).length;
-					toasts.push(grabbed ? 'success' : 'info', grabbed ? `Grabbed ${grabbed} release(s)` : 'No acceptable releases found');
-				},
-				onSettled: () => (searching = null)
-			}
+		autoSearch.mutate(
+			{ kind: 'season', tmdb_id: resolvedTMDBId!, season: n },
+			{ onSuccess: reportGrabs, onSettled: () => (searching = null) }
 		);
 	}
-	function autoSearchEpisode(id: number, e: Episode) {
+	function autoSearchEpisode(e: Episode) {
 		searching = `e${e.id}`;
-		searchEpisode.mutate(
-			{ episodeId: e.id, seriesId: id },
-			{
-				onSuccess: (r) =>
-					toasts.push(r.grabbed ? 'success' : 'info', r.grabbed ? `Grabbed ${r.grabbed.release_title}` : 'No acceptable release found'),
-				onSettled: () => (searching = null)
-			}
+		autoSearch.mutate(
+			{ kind: 'episode', tmdb_id: resolvedTMDBId!, season: e.season, episode: e.episode },
+			{ onSuccess: reportGrabs, onSettled: () => (searching = null) }
 		);
 	}
 </script>
@@ -183,7 +173,7 @@
 						what={season === 0 ? 'specials' : `season ${season}`}
 						onchange={(v) => setSeasonMonitored.mutate({ seriesId: librarySeriesId, season, monitored: v })}
 					/>
-					<Button size="sm" loading={searching === `s${season}`} onclick={() => autoSearchSeason(librarySeriesId, season)}>
+					<Button size="sm" loading={searching === `s${season}`} onclick={() => autoSearchSeason(season)}>
 						<Icon name="search" size={14} />Search
 					</Button>
 				{/if}
@@ -224,7 +214,7 @@
 									what={episodeCode(lib.season, lib.episode)}
 									onchange={(v) => setEpisodeMonitored.mutate({ seriesId: librarySeriesId, episodeId: lib.id, monitored: v })}
 								/>
-								<Button size="sm" loading={searching === `e${lib.id}`} onclick={() => autoSearchEpisode(librarySeriesId, lib)}>
+								<Button size="sm" loading={searching === `e${lib.id}`} onclick={() => autoSearchEpisode(lib)}>
 									<Icon name="search" size={14} />Search
 								</Button>
 							{/if}

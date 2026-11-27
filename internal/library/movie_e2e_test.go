@@ -44,7 +44,7 @@ func TestMovieEndToEnd(t *testing.T) {
 	}
 
 	// Manual search shows the ranking and the broken indexer's failure.
-	res, err := svc.Acquire.SearchMovie(ctx, movie.ID, "")
+	res, err := svc.Acquire.Search(ctx, acquire.MovieTarget(movie.TMDBID), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,17 +58,17 @@ func TestMovieEndToEnd(t *testing.T) {
 		t.Error("broken indexer's error was not recorded")
 	}
 
-	auto, err := svc.Acquire.AutoSearchMovie(ctx, movie.ID)
+	auto, err := svc.Acquire.AutoSearch(ctx, acquire.MovieTarget(movie.TMDBID))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if auto.Grabbed == nil || auto.Grabbed.Quality != "Bluray-1080p" {
+	if len(auto.Grabbed) != 1 || auto.Grabbed[0].Quality != "Bluray-1080p" {
 		t.Fatalf("auto search = %+v", auto)
 	}
 	if m, _ := svc.Media.Movie(ctx, movie.ID); m.Status != media.MovieDownloading {
 		t.Errorf("status while downloading = %s", m.Status)
 	}
-	if _, err := svc.Acquire.GrabMovieRelease(ctx, movie.ID, res.Releases[0]); err == nil {
+	if _, err := svc.Acquire.Grab(ctx, acquire.MovieTarget(movie.TMDBID), res.Releases[0]); err == nil {
 		t.Error("grabbing the same torrent twice succeeded")
 	}
 	// A settings change mid-download restarts the engine; the download resumes.

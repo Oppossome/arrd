@@ -4,8 +4,12 @@ SELECT * FROM downloads ORDER BY added_at DESC, id DESC;
 -- name: ListDownloadsByStatus :many
 SELECT * FROM downloads WHERE status = @status ORDER BY id;
 
+-- Downloads for a movie: grabbed for it, or a pack expected to contain it.
 -- name: ListDownloadsForMovie :many
-SELECT * FROM downloads WHERE movie_id = @movie_id ORDER BY id DESC;
+SELECT d.* FROM downloads d
+WHERE d.movie_id = @movie_id
+   OR d.id IN (SELECT di.download_id FROM download_items di WHERE di.movie_id = @movie_id)
+ORDER BY d.id DESC;
 
 -- name: GetDownload :one
 SELECT * FROM downloads WHERE id = @id;
@@ -54,3 +58,26 @@ UPDATE downloads SET paused = @paused WHERE id = @id;
 
 -- name: CountActiveDownloads :one
 SELECT COUNT(*) FROM downloads WHERE status = 'downloading';
+
+-- name: AddDownloadItem :exec
+INSERT INTO download_items (download_id, movie_id, episode_id) VALUES (@download_id, @movie_id, @episode_id);
+
+-- Movies a download is expected to contain.
+-- name: ListDownloadItemMovies :many
+SELECT m.* FROM movies m
+JOIN download_items di ON di.movie_id = m.id
+WHERE di.download_id = @download_id
+ORDER BY m.year, m.title;
+
+-- Episodes a download is expected to contain.
+-- name: ListDownloadItemEpisodes :many
+SELECT e.* FROM episodes e
+JOIN download_items di ON di.episode_id = e.id
+WHERE di.download_id = @download_id
+ORDER BY e.season, e.episode;
+
+-- Movies and episodes in a download that is downloading or awaiting import.
+-- name: ListActiveItemIDs :many
+SELECT DISTINCT di.movie_id, di.episode_id FROM download_items di
+JOIN downloads d ON d.id = di.download_id
+WHERE d.status IN ('downloading', 'completed');

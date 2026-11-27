@@ -34,13 +34,21 @@
 
 {#if item}
 	{#if kind === 'movies' && ondownload}
-		<Button variant="primary" onclick={() => ondownload({ title: item.title, source: { kind: 'discoverMovie', tmdbId } })}>
+		{@const collection = movie.data?.collection}
+		<Button variant="primary" onclick={() => ondownload({ title: item.title, target: { kind: 'movie', tmdb_id: tmdbId } })}>
 			<Icon name="download" />Download
 		</Button>
+		{#if collection}
+			<Button
+				onclick={() => ondownload({ title: `${collection.name} · Movie packs`, target: { kind: 'collection', tmdb_id: tmdbId } })}
+			>
+				<Icon name="download" />Download collection
+			</Button>
+		{/if}
 	{:else if kind === 'series' && ondownload}
 		<Button
 			variant="primary"
-			onclick={() => ondownload({ title: `${item.title} · Whole series`, source: { kind: 'discoverSeries', tmdbId } })}
+			onclick={() => ondownload({ title: `${item.title} · Whole series`, target: { kind: 'series', tmdb_id: tmdbId } })}
 		>
 			<Icon name="download" />Download series
 		</Button>

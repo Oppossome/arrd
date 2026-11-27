@@ -215,6 +215,33 @@ func (e PeerSource) Valid() bool {
 	}
 }
 
+// Defines values for ReleaseTargetKind.
+const (
+	ReleaseTargetKindCollection ReleaseTargetKind = "collection"
+	ReleaseTargetKindEpisode    ReleaseTargetKind = "episode"
+	ReleaseTargetKindMovie      ReleaseTargetKind = "movie"
+	ReleaseTargetKindSeason     ReleaseTargetKind = "season"
+	ReleaseTargetKindSeries     ReleaseTargetKind = "series"
+)
+
+// Valid indicates whether the value is a known member of the ReleaseTargetKind enum.
+func (e ReleaseTargetKind) Valid() bool {
+	switch e {
+	case ReleaseTargetKindCollection:
+		return true
+	case ReleaseTargetKindEpisode:
+		return true
+	case ReleaseTargetKindMovie:
+		return true
+	case ReleaseTargetKindSeason:
+		return true
+	case ReleaseTargetKindSeries:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SeriesList.
 const (
 	SeriesListAiringToday SeriesList = "airing_today"
@@ -299,9 +326,15 @@ type AddSeriesRequest struct {
 	TMDBID int64 `json:"tmdb_id"`
 }
 
+// AutoSearchRequest defines model for AutoSearchRequest.
+type AutoSearchRequest struct {
+	// Target What a release is wanted for, by TMDB id, whether or not the title is in the library.
+	Target ReleaseTarget `json:"target"`
+}
+
 // AutoSearchResult defines model for AutoSearchResult.
 type AutoSearchResult struct {
-	Grabbed            *Download        `json:"grabbed,omitempty"`
+	Grabbed            []Download       `json:"grabbed"`
 	IndexerFailures    []IndexerFailure `json:"indexer_failures"`
 	ReleasesConsidered int              `json:"releases_considered"`
 }
@@ -357,6 +390,9 @@ type Download struct {
 	IndexerID    *int64    `json:"indexer_id,omitempty"`
 	InfoHash     string    `json:"info_hash"`
 	MovieID      *int64    `json:"movie_id,omitempty"`
+
+	// Movies The movies of a multi-movie pack, as "Title (Year)".
+	Movies *[]string `json:"movies,omitempty"`
 
 	// Paused Transfers are stopped; only set while status is downloading.
 	Paused       bool           `json:"paused"`
@@ -429,6 +465,15 @@ type GeneralSettingsInput struct {
 type Genre struct {
 	ID   int64  `json:"id"`
 	Name string `json:"name"`
+}
+
+// GrabRequest defines model for GrabRequest.
+type GrabRequest struct {
+	// Release A release to grab, as returned by a search. Only title and indexer_id are needed.
+	Release ReleaseInput `json:"release"`
+
+	// Target What a release is wanted for, by TMDB id, whether or not the title is in the library.
+	Target ReleaseTarget `json:"target"`
 }
 
 // Health defines model for Health.
@@ -570,6 +615,9 @@ type LookupEpisode struct {
 // LookupMovie A TMDB lookup result (not yet in the library).
 type LookupMovie struct {
 	BackdropPath *string `json:"backdrop_path,omitempty"`
+
+	// Collection The TMDB collection (franchise) a movie belongs to. Only the single-movie lookup fills it.
+	Collection *MovieCollection `json:"collection,omitempty"`
 
 	// Extras Detail-page information. Only returned when fetching a single title, not in lists or searches.
 	Extras *MediaExtras `json:"extras,omitempty"`
@@ -720,6 +768,12 @@ type MovieBrowsePage struct {
 	TotalPages int           `json:"total_pages"`
 }
 
+// MovieCollection The TMDB collection (franchise) a movie belongs to. Only the single-movie lookup fills it.
+type MovieCollection struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
 // MovieList One of TMDB's curated movie lists (trending is this week's).
 type MovieList string
 
@@ -864,8 +918,11 @@ type ReleaseInput struct {
 	InfoHash       *string `json:"info_hash,omitempty"`
 
 	// LastSeason The last season of a multi-season pack; season is the first.
-	LastSeason  *int       `json:"last_season,omitempty"`
-	MagnetURI   *string    `json:"magnet_uri,omitempty"`
+	LastSeason *int    `json:"last_season,omitempty"`
+	MagnetURI  *string `json:"magnet_uri,omitempty"`
+
+	// MoviePack A release of several movies of one collection ("Trilogy", "Collection", "2011-2015").
+	MoviePack   *bool      `json:"movie_pack,omitempty"`
 	Peers       *int       `json:"peers,omitempty"`
 	PublishDate *time.Time `json:"publish_date,omitempty"`
 	Quality     *string    `json:"quality,omitempty"`
@@ -891,8 +948,11 @@ type ReleaseResult struct {
 	InfoHash       *string `json:"info_hash,omitempty"`
 
 	// LastSeason The last season of a multi-season pack; season is the first.
-	LastSeason  *int      `json:"last_season,omitempty"`
-	MagnetURI   *string   `json:"magnet_uri,omitempty"`
+	LastSeason *int    `json:"last_season,omitempty"`
+	MagnetURI  *string `json:"magnet_uri,omitempty"`
+
+	// MoviePack A release of several movies of one collection ("Trilogy", "Collection", "2011-2015").
+	MoviePack   *bool     `json:"movie_pack,omitempty"`
 	Peers       int       `json:"peers"`
 	PublishDate time.Time `json:"publish_date"`
 	Quality     string    `json:"quality"`
@@ -904,6 +964,24 @@ type ReleaseResult struct {
 	Size        int64     `json:"size"`
 	Title       string    `json:"title"`
 }
+
+// ReleaseTarget What a release is wanted for, by TMDB id, whether or not the title is in the library.
+type ReleaseTarget struct {
+	// Episode Episode targets.
+	Episode *int `json:"episode,omitempty"`
+
+	// Kind movie: one movie. collection: multi-movie packs of the movie's TMDB collection. series: whole-series packs. season: a season pack or any wanted episode of the season. episode: one episode.
+	Kind ReleaseTargetKind `json:"kind"`
+
+	// Season Season and episode targets.
+	Season *int `json:"season,omitempty"`
+
+	// TMDBID The movie's (for a collection, any movie in it) or the series'.
+	TMDBID int64 `json:"tmdb_id"`
+}
+
+// ReleaseTargetKind movie: one movie. collection: multi-movie packs of the movie's TMDB collection. series: whole-series packs. season: a season pack or any wanted episode of the season. episode: one episode.
+type ReleaseTargetKind string
 
 // RootFolder defines model for RootFolder.
 type RootFolder struct {
@@ -1195,9 +1273,6 @@ type BrowsePage = int
 // BrowseSort Browse order. top_rated only counts titles with enough votes; newest leaves out titles not yet released.
 type BrowseSort = DiscoverSort
 
-// EpisodeNumber defines model for EpisodeNumber.
-type EpisodeNumber = int
-
 // ID defines model for ID.
 type ID = int64
 
@@ -1229,12 +1304,6 @@ type BrowseMoviesParams struct {
 	Page *BrowsePage `form:"page,omitempty" json:"page,omitempty"`
 }
 
-// DiscoverMovieReleasesParams defines parameters for DiscoverMovieReleases.
-type DiscoverMovieReleasesParams struct {
-	// Q Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for.
-	Q *ReleaseQuery `form:"q,omitempty" json:"q,omitempty"`
-}
-
 // BrowseSeriesParams defines parameters for BrowseSeries.
 type BrowseSeriesParams struct {
 	// Genre TMDB genre ids; a title matches when it has any of them. Every genre when absent.
@@ -1246,30 +1315,6 @@ type BrowseSeriesParams struct {
 
 	// Page TMDB serves at most 500 pages.
 	Page *BrowsePage `form:"page,omitempty" json:"page,omitempty"`
-}
-
-// DiscoverSeriesReleasesParams defines parameters for DiscoverSeriesReleases.
-type DiscoverSeriesReleasesParams struct {
-	// Q Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for.
-	Q *ReleaseQuery `form:"q,omitempty" json:"q,omitempty"`
-}
-
-// DiscoverEpisodeReleasesParams defines parameters for DiscoverEpisodeReleases.
-type DiscoverEpisodeReleasesParams struct {
-	// Q Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for.
-	Q *ReleaseQuery `form:"q,omitempty" json:"q,omitempty"`
-}
-
-// DiscoverSeasonReleasesParams defines parameters for DiscoverSeasonReleases.
-type DiscoverSeasonReleasesParams struct {
-	// Q Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for.
-	Q *ReleaseQuery `form:"q,omitempty" json:"q,omitempty"`
-}
-
-// EpisodeReleasesParams defines parameters for EpisodeReleases.
-type EpisodeReleasesParams struct {
-	// Q Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for.
-	Q *ReleaseQuery `form:"q,omitempty" json:"q,omitempty"`
 }
 
 // ListDirsParams defines parameters for ListDirs.
@@ -1291,12 +1336,6 @@ type LookupMoviesParams struct {
 	Lang *BrowseLanguage `form:"lang,omitempty" json:"lang,omitempty"`
 }
 
-// MovieReleasesParams defines parameters for MovieReleases.
-type MovieReleasesParams struct {
-	// Q Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for.
-	Q *ReleaseQuery `form:"q,omitempty" json:"q,omitempty"`
-}
-
 // ListQueueParams defines parameters for ListQueue.
 type ListQueueParams struct {
 	MovieID  *int64 `form:"movie_id,omitempty" json:"movie_id,omitempty"`
@@ -1307,6 +1346,21 @@ type ListQueueParams struct {
 type RemoveQueueItemParams struct {
 	// DeleteData Also delete the downloaded data.
 	DeleteData *bool `form:"delete_data,omitempty" json:"delete_data,omitempty"`
+}
+
+// SearchReleasesParams defines parameters for SearchReleases.
+type SearchReleasesParams struct {
+	Kind   ReleaseTargetKind `form:"kind" json:"kind"`
+	TMDBID int64             `form:"tmdb_id" json:"tmdb_id"`
+
+	// Season Season and episode targets.
+	Season *int `form:"season,omitempty" json:"season,omitempty"`
+
+	// Episode Episode targets.
+	Episode *int `form:"episode,omitempty" json:"episode,omitempty"`
+
+	// Q Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for.
+	Q *ReleaseQuery `form:"q,omitempty" json:"q,omitempty"`
 }
 
 // ListRootFoldersParams defines parameters for ListRootFolders.
@@ -1328,32 +1382,14 @@ type LookupSeriesParams struct {
 	Lang *BrowseLanguage `form:"lang,omitempty" json:"lang,omitempty"`
 }
 
-// SeriesReleasesParams defines parameters for SeriesReleases.
-type SeriesReleasesParams struct {
-	// Q Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for.
-	Q *ReleaseQuery `form:"q,omitempty" json:"q,omitempty"`
-}
-
-// SeasonReleasesParams defines parameters for SeasonReleases.
-type SeasonReleasesParams struct {
-	// Q Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for.
-	Q *ReleaseQuery `form:"q,omitempty" json:"q,omitempty"`
-}
-
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
-
-// DiscoverGrabMovieJSONRequestBody defines body for DiscoverGrabMovie for application/json ContentType.
-type DiscoverGrabMovieJSONRequestBody = ReleaseInput
-
-// DiscoverGrabSeriesJSONRequestBody defines body for DiscoverGrabSeries for application/json ContentType.
-type DiscoverGrabSeriesJSONRequestBody = ReleaseInput
 
 // UpdateEpisodeJSONRequestBody defines body for UpdateEpisode for application/json ContentType.
 type UpdateEpisodeJSONRequestBody = MonitoredRequest
 
-// GrabEpisodeJSONRequestBody defines body for GrabEpisode for application/json ContentType.
-type GrabEpisodeJSONRequestBody = ReleaseInput
+// GrabReleaseJSONRequestBody defines body for GrabRelease for application/json ContentType.
+type GrabReleaseJSONRequestBody = GrabRequest
 
 // CreateIndexerJSONRequestBody defines body for CreateIndexer for application/json ContentType.
 type CreateIndexerJSONRequestBody = IndexerInput
@@ -1373,20 +1409,17 @@ type AddMovieJSONRequestBody = AddMovieRequest
 // UpdateMovieJSONRequestBody defines body for UpdateMovie for application/json ContentType.
 type UpdateMovieJSONRequestBody = UpdateMovieRequest
 
-// GrabMovieJSONRequestBody defines body for GrabMovie for application/json ContentType.
-type GrabMovieJSONRequestBody = ReleaseInput
-
 // CreateRootFolderJSONRequestBody defines body for CreateRootFolder for application/json ContentType.
 type CreateRootFolderJSONRequestBody = CreateRootFolderRequest
+
+// AutoSearchJSONRequestBody defines body for AutoSearch for application/json ContentType.
+type AutoSearchJSONRequestBody = AutoSearchRequest
 
 // AddSeriesJSONRequestBody defines body for AddSeries for application/json ContentType.
 type AddSeriesJSONRequestBody = AddSeriesRequest
 
 // UpdateSeriesJSONRequestBody defines body for UpdateSeries for application/json ContentType.
 type UpdateSeriesJSONRequestBody = UpdateSeriesRequest
-
-// GrabSeriesJSONRequestBody defines body for GrabSeries for application/json ContentType.
-type GrabSeriesJSONRequestBody = ReleaseInput
 
 // UpdateSeasonJSONRequestBody defines body for UpdateSeason for application/json ContentType.
 type UpdateSeasonJSONRequestBody = MonitoredRequest
@@ -1457,14 +1490,8 @@ type ServerInterface interface {
 	// (GET /api/v1/discover/movies/{tmdbId})
 	DiscoverMovie(w http.ResponseWriter, r *http.Request, tmdbid TMDBID)
 
-	// (POST /api/v1/discover/movies/{tmdbId}/grab)
-	DiscoverGrabMovie(w http.ResponseWriter, r *http.Request, tmdbid TMDBID)
-
 	// (GET /api/v1/discover/movies/{tmdbId}/recommendations)
 	MoviesLike(w http.ResponseWriter, r *http.Request, tmdbid TMDBID)
-
-	// (GET /api/v1/discover/movies/{tmdbId}/releases)
-	DiscoverMovieReleases(w http.ResponseWriter, r *http.Request, tmdbid TMDBID, params DiscoverMovieReleasesParams)
 
 	// (GET /api/v1/discover/series/browse)
 	BrowseSeries(w http.ResponseWriter, r *http.Request, params BrowseSeriesParams)
@@ -1478,38 +1505,20 @@ type ServerInterface interface {
 	// (GET /api/v1/discover/series/{tmdbId})
 	DiscoverSeries(w http.ResponseWriter, r *http.Request, tmdbid TMDBID)
 
-	// (POST /api/v1/discover/series/{tmdbId}/grab)
-	DiscoverGrabSeries(w http.ResponseWriter, r *http.Request, tmdbid TMDBID)
-
 	// (GET /api/v1/discover/series/{tmdbId}/recommendations)
 	SeriesLike(w http.ResponseWriter, r *http.Request, tmdbid TMDBID)
-
-	// (GET /api/v1/discover/series/{tmdbId}/releases)
-	DiscoverSeriesReleases(w http.ResponseWriter, r *http.Request, tmdbid TMDBID, params DiscoverSeriesReleasesParams)
 
 	// (GET /api/v1/discover/series/{tmdbId}/seasons/{season})
 	DiscoverSeason(w http.ResponseWriter, r *http.Request, tmdbid TMDBID, season Season)
 
-	// (GET /api/v1/discover/series/{tmdbId}/seasons/{season}/episodes/{episode}/releases)
-	DiscoverEpisodeReleases(w http.ResponseWriter, r *http.Request, tmdbid TMDBID, season Season, episode EpisodeNumber, params DiscoverEpisodeReleasesParams)
-
-	// (GET /api/v1/discover/series/{tmdbId}/seasons/{season}/releases)
-	DiscoverSeasonReleases(w http.ResponseWriter, r *http.Request, tmdbid TMDBID, season Season, params DiscoverSeasonReleasesParams)
-
 	// (PUT /api/v1/episodes/{id})
 	UpdateEpisode(w http.ResponseWriter, r *http.Request, id ID)
 
-	// (POST /api/v1/episodes/{id}/grab)
-	GrabEpisode(w http.ResponseWriter, r *http.Request, id ID)
-
-	// (GET /api/v1/episodes/{id}/releases)
-	EpisodeReleases(w http.ResponseWriter, r *http.Request, id ID, params EpisodeReleasesParams)
-
-	// (POST /api/v1/episodes/{id}/search)
-	SearchEpisode(w http.ResponseWriter, r *http.Request, id ID)
-
 	// (GET /api/v1/fs/dirs)
 	ListDirs(w http.ResponseWriter, r *http.Request, params ListDirsParams)
+
+	// (POST /api/v1/grabs)
+	GrabRelease(w http.ResponseWriter, r *http.Request)
 
 	// (GET /api/v1/health)
 	Health(w http.ResponseWriter, r *http.Request)
@@ -1583,15 +1592,6 @@ type ServerInterface interface {
 	// (PUT /api/v1/movies/{id})
 	UpdateMovie(w http.ResponseWriter, r *http.Request, id ID)
 
-	// (POST /api/v1/movies/{id}/grab)
-	GrabMovie(w http.ResponseWriter, r *http.Request, id ID)
-
-	// (GET /api/v1/movies/{id}/releases)
-	MovieReleases(w http.ResponseWriter, r *http.Request, id ID, params MovieReleasesParams)
-
-	// (POST /api/v1/movies/{id}/search)
-	SearchMovie(w http.ResponseWriter, r *http.Request, id ID)
-
 	// (GET /api/v1/queue)
 	ListQueue(w http.ResponseWriter, r *http.Request, params ListQueueParams)
 
@@ -1610,6 +1610,9 @@ type ServerInterface interface {
 	// (POST /api/v1/queue/{id}/resume)
 	ResumeDownload(w http.ResponseWriter, r *http.Request, id ID)
 
+	// (GET /api/v1/releases)
+	SearchReleases(w http.ResponseWriter, r *http.Request, params SearchReleasesParams)
+
 	// (GET /api/v1/rootfolders)
 	ListRootFolders(w http.ResponseWriter, r *http.Request, params ListRootFoldersParams)
 
@@ -1624,6 +1627,9 @@ type ServerInterface interface {
 
 	// (POST /api/v1/rss/sync)
 	RSSSync(w http.ResponseWriter, r *http.Request)
+
+	// (POST /api/v1/searches)
+	AutoSearch(w http.ResponseWriter, r *http.Request)
 
 	// (GET /api/v1/series)
 	ListSeries(w http.ResponseWriter, r *http.Request)
@@ -1646,26 +1652,11 @@ type ServerInterface interface {
 	// (GET /api/v1/series/{id}/episodes)
 	SeriesEpisodes(w http.ResponseWriter, r *http.Request, id ID)
 
-	// (POST /api/v1/series/{id}/grab)
-	GrabSeries(w http.ResponseWriter, r *http.Request, id ID)
-
 	// (POST /api/v1/series/{id}/refresh)
 	RefreshSeries(w http.ResponseWriter, r *http.Request, id ID)
 
-	// (GET /api/v1/series/{id}/releases)
-	SeriesReleases(w http.ResponseWriter, r *http.Request, id ID, params SeriesReleasesParams)
-
-	// (POST /api/v1/series/{id}/search)
-	SearchSeriesWanted(w http.ResponseWriter, r *http.Request, id ID)
-
 	// (PUT /api/v1/series/{id}/seasons/{season})
 	UpdateSeason(w http.ResponseWriter, r *http.Request, id ID, season Season)
-
-	// (GET /api/v1/series/{id}/seasons/{season}/releases)
-	SeasonReleases(w http.ResponseWriter, r *http.Request, id ID, season Season, params SeasonReleasesParams)
-
-	// (POST /api/v1/series/{id}/seasons/{season}/search)
-	SearchSeason(w http.ResponseWriter, r *http.Request, id ID, season Season)
 
 	// (POST /api/v1/settings/api-key/regenerate)
 	RegenerateAPIKey(w http.ResponseWriter, r *http.Request)
@@ -1977,32 +1968,6 @@ func (siw *ServerInterfaceWrapper) DiscoverMovie(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
-// DiscoverGrabMovie operation middleware
-func (siw *ServerInterfaceWrapper) DiscoverGrabMovie(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "tmdbId" -------------
-	var tmdbid TMDBID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "tmdbId", r.PathValue("tmdbId"), &tmdbid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tmdbId", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DiscoverGrabMovie(w, r, tmdbid)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // MoviesLike operation middleware
 func (siw *ServerInterfaceWrapper) MoviesLike(w http.ResponseWriter, r *http.Request) {
 
@@ -2020,48 +1985,6 @@ func (siw *ServerInterfaceWrapper) MoviesLike(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.MoviesLike(w, r, tmdbid)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// DiscoverMovieReleases operation middleware
-func (siw *ServerInterfaceWrapper) DiscoverMovieReleases(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "tmdbId" -------------
-	var tmdbid TMDBID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "tmdbId", r.PathValue("tmdbId"), &tmdbid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tmdbId", Err: err})
-		return
-	}
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params DiscoverMovieReleasesParams
-
-	// ------------- Optional query parameter "q" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DiscoverMovieReleases(w, r, tmdbid, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2197,32 +2120,6 @@ func (siw *ServerInterfaceWrapper) DiscoverSeries(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
-// DiscoverGrabSeries operation middleware
-func (siw *ServerInterfaceWrapper) DiscoverGrabSeries(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "tmdbId" -------------
-	var tmdbid TMDBID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "tmdbId", r.PathValue("tmdbId"), &tmdbid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tmdbId", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DiscoverGrabSeries(w, r, tmdbid)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // SeriesLike operation middleware
 func (siw *ServerInterfaceWrapper) SeriesLike(w http.ResponseWriter, r *http.Request) {
 
@@ -2240,48 +2137,6 @@ func (siw *ServerInterfaceWrapper) SeriesLike(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SeriesLike(w, r, tmdbid)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// DiscoverSeriesReleases operation middleware
-func (siw *ServerInterfaceWrapper) DiscoverSeriesReleases(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "tmdbId" -------------
-	var tmdbid TMDBID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "tmdbId", r.PathValue("tmdbId"), &tmdbid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tmdbId", Err: err})
-		return
-	}
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params DiscoverSeriesReleasesParams
-
-	// ------------- Optional query parameter "q" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DiscoverSeriesReleases(w, r, tmdbid, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2326,117 +2181,6 @@ func (siw *ServerInterfaceWrapper) DiscoverSeason(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
-// DiscoverEpisodeReleases operation middleware
-func (siw *ServerInterfaceWrapper) DiscoverEpisodeReleases(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "tmdbId" -------------
-	var tmdbid TMDBID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "tmdbId", r.PathValue("tmdbId"), &tmdbid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tmdbId", Err: err})
-		return
-	}
-
-	// ------------- Path parameter "season" -------------
-	var season Season
-
-	err = runtime.BindStyledParameterWithOptions("simple", "season", r.PathValue("season"), &season, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "season", Err: err})
-		return
-	}
-
-	// ------------- Path parameter "episode" -------------
-	var episode EpisodeNumber
-
-	err = runtime.BindStyledParameterWithOptions("simple", "episode", r.PathValue("episode"), &episode, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "episode", Err: err})
-		return
-	}
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params DiscoverEpisodeReleasesParams
-
-	// ------------- Optional query parameter "q" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DiscoverEpisodeReleases(w, r, tmdbid, season, episode, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// DiscoverSeasonReleases operation middleware
-func (siw *ServerInterfaceWrapper) DiscoverSeasonReleases(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "tmdbId" -------------
-	var tmdbid TMDBID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "tmdbId", r.PathValue("tmdbId"), &tmdbid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tmdbId", Err: err})
-		return
-	}
-
-	// ------------- Path parameter "season" -------------
-	var season Season
-
-	err = runtime.BindStyledParameterWithOptions("simple", "season", r.PathValue("season"), &season, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "season", Err: err})
-		return
-	}
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params DiscoverSeasonReleasesParams
-
-	// ------------- Optional query parameter "q" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DiscoverSeasonReleases(w, r, tmdbid, season, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // UpdateEpisode operation middleware
 func (siw *ServerInterfaceWrapper) UpdateEpisode(w http.ResponseWriter, r *http.Request) {
 
@@ -2454,100 +2198,6 @@ func (siw *ServerInterfaceWrapper) UpdateEpisode(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateEpisode(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GrabEpisode operation middleware
-func (siw *ServerInterfaceWrapper) GrabEpisode(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id ID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GrabEpisode(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// EpisodeReleases operation middleware
-func (siw *ServerInterfaceWrapper) EpisodeReleases(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id ID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params EpisodeReleasesParams
-
-	// ------------- Optional query parameter "q" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.EpisodeReleases(w, r, id, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// SearchEpisode operation middleware
-func (siw *ServerInterfaceWrapper) SearchEpisode(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id ID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SearchEpisode(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2581,6 +2231,20 @@ func (siw *ServerInterfaceWrapper) ListDirs(w http.ResponseWriter, r *http.Reque
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListDirs(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GrabRelease operation middleware
+func (siw *ServerInterfaceWrapper) GrabRelease(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GrabRelease(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3128,100 +2792,6 @@ func (siw *ServerInterfaceWrapper) UpdateMovie(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
-// GrabMovie operation middleware
-func (siw *ServerInterfaceWrapper) GrabMovie(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id ID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GrabMovie(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// MovieReleases operation middleware
-func (siw *ServerInterfaceWrapper) MovieReleases(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id ID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params MovieReleasesParams
-
-	// ------------- Optional query parameter "q" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.MovieReleases(w, r, id, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// SearchMovie operation middleware
-func (siw *ServerInterfaceWrapper) SearchMovie(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id ID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SearchMovie(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // ListQueue operation middleware
 func (siw *ServerInterfaceWrapper) ListQueue(w http.ResponseWriter, r *http.Request) {
 
@@ -3402,6 +2972,91 @@ func (siw *ServerInterfaceWrapper) ResumeDownload(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// SearchReleases operation middleware
+func (siw *ServerInterfaceWrapper) SearchReleases(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SearchReleasesParams
+
+	// ------------- Required query parameter "kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "kind", r.URL.Query(), &params.Kind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "tmdb_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "tmdb_id", r.URL.Query(), &params.TMDBID, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tmdb_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tmdb_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "season" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "season", r.URL.Query(), &params.Season, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "season"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "season", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "episode" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "episode", r.URL.Query(), &params.Episode, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "episode"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "episode", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SearchReleases(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListRootFolders operation middleware
 func (siw *ServerInterfaceWrapper) ListRootFolders(w http.ResponseWriter, r *http.Request) {
 
@@ -3506,6 +3161,20 @@ func (siw *ServerInterfaceWrapper) RSSSync(w http.ResponseWriter, r *http.Reques
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RSSSync(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AutoSearch operation middleware
+func (siw *ServerInterfaceWrapper) AutoSearch(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AutoSearch(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3719,32 +3388,6 @@ func (siw *ServerInterfaceWrapper) SeriesEpisodes(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
-// GrabSeries operation middleware
-func (siw *ServerInterfaceWrapper) GrabSeries(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id ID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GrabSeries(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // RefreshSeries operation middleware
 func (siw *ServerInterfaceWrapper) RefreshSeries(w http.ResponseWriter, r *http.Request) {
 
@@ -3762,74 +3405,6 @@ func (siw *ServerInterfaceWrapper) RefreshSeries(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RefreshSeries(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// SeriesReleases operation middleware
-func (siw *ServerInterfaceWrapper) SeriesReleases(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id ID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params SeriesReleasesParams
-
-	// ------------- Optional query parameter "q" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SeriesReleases(w, r, id, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// SearchSeriesWanted operation middleware
-func (siw *ServerInterfaceWrapper) SearchSeriesWanted(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id ID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SearchSeriesWanted(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3865,92 +3440,6 @@ func (siw *ServerInterfaceWrapper) UpdateSeason(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateSeason(w, r, id, season)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// SeasonReleases operation middleware
-func (siw *ServerInterfaceWrapper) SeasonReleases(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id ID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	// ------------- Path parameter "season" -------------
-	var season Season
-
-	err = runtime.BindStyledParameterWithOptions("simple", "season", r.PathValue("season"), &season, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "season", Err: err})
-		return
-	}
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params SeasonReleasesParams
-
-	// ------------- Optional query parameter "q" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SeasonReleases(w, r, id, season, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// SearchSeason operation middleware
-func (siw *ServerInterfaceWrapper) SearchSeason(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id ID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	// ------------- Path parameter "season" -------------
-	var season Season
-
-	err = runtime.BindStyledParameterWithOptions("simple", "season", r.PathValue("season"), &season, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "season", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SearchSeason(w, r, id, season)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4463,9 +3952,6 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/movies/{id}", wrapper.DeleteMovie)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/movies/{id}", wrapper.GetMovie)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/movies/{id}", wrapper.UpdateMovie)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/movies/{id}/releases", wrapper.MovieReleases)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/movies/{id}/search", wrapper.SearchMovie)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/movies/{id}/grab", wrapper.GrabMovie)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/discover/lists/movies/{list}", wrapper.MovieList)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/discover/languages", wrapper.DiscoverLanguages)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/discover/movies/genres", wrapper.MovieGenres)
@@ -4473,8 +3959,6 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/discover/movies/recommendations", wrapper.MovieRecommendations)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/discover/movies/{tmdbId}", wrapper.DiscoverMovie)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/discover/movies/{tmdbId}/recommendations", wrapper.MoviesLike)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/discover/movies/{tmdbId}/releases", wrapper.DiscoverMovieReleases)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/discover/movies/{tmdbId}/grab", wrapper.DiscoverGrabMovie)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/discover/lists/series/{list}", wrapper.SeriesList)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/discover/series/genres", wrapper.SeriesGenres)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/discover/series/browse", wrapper.BrowseSeries)
@@ -4482,10 +3966,6 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/discover/series/{tmdbId}", wrapper.DiscoverSeries)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/discover/series/{tmdbId}/recommendations", wrapper.SeriesLike)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/discover/series/{tmdbId}/seasons/{season}", wrapper.DiscoverSeason)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/discover/series/{tmdbId}/seasons/{season}/episodes/{episode}/releases", wrapper.DiscoverEpisodeReleases)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/discover/series/{tmdbId}/seasons/{season}/releases", wrapper.DiscoverSeasonReleases)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/discover/series/{tmdbId}/releases", wrapper.DiscoverSeriesReleases)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/discover/series/{tmdbId}/grab", wrapper.DiscoverGrabSeries)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/series/lookup", wrapper.LookupSeries)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/series", wrapper.ListSeries)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/series", wrapper.AddSeries)
@@ -4494,16 +3974,11 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/series/{id}", wrapper.UpdateSeries)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/series/{id}/refresh", wrapper.RefreshSeries)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/series/{id}/episodes", wrapper.SeriesEpisodes)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/series/{id}/search", wrapper.SearchSeriesWanted)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/series/{id}/releases", wrapper.SeriesReleases)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/series/{id}/grab", wrapper.GrabSeries)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/series/{id}/seasons/{season}", wrapper.UpdateSeason)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/series/{id}/seasons/{season}/releases", wrapper.SeasonReleases)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/series/{id}/seasons/{season}/search", wrapper.SearchSeason)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/episodes/{id}", wrapper.UpdateEpisode)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/episodes/{id}/releases", wrapper.EpisodeReleases)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/episodes/{id}/search", wrapper.SearchEpisode)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/episodes/{id}/grab", wrapper.GrabEpisode)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/releases", wrapper.SearchReleases)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/grabs", wrapper.GrabRelease)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/searches", wrapper.AutoSearch)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/rss/sync", wrapper.RSSSync)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/queue", wrapper.ListQueue)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/queue/{id}", wrapper.RemoveQueueItem)
@@ -4918,46 +4393,6 @@ func (response DiscoverMoviedefaultJSONResponse) VisitDiscoverMovieResponse(w ht
 	return err
 }
 
-type DiscoverGrabMovieRequestObject struct {
-	TMDBID TMDBID `json:"tmdbId"`
-	Body   *DiscoverGrabMovieJSONRequestBody
-}
-
-type DiscoverGrabMovieResponseObject interface {
-	VisitDiscoverGrabMovieResponse(w http.ResponseWriter) error
-}
-
-type DiscoverGrabMovie201JSONResponse Download
-
-func (response DiscoverGrabMovie201JSONResponse) VisitDiscoverGrabMovieResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(201)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type DiscoverGrabMoviedefaultJSONResponse struct {
-	Body       Error
-	StatusCode int
-}
-
-func (response DiscoverGrabMoviedefaultJSONResponse) VisitDiscoverGrabMovieResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(response.StatusCode)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
 type MoviesLikeRequestObject struct {
 	TMDBID TMDBID `json:"tmdbId"`
 }
@@ -4986,46 +4421,6 @@ type MoviesLikedefaultJSONResponse struct {
 }
 
 func (response MoviesLikedefaultJSONResponse) VisitMoviesLikeResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(response.StatusCode)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type DiscoverMovieReleasesRequestObject struct {
-	TMDBID TMDBID `json:"tmdbId"`
-	Params DiscoverMovieReleasesParams
-}
-
-type DiscoverMovieReleasesResponseObject interface {
-	VisitDiscoverMovieReleasesResponse(w http.ResponseWriter) error
-}
-
-type DiscoverMovieReleases200JSONResponse SearchResult
-
-func (response DiscoverMovieReleases200JSONResponse) VisitDiscoverMovieReleasesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type DiscoverMovieReleasesdefaultJSONResponse struct {
-	Body       Error
-	StatusCode int
-}
-
-func (response DiscoverMovieReleasesdefaultJSONResponse) VisitDiscoverMovieReleasesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
@@ -5191,46 +4586,6 @@ func (response DiscoverSeriesdefaultJSONResponse) VisitDiscoverSeriesResponse(w 
 	return err
 }
 
-type DiscoverGrabSeriesRequestObject struct {
-	TMDBID TMDBID `json:"tmdbId"`
-	Body   *DiscoverGrabSeriesJSONRequestBody
-}
-
-type DiscoverGrabSeriesResponseObject interface {
-	VisitDiscoverGrabSeriesResponse(w http.ResponseWriter) error
-}
-
-type DiscoverGrabSeries201JSONResponse Download
-
-func (response DiscoverGrabSeries201JSONResponse) VisitDiscoverGrabSeriesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(201)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type DiscoverGrabSeriesdefaultJSONResponse struct {
-	Body       Error
-	StatusCode int
-}
-
-func (response DiscoverGrabSeriesdefaultJSONResponse) VisitDiscoverGrabSeriesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(response.StatusCode)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
 type SeriesLikeRequestObject struct {
 	TMDBID TMDBID `json:"tmdbId"`
 }
@@ -5259,46 +4614,6 @@ type SeriesLikedefaultJSONResponse struct {
 }
 
 func (response SeriesLikedefaultJSONResponse) VisitSeriesLikeResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(response.StatusCode)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type DiscoverSeriesReleasesRequestObject struct {
-	TMDBID TMDBID `json:"tmdbId"`
-	Params DiscoverSeriesReleasesParams
-}
-
-type DiscoverSeriesReleasesResponseObject interface {
-	VisitDiscoverSeriesReleasesResponse(w http.ResponseWriter) error
-}
-
-type DiscoverSeriesReleases200JSONResponse SearchResult
-
-func (response DiscoverSeriesReleases200JSONResponse) VisitDiscoverSeriesReleasesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type DiscoverSeriesReleasesdefaultJSONResponse struct {
-	Body       Error
-	StatusCode int
-}
-
-func (response DiscoverSeriesReleasesdefaultJSONResponse) VisitDiscoverSeriesReleasesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
@@ -5350,89 +4665,6 @@ func (response DiscoverSeasondefaultJSONResponse) VisitDiscoverSeasonResponse(w 
 	return err
 }
 
-type DiscoverEpisodeReleasesRequestObject struct {
-	TMDBID  TMDBID        `json:"tmdbId"`
-	Season  Season        `json:"season"`
-	Episode EpisodeNumber `json:"episode"`
-	Params  DiscoverEpisodeReleasesParams
-}
-
-type DiscoverEpisodeReleasesResponseObject interface {
-	VisitDiscoverEpisodeReleasesResponse(w http.ResponseWriter) error
-}
-
-type DiscoverEpisodeReleases200JSONResponse SearchResult
-
-func (response DiscoverEpisodeReleases200JSONResponse) VisitDiscoverEpisodeReleasesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type DiscoverEpisodeReleasesdefaultJSONResponse struct {
-	Body       Error
-	StatusCode int
-}
-
-func (response DiscoverEpisodeReleasesdefaultJSONResponse) VisitDiscoverEpisodeReleasesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(response.StatusCode)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type DiscoverSeasonReleasesRequestObject struct {
-	TMDBID TMDBID `json:"tmdbId"`
-	Season Season `json:"season"`
-	Params DiscoverSeasonReleasesParams
-}
-
-type DiscoverSeasonReleasesResponseObject interface {
-	VisitDiscoverSeasonReleasesResponse(w http.ResponseWriter) error
-}
-
-type DiscoverSeasonReleases200JSONResponse SearchResult
-
-func (response DiscoverSeasonReleases200JSONResponse) VisitDiscoverSeasonReleasesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type DiscoverSeasonReleasesdefaultJSONResponse struct {
-	Body       Error
-	StatusCode int
-}
-
-func (response DiscoverSeasonReleasesdefaultJSONResponse) VisitDiscoverSeasonReleasesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(response.StatusCode)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
 type UpdateEpisodeRequestObject struct {
 	ID   ID `json:"id"`
 	Body *UpdateEpisodeJSONRequestBody
@@ -5473,125 +4705,6 @@ func (response UpdateEpisodedefaultJSONResponse) VisitUpdateEpisodeResponse(w ht
 	return err
 }
 
-type GrabEpisodeRequestObject struct {
-	ID   ID `json:"id"`
-	Body *GrabEpisodeJSONRequestBody
-}
-
-type GrabEpisodeResponseObject interface {
-	VisitGrabEpisodeResponse(w http.ResponseWriter) error
-}
-
-type GrabEpisode201JSONResponse Download
-
-func (response GrabEpisode201JSONResponse) VisitGrabEpisodeResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(201)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GrabEpisodedefaultJSONResponse struct {
-	Body       Error
-	StatusCode int
-}
-
-func (response GrabEpisodedefaultJSONResponse) VisitGrabEpisodeResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(response.StatusCode)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type EpisodeReleasesRequestObject struct {
-	ID     ID `json:"id"`
-	Params EpisodeReleasesParams
-}
-
-type EpisodeReleasesResponseObject interface {
-	VisitEpisodeReleasesResponse(w http.ResponseWriter) error
-}
-
-type EpisodeReleases200JSONResponse SearchResult
-
-func (response EpisodeReleases200JSONResponse) VisitEpisodeReleasesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type EpisodeReleasesdefaultJSONResponse struct {
-	Body       Error
-	StatusCode int
-}
-
-func (response EpisodeReleasesdefaultJSONResponse) VisitEpisodeReleasesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(response.StatusCode)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type SearchEpisodeRequestObject struct {
-	ID ID `json:"id"`
-}
-
-type SearchEpisodeResponseObject interface {
-	VisitSearchEpisodeResponse(w http.ResponseWriter) error
-}
-
-type SearchEpisode200JSONResponse AutoSearchResult
-
-func (response SearchEpisode200JSONResponse) VisitSearchEpisodeResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type SearchEpisodedefaultJSONResponse struct {
-	Body       Error
-	StatusCode int
-}
-
-func (response SearchEpisodedefaultJSONResponse) VisitSearchEpisodeResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(response.StatusCode)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
 type ListDirsRequestObject struct {
 	Params ListDirsParams
 }
@@ -5620,6 +4733,45 @@ type ListDirsdefaultJSONResponse struct {
 }
 
 func (response ListDirsdefaultJSONResponse) VisitListDirsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrabReleaseRequestObject struct {
+	Body *GrabReleaseJSONRequestBody
+}
+
+type GrabReleaseResponseObject interface {
+	VisitGrabReleaseResponse(w http.ResponseWriter) error
+}
+
+type GrabRelease201JSONResponse Download
+
+func (response GrabRelease201JSONResponse) VisitGrabReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrabReleasedefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response GrabReleasedefaultJSONResponse) VisitGrabReleaseResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
@@ -6567,125 +5719,6 @@ func (response UpdateMoviedefaultJSONResponse) VisitUpdateMovieResponse(w http.R
 	return err
 }
 
-type GrabMovieRequestObject struct {
-	ID   ID `json:"id"`
-	Body *GrabMovieJSONRequestBody
-}
-
-type GrabMovieResponseObject interface {
-	VisitGrabMovieResponse(w http.ResponseWriter) error
-}
-
-type GrabMovie201JSONResponse Download
-
-func (response GrabMovie201JSONResponse) VisitGrabMovieResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(201)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GrabMoviedefaultJSONResponse struct {
-	Body       Error
-	StatusCode int
-}
-
-func (response GrabMoviedefaultJSONResponse) VisitGrabMovieResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(response.StatusCode)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type MovieReleasesRequestObject struct {
-	ID     ID `json:"id"`
-	Params MovieReleasesParams
-}
-
-type MovieReleasesResponseObject interface {
-	VisitMovieReleasesResponse(w http.ResponseWriter) error
-}
-
-type MovieReleases200JSONResponse SearchResult
-
-func (response MovieReleases200JSONResponse) VisitMovieReleasesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type MovieReleasesdefaultJSONResponse struct {
-	Body       Error
-	StatusCode int
-}
-
-func (response MovieReleasesdefaultJSONResponse) VisitMovieReleasesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(response.StatusCode)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type SearchMovieRequestObject struct {
-	ID ID `json:"id"`
-}
-
-type SearchMovieResponseObject interface {
-	VisitSearchMovieResponse(w http.ResponseWriter) error
-}
-
-type SearchMovie200JSONResponse AutoSearchResult
-
-func (response SearchMovie200JSONResponse) VisitSearchMovieResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type SearchMoviedefaultJSONResponse struct {
-	Body       Error
-	StatusCode int
-}
-
-func (response SearchMoviedefaultJSONResponse) VisitSearchMovieResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(response.StatusCode)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
 type ListQueueRequestObject struct {
 	Params ListQueueParams
 }
@@ -6902,6 +5935,45 @@ func (response ResumeDownloaddefaultJSONResponse) VisitResumeDownloadResponse(w 
 	return err
 }
 
+type SearchReleasesRequestObject struct {
+	Params SearchReleasesParams
+}
+
+type SearchReleasesResponseObject interface {
+	VisitSearchReleasesResponse(w http.ResponseWriter) error
+}
+
+type SearchReleases200JSONResponse SearchResult
+
+func (response SearchReleases200JSONResponse) VisitSearchReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchReleasesdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response SearchReleasesdefaultJSONResponse) VisitSearchReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListRootFoldersRequestObject struct {
 	Params ListRootFoldersParams
 }
@@ -7073,6 +6145,45 @@ type RSSSyncdefaultJSONResponse struct {
 }
 
 func (response RSSSyncdefaultJSONResponse) VisitRSSSyncResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AutoSearchRequestObject struct {
+	Body *AutoSearchJSONRequestBody
+}
+
+type AutoSearchResponseObject interface {
+	VisitAutoSearchResponse(w http.ResponseWriter) error
+}
+
+type AutoSearch200JSONResponse AutoSearchResult
+
+func (response AutoSearch200JSONResponse) VisitAutoSearchResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AutoSearchdefaultJSONResponse struct {
+	Body       Error
+	StatusCode int
+}
+
+func (response AutoSearchdefaultJSONResponse) VisitAutoSearchResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
@@ -7351,46 +6462,6 @@ func (response SeriesEpisodesdefaultJSONResponse) VisitSeriesEpisodesResponse(w 
 	return err
 }
 
-type GrabSeriesRequestObject struct {
-	ID   ID `json:"id"`
-	Body *GrabSeriesJSONRequestBody
-}
-
-type GrabSeriesResponseObject interface {
-	VisitGrabSeriesResponse(w http.ResponseWriter) error
-}
-
-type GrabSeries201JSONResponse Download
-
-func (response GrabSeries201JSONResponse) VisitGrabSeriesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(201)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GrabSeriesdefaultJSONResponse struct {
-	Body       Error
-	StatusCode int
-}
-
-func (response GrabSeriesdefaultJSONResponse) VisitGrabSeriesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(response.StatusCode)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
 type RefreshSeriesRequestObject struct {
 	ID ID `json:"id"`
 }
@@ -7430,79 +6501,6 @@ func (response RefreshSeriesdefaultJSONResponse) VisitRefreshSeriesResponse(w ht
 	return err
 }
 
-type SeriesReleasesRequestObject struct {
-	ID     ID `json:"id"`
-	Params SeriesReleasesParams
-}
-
-type SeriesReleasesResponseObject interface {
-	VisitSeriesReleasesResponse(w http.ResponseWriter) error
-}
-
-type SeriesReleases200JSONResponse SearchResult
-
-func (response SeriesReleases200JSONResponse) VisitSeriesReleasesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type SeriesReleasesdefaultJSONResponse struct {
-	Body       Error
-	StatusCode int
-}
-
-func (response SeriesReleasesdefaultJSONResponse) VisitSeriesReleasesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(response.StatusCode)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type SearchSeriesWantedRequestObject struct {
-	ID ID `json:"id"`
-}
-
-type SearchSeriesWantedResponseObject interface {
-	VisitSearchSeriesWantedResponse(w http.ResponseWriter) error
-}
-
-type SearchSeriesWanted204Response struct {
-}
-
-func (response SearchSeriesWanted204Response) VisitSearchSeriesWantedResponse(w http.ResponseWriter) error {
-	w.WriteHeader(204)
-	return nil
-}
-
-type SearchSeriesWanteddefaultJSONResponse struct {
-	Body       Error
-	StatusCode int
-}
-
-func (response SearchSeriesWanteddefaultJSONResponse) VisitSearchSeriesWantedResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(response.StatusCode)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
 type UpdateSeasonRequestObject struct {
 	ID     ID     `json:"id"`
 	Season Season `json:"season"`
@@ -7527,87 +6525,6 @@ type UpdateSeasondefaultJSONResponse struct {
 }
 
 func (response UpdateSeasondefaultJSONResponse) VisitUpdateSeasonResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(response.StatusCode)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type SeasonReleasesRequestObject struct {
-	ID     ID     `json:"id"`
-	Season Season `json:"season"`
-	Params SeasonReleasesParams
-}
-
-type SeasonReleasesResponseObject interface {
-	VisitSeasonReleasesResponse(w http.ResponseWriter) error
-}
-
-type SeasonReleases200JSONResponse SearchResult
-
-func (response SeasonReleases200JSONResponse) VisitSeasonReleasesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type SeasonReleasesdefaultJSONResponse struct {
-	Body       Error
-	StatusCode int
-}
-
-func (response SeasonReleasesdefaultJSONResponse) VisitSeasonReleasesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(response.StatusCode)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type SearchSeasonRequestObject struct {
-	ID     ID     `json:"id"`
-	Season Season `json:"season"`
-}
-
-type SearchSeasonResponseObject interface {
-	VisitSearchSeasonResponse(w http.ResponseWriter) error
-}
-
-type SearchSeason200JSONResponse []AutoSearchResult
-
-func (response SearchSeason200JSONResponse) VisitSearchSeasonResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type SearchSeasondefaultJSONResponse struct {
-	Body       Error
-	StatusCode int
-}
-
-func (response SearchSeasondefaultJSONResponse) VisitSearchSeasonResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
@@ -8505,14 +7422,8 @@ type StrictServerInterface interface {
 	// (GET /api/v1/discover/movies/{tmdbId})
 	DiscoverMovie(ctx context.Context, request DiscoverMovieRequestObject) (DiscoverMovieResponseObject, error)
 
-	// (POST /api/v1/discover/movies/{tmdbId}/grab)
-	DiscoverGrabMovie(ctx context.Context, request DiscoverGrabMovieRequestObject) (DiscoverGrabMovieResponseObject, error)
-
 	// (GET /api/v1/discover/movies/{tmdbId}/recommendations)
 	MoviesLike(ctx context.Context, request MoviesLikeRequestObject) (MoviesLikeResponseObject, error)
-
-	// (GET /api/v1/discover/movies/{tmdbId}/releases)
-	DiscoverMovieReleases(ctx context.Context, request DiscoverMovieReleasesRequestObject) (DiscoverMovieReleasesResponseObject, error)
 
 	// (GET /api/v1/discover/series/browse)
 	BrowseSeries(ctx context.Context, request BrowseSeriesRequestObject) (BrowseSeriesResponseObject, error)
@@ -8526,38 +7437,20 @@ type StrictServerInterface interface {
 	// (GET /api/v1/discover/series/{tmdbId})
 	DiscoverSeries(ctx context.Context, request DiscoverSeriesRequestObject) (DiscoverSeriesResponseObject, error)
 
-	// (POST /api/v1/discover/series/{tmdbId}/grab)
-	DiscoverGrabSeries(ctx context.Context, request DiscoverGrabSeriesRequestObject) (DiscoverGrabSeriesResponseObject, error)
-
 	// (GET /api/v1/discover/series/{tmdbId}/recommendations)
 	SeriesLike(ctx context.Context, request SeriesLikeRequestObject) (SeriesLikeResponseObject, error)
-
-	// (GET /api/v1/discover/series/{tmdbId}/releases)
-	DiscoverSeriesReleases(ctx context.Context, request DiscoverSeriesReleasesRequestObject) (DiscoverSeriesReleasesResponseObject, error)
 
 	// (GET /api/v1/discover/series/{tmdbId}/seasons/{season})
 	DiscoverSeason(ctx context.Context, request DiscoverSeasonRequestObject) (DiscoverSeasonResponseObject, error)
 
-	// (GET /api/v1/discover/series/{tmdbId}/seasons/{season}/episodes/{episode}/releases)
-	DiscoverEpisodeReleases(ctx context.Context, request DiscoverEpisodeReleasesRequestObject) (DiscoverEpisodeReleasesResponseObject, error)
-
-	// (GET /api/v1/discover/series/{tmdbId}/seasons/{season}/releases)
-	DiscoverSeasonReleases(ctx context.Context, request DiscoverSeasonReleasesRequestObject) (DiscoverSeasonReleasesResponseObject, error)
-
 	// (PUT /api/v1/episodes/{id})
 	UpdateEpisode(ctx context.Context, request UpdateEpisodeRequestObject) (UpdateEpisodeResponseObject, error)
 
-	// (POST /api/v1/episodes/{id}/grab)
-	GrabEpisode(ctx context.Context, request GrabEpisodeRequestObject) (GrabEpisodeResponseObject, error)
-
-	// (GET /api/v1/episodes/{id}/releases)
-	EpisodeReleases(ctx context.Context, request EpisodeReleasesRequestObject) (EpisodeReleasesResponseObject, error)
-
-	// (POST /api/v1/episodes/{id}/search)
-	SearchEpisode(ctx context.Context, request SearchEpisodeRequestObject) (SearchEpisodeResponseObject, error)
-
 	// (GET /api/v1/fs/dirs)
 	ListDirs(ctx context.Context, request ListDirsRequestObject) (ListDirsResponseObject, error)
+
+	// (POST /api/v1/grabs)
+	GrabRelease(ctx context.Context, request GrabReleaseRequestObject) (GrabReleaseResponseObject, error)
 
 	// (GET /api/v1/health)
 	Health(ctx context.Context, request HealthRequestObject) (HealthResponseObject, error)
@@ -8631,15 +7524,6 @@ type StrictServerInterface interface {
 	// (PUT /api/v1/movies/{id})
 	UpdateMovie(ctx context.Context, request UpdateMovieRequestObject) (UpdateMovieResponseObject, error)
 
-	// (POST /api/v1/movies/{id}/grab)
-	GrabMovie(ctx context.Context, request GrabMovieRequestObject) (GrabMovieResponseObject, error)
-
-	// (GET /api/v1/movies/{id}/releases)
-	MovieReleases(ctx context.Context, request MovieReleasesRequestObject) (MovieReleasesResponseObject, error)
-
-	// (POST /api/v1/movies/{id}/search)
-	SearchMovie(ctx context.Context, request SearchMovieRequestObject) (SearchMovieResponseObject, error)
-
 	// (GET /api/v1/queue)
 	ListQueue(ctx context.Context, request ListQueueRequestObject) (ListQueueResponseObject, error)
 
@@ -8658,6 +7542,9 @@ type StrictServerInterface interface {
 	// (POST /api/v1/queue/{id}/resume)
 	ResumeDownload(ctx context.Context, request ResumeDownloadRequestObject) (ResumeDownloadResponseObject, error)
 
+	// (GET /api/v1/releases)
+	SearchReleases(ctx context.Context, request SearchReleasesRequestObject) (SearchReleasesResponseObject, error)
+
 	// (GET /api/v1/rootfolders)
 	ListRootFolders(ctx context.Context, request ListRootFoldersRequestObject) (ListRootFoldersResponseObject, error)
 
@@ -8672,6 +7559,9 @@ type StrictServerInterface interface {
 
 	// (POST /api/v1/rss/sync)
 	RSSSync(ctx context.Context, request RSSSyncRequestObject) (RSSSyncResponseObject, error)
+
+	// (POST /api/v1/searches)
+	AutoSearch(ctx context.Context, request AutoSearchRequestObject) (AutoSearchResponseObject, error)
 
 	// (GET /api/v1/series)
 	ListSeries(ctx context.Context, request ListSeriesRequestObject) (ListSeriesResponseObject, error)
@@ -8694,26 +7584,11 @@ type StrictServerInterface interface {
 	// (GET /api/v1/series/{id}/episodes)
 	SeriesEpisodes(ctx context.Context, request SeriesEpisodesRequestObject) (SeriesEpisodesResponseObject, error)
 
-	// (POST /api/v1/series/{id}/grab)
-	GrabSeries(ctx context.Context, request GrabSeriesRequestObject) (GrabSeriesResponseObject, error)
-
 	// (POST /api/v1/series/{id}/refresh)
 	RefreshSeries(ctx context.Context, request RefreshSeriesRequestObject) (RefreshSeriesResponseObject, error)
 
-	// (GET /api/v1/series/{id}/releases)
-	SeriesReleases(ctx context.Context, request SeriesReleasesRequestObject) (SeriesReleasesResponseObject, error)
-
-	// (POST /api/v1/series/{id}/search)
-	SearchSeriesWanted(ctx context.Context, request SearchSeriesWantedRequestObject) (SearchSeriesWantedResponseObject, error)
-
 	// (PUT /api/v1/series/{id}/seasons/{season})
 	UpdateSeason(ctx context.Context, request UpdateSeasonRequestObject) (UpdateSeasonResponseObject, error)
-
-	// (GET /api/v1/series/{id}/seasons/{season}/releases)
-	SeasonReleases(ctx context.Context, request SeasonReleasesRequestObject) (SeasonReleasesResponseObject, error)
-
-	// (POST /api/v1/series/{id}/seasons/{season}/search)
-	SearchSeason(ctx context.Context, request SearchSeasonRequestObject) (SearchSeasonResponseObject, error)
 
 	// (POST /api/v1/settings/api-key/regenerate)
 	RegenerateAPIKey(ctx context.Context, request RegenerateAPIKeyRequestObject) (RegenerateAPIKeyResponseObject, error)
@@ -9079,39 +7954,6 @@ func (sh *strictHandler) DiscoverMovie(w http.ResponseWriter, r *http.Request, t
 	}
 }
 
-// DiscoverGrabMovie operation middleware
-func (sh *strictHandler) DiscoverGrabMovie(w http.ResponseWriter, r *http.Request, tmdbid TMDBID) {
-	var request DiscoverGrabMovieRequestObject
-
-	request.TMDBID = tmdbid
-
-	var body DiscoverGrabMovieJSONRequestBody
-	if err := runtime.BindJSONBody(r, &body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
-		return sh.ssi.DiscoverGrabMovie(ctx, request.(DiscoverGrabMovieRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "DiscoverGrabMovie")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(DiscoverGrabMovieResponseObject); ok {
-		if err := validResponse.VisitDiscoverGrabMovieResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
 // MoviesLike operation middleware
 func (sh *strictHandler) MoviesLike(w http.ResponseWriter, r *http.Request, tmdbid TMDBID) {
 	var request MoviesLikeRequestObject
@@ -9131,33 +7973,6 @@ func (sh *strictHandler) MoviesLike(w http.ResponseWriter, r *http.Request, tmdb
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(MoviesLikeResponseObject); ok {
 		if err := validResponse.VisitMoviesLikeResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// DiscoverMovieReleases operation middleware
-func (sh *strictHandler) DiscoverMovieReleases(w http.ResponseWriter, r *http.Request, tmdbid TMDBID, params DiscoverMovieReleasesParams) {
-	var request DiscoverMovieReleasesRequestObject
-
-	request.TMDBID = tmdbid
-	request.Params = params
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
-		return sh.ssi.DiscoverMovieReleases(ctx, request.(DiscoverMovieReleasesRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "DiscoverMovieReleases")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(DiscoverMovieReleasesResponseObject); ok {
-		if err := validResponse.VisitDiscoverMovieReleasesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -9265,39 +8080,6 @@ func (sh *strictHandler) DiscoverSeries(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
-// DiscoverGrabSeries operation middleware
-func (sh *strictHandler) DiscoverGrabSeries(w http.ResponseWriter, r *http.Request, tmdbid TMDBID) {
-	var request DiscoverGrabSeriesRequestObject
-
-	request.TMDBID = tmdbid
-
-	var body DiscoverGrabSeriesJSONRequestBody
-	if err := runtime.BindJSONBody(r, &body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
-		return sh.ssi.DiscoverGrabSeries(ctx, request.(DiscoverGrabSeriesRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "DiscoverGrabSeries")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(DiscoverGrabSeriesResponseObject); ok {
-		if err := validResponse.VisitDiscoverGrabSeriesResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
 // SeriesLike operation middleware
 func (sh *strictHandler) SeriesLike(w http.ResponseWriter, r *http.Request, tmdbid TMDBID) {
 	var request SeriesLikeRequestObject
@@ -9317,33 +8099,6 @@ func (sh *strictHandler) SeriesLike(w http.ResponseWriter, r *http.Request, tmdb
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SeriesLikeResponseObject); ok {
 		if err := validResponse.VisitSeriesLikeResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// DiscoverSeriesReleases operation middleware
-func (sh *strictHandler) DiscoverSeriesReleases(w http.ResponseWriter, r *http.Request, tmdbid TMDBID, params DiscoverSeriesReleasesParams) {
-	var request DiscoverSeriesReleasesRequestObject
-
-	request.TMDBID = tmdbid
-	request.Params = params
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
-		return sh.ssi.DiscoverSeriesReleases(ctx, request.(DiscoverSeriesReleasesRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "DiscoverSeriesReleases")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(DiscoverSeriesReleasesResponseObject); ok {
-		if err := validResponse.VisitDiscoverSeriesReleasesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -9371,63 +8126,6 @@ func (sh *strictHandler) DiscoverSeason(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(DiscoverSeasonResponseObject); ok {
 		if err := validResponse.VisitDiscoverSeasonResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// DiscoverEpisodeReleases operation middleware
-func (sh *strictHandler) DiscoverEpisodeReleases(w http.ResponseWriter, r *http.Request, tmdbid TMDBID, season Season, episode EpisodeNumber, params DiscoverEpisodeReleasesParams) {
-	var request DiscoverEpisodeReleasesRequestObject
-
-	request.TMDBID = tmdbid
-	request.Season = season
-	request.Episode = episode
-	request.Params = params
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
-		return sh.ssi.DiscoverEpisodeReleases(ctx, request.(DiscoverEpisodeReleasesRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "DiscoverEpisodeReleases")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(DiscoverEpisodeReleasesResponseObject); ok {
-		if err := validResponse.VisitDiscoverEpisodeReleasesResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// DiscoverSeasonReleases operation middleware
-func (sh *strictHandler) DiscoverSeasonReleases(w http.ResponseWriter, r *http.Request, tmdbid TMDBID, season Season, params DiscoverSeasonReleasesParams) {
-	var request DiscoverSeasonReleasesRequestObject
-
-	request.TMDBID = tmdbid
-	request.Season = season
-	request.Params = params
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
-		return sh.ssi.DiscoverSeasonReleases(ctx, request.(DiscoverSeasonReleasesRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "DiscoverSeasonReleases")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(DiscoverSeasonReleasesResponseObject); ok {
-		if err := validResponse.VisitDiscoverSeasonReleasesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -9468,92 +8166,6 @@ func (sh *strictHandler) UpdateEpisode(w http.ResponseWriter, r *http.Request, i
 	}
 }
 
-// GrabEpisode operation middleware
-func (sh *strictHandler) GrabEpisode(w http.ResponseWriter, r *http.Request, id ID) {
-	var request GrabEpisodeRequestObject
-
-	request.ID = id
-
-	var body GrabEpisodeJSONRequestBody
-	if err := runtime.BindJSONBody(r, &body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
-		return sh.ssi.GrabEpisode(ctx, request.(GrabEpisodeRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GrabEpisode")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GrabEpisodeResponseObject); ok {
-		if err := validResponse.VisitGrabEpisodeResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// EpisodeReleases operation middleware
-func (sh *strictHandler) EpisodeReleases(w http.ResponseWriter, r *http.Request, id ID, params EpisodeReleasesParams) {
-	var request EpisodeReleasesRequestObject
-
-	request.ID = id
-	request.Params = params
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
-		return sh.ssi.EpisodeReleases(ctx, request.(EpisodeReleasesRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "EpisodeReleases")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(EpisodeReleasesResponseObject); ok {
-		if err := validResponse.VisitEpisodeReleasesResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// SearchEpisode operation middleware
-func (sh *strictHandler) SearchEpisode(w http.ResponseWriter, r *http.Request, id ID) {
-	var request SearchEpisodeRequestObject
-
-	request.ID = id
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
-		return sh.ssi.SearchEpisode(ctx, request.(SearchEpisodeRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "SearchEpisode")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(SearchEpisodeResponseObject); ok {
-		if err := validResponse.VisitSearchEpisodeResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
 // ListDirs operation middleware
 func (sh *strictHandler) ListDirs(w http.ResponseWriter, r *http.Request, params ListDirsParams) {
 	var request ListDirsRequestObject
@@ -9573,6 +8185,37 @@ func (sh *strictHandler) ListDirs(w http.ResponseWriter, r *http.Request, params
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListDirsResponseObject); ok {
 		if err := validResponse.VisitListDirsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GrabRelease operation middleware
+func (sh *strictHandler) GrabRelease(w http.ResponseWriter, r *http.Request) {
+	var request GrabReleaseRequestObject
+
+	var body GrabReleaseJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.GrabRelease(ctx, request.(GrabReleaseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GrabRelease")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GrabReleaseResponseObject); ok {
+		if err := validResponse.VisitGrabReleaseResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -10226,92 +8869,6 @@ func (sh *strictHandler) UpdateMovie(w http.ResponseWriter, r *http.Request, id 
 	}
 }
 
-// GrabMovie operation middleware
-func (sh *strictHandler) GrabMovie(w http.ResponseWriter, r *http.Request, id ID) {
-	var request GrabMovieRequestObject
-
-	request.ID = id
-
-	var body GrabMovieJSONRequestBody
-	if err := runtime.BindJSONBody(r, &body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
-		return sh.ssi.GrabMovie(ctx, request.(GrabMovieRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GrabMovie")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GrabMovieResponseObject); ok {
-		if err := validResponse.VisitGrabMovieResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// MovieReleases operation middleware
-func (sh *strictHandler) MovieReleases(w http.ResponseWriter, r *http.Request, id ID, params MovieReleasesParams) {
-	var request MovieReleasesRequestObject
-
-	request.ID = id
-	request.Params = params
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
-		return sh.ssi.MovieReleases(ctx, request.(MovieReleasesRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "MovieReleases")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(MovieReleasesResponseObject); ok {
-		if err := validResponse.VisitMovieReleasesResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// SearchMovie operation middleware
-func (sh *strictHandler) SearchMovie(w http.ResponseWriter, r *http.Request, id ID) {
-	var request SearchMovieRequestObject
-
-	request.ID = id
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
-		return sh.ssi.SearchMovie(ctx, request.(SearchMovieRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "SearchMovie")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(SearchMovieResponseObject); ok {
-		if err := validResponse.VisitSearchMovieResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
 // ListQueue operation middleware
 func (sh *strictHandler) ListQueue(w http.ResponseWriter, r *http.Request, params ListQueueParams) {
 	var request ListQueueRequestObject
@@ -10467,6 +9024,32 @@ func (sh *strictHandler) ResumeDownload(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
+// SearchReleases operation middleware
+func (sh *strictHandler) SearchReleases(w http.ResponseWriter, r *http.Request, params SearchReleasesParams) {
+	var request SearchReleasesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.SearchReleases(ctx, request.(SearchReleasesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SearchReleases")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SearchReleasesResponseObject); ok {
+		if err := validResponse.VisitSearchReleasesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListRootFolders operation middleware
 func (sh *strictHandler) ListRootFolders(w http.ResponseWriter, r *http.Request, params ListRootFoldersParams) {
 	var request ListRootFoldersRequestObject
@@ -10593,6 +9176,37 @@ func (sh *strictHandler) RSSSync(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(RSSSyncResponseObject); ok {
 		if err := validResponse.VisitRSSSyncResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AutoSearch operation middleware
+func (sh *strictHandler) AutoSearch(w http.ResponseWriter, r *http.Request) {
+	var request AutoSearchRequestObject
+
+	var body AutoSearchJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.AutoSearch(ctx, request.(AutoSearchRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AutoSearch")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AutoSearchResponseObject); ok {
+		if err := validResponse.VisitAutoSearchResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -10792,39 +9406,6 @@ func (sh *strictHandler) SeriesEpisodes(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
-// GrabSeries operation middleware
-func (sh *strictHandler) GrabSeries(w http.ResponseWriter, r *http.Request, id ID) {
-	var request GrabSeriesRequestObject
-
-	request.ID = id
-
-	var body GrabSeriesJSONRequestBody
-	if err := runtime.BindJSONBody(r, &body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
-		return sh.ssi.GrabSeries(ctx, request.(GrabSeriesRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GrabSeries")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GrabSeriesResponseObject); ok {
-		if err := validResponse.VisitGrabSeriesResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
 // RefreshSeries operation middleware
 func (sh *strictHandler) RefreshSeries(w http.ResponseWriter, r *http.Request, id ID) {
 	var request RefreshSeriesRequestObject
@@ -10844,59 +9425,6 @@ func (sh *strictHandler) RefreshSeries(w http.ResponseWriter, r *http.Request, i
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(RefreshSeriesResponseObject); ok {
 		if err := validResponse.VisitRefreshSeriesResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// SeriesReleases operation middleware
-func (sh *strictHandler) SeriesReleases(w http.ResponseWriter, r *http.Request, id ID, params SeriesReleasesParams) {
-	var request SeriesReleasesRequestObject
-
-	request.ID = id
-	request.Params = params
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
-		return sh.ssi.SeriesReleases(ctx, request.(SeriesReleasesRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "SeriesReleases")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(SeriesReleasesResponseObject); ok {
-		if err := validResponse.VisitSeriesReleasesResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// SearchSeriesWanted operation middleware
-func (sh *strictHandler) SearchSeriesWanted(w http.ResponseWriter, r *http.Request, id ID) {
-	var request SearchSeriesWantedRequestObject
-
-	request.ID = id
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
-		return sh.ssi.SearchSeriesWanted(ctx, request.(SearchSeriesWantedRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "SearchSeriesWanted")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(SearchSeriesWantedResponseObject); ok {
-		if err := validResponse.VisitSearchSeriesWantedResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -10931,61 +9459,6 @@ func (sh *strictHandler) UpdateSeason(w http.ResponseWriter, r *http.Request, id
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateSeasonResponseObject); ok {
 		if err := validResponse.VisitUpdateSeasonResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// SeasonReleases operation middleware
-func (sh *strictHandler) SeasonReleases(w http.ResponseWriter, r *http.Request, id ID, season Season, params SeasonReleasesParams) {
-	var request SeasonReleasesRequestObject
-
-	request.ID = id
-	request.Season = season
-	request.Params = params
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
-		return sh.ssi.SeasonReleases(ctx, request.(SeasonReleasesRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "SeasonReleases")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(SeasonReleasesResponseObject); ok {
-		if err := validResponse.VisitSeasonReleasesResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// SearchSeason operation middleware
-func (sh *strictHandler) SearchSeason(w http.ResponseWriter, r *http.Request, id ID, season Season) {
-	var request SearchSeasonRequestObject
-
-	request.ID = id
-	request.Season = season
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
-		return sh.ssi.SearchSeason(ctx, request.(SearchSeasonRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "SearchSeason")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(SearchSeasonResponseObject); ok {
-		if err := validResponse.VisitSearchSeasonResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -11609,185 +10082,189 @@ func (sh *strictHandler) VPNOptions(w http.ResponseWriter, r *http.Request, id s
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"7L37chs31iD+Kqj+fVW2f9W6OJnJfp9U+4fHdjLeiR2N5Hg2FXs5YPcRiVET6ABo0RyXqvZp9sH2SbYO",
-	"Ln0h0TeKpJQZ/5VYRONybjh3fIkSscgFB65VdPYlmgNNQZr/vQJ9BUoxwV8KccMA/5aCSiTLNRM8OsMR",
-	"ighJkgyoVETPgVAp04myn5HEfHccxZFK5rCgOINe5RCdRUpLxmfR3d1dHOVU0gVot+yfpFgq+AG4DKz4",
-	"/u2rP5EZ/kZYqs4JJZrpDMiC6mQOiiznwAnTZE4VoXxFxDXuanFMXt+CXLkvzSA6VcA17g0+55lIITrT",
-	"soA4YrjObwXIVRRHnC4gOovMd41jMA0Ls91rIRdUR2cR4/q7P0RxtGCcLYpFdPY89odlXMMMZHQXRwv6",
-	"+Y399JvT8ncqJV3hr0qvMvwDTor/trD4kfJZQWcBcLzg5M3VT+S7b//r6DkRks0YpxnJ3PiYqCKZE6rI",
-	"x+gf9GN0TsBAwf++DojQyXFs4+A51Rokjvxfv9Kjf3768s3df0TxBlr93i/orA2NCuQtKEI1WQilyR9P",
-	"T0lOZ6DatoI/NraSwjUtMm0gvaCfLdT/eHrajYNya1dCaoPKwFoKf6uv9R8SrqOz6P87qdjlxP6qTl4x",
-	"lYhbkGZCnP91zpRI4V2xmIIsl8ipnlcrgB0TxZGE3womIfUEWC3ac4w3r1rmZmnntKNI9i6OfhTipsj/",
-	"aiC0iUrDf1oQBVQmc3ItZBsCf+sUBH6dX4DKNrSs8LfAJPXdXkIGVEHbduGzru0WRRbjKXwGqXDrhHGl",
-	"gaYoOFCUPVFELDkx2zgml6CKTCtCJRClWZaRfxTpDFJCZxQ/NNNZgTQFxmduFUiHQ2VBP/8IfKbnKCBO",
-	"Q3x1BVQJXkKoiXllfxxEVKdBZCNrthKWXqTTN7skrjucSuWCKzDS9LWUwmA/EVwDN/xJ8zxjCUUEnvzD",
-	"HX0YY9rZzCobchPwt2NzZDccZ3tx8eYvsLp0WzKrpynDr2h2IUUOUjPc6TXNFMRRXvsTbpRNbmAVJu4K",
-	"Yr+WAz+VEBHTf0CiUeS/SNO34pbBJfxWgNIjt7AQnGlhllmn/FdWWiqkfkTacSW1p0JkQDkuL4XQk2uR",
-	"pSAnrG+WORAng8kC90zwa2K/xuk3aGHzPrQcElItvDTB61yy2VwTuqSr8K6RLt12e9dcw4X/tAUXVyAZ",
-	"qHsho49K39phb0UK98HA+w/7Af+Scg0pcfeVejBcFFrYXVkpPBIXM0mnU0j7cPFKLHkmaIorunthck1Z",
-	"VkhQDbWva5I39sPv7XfRXXmaUs+T9o5Sk0RwxVJwDNsDntBXgW2GoPeSKv0WvDoyAm7JnEqaaPvdmlTz",
-	"10Lgh1yKa5bBxFwfvfLQTBPc9pzyGVxQpZZCpttxYVJICVxPcjdL+CCw7Bqwtt+NKdcmCB5FFFzLlfnP",
-	"2BP4bzb5N7GzbjIwmgXfPv/uu6PnhGb5nB59QxKRwjmBRa5XVvNH6ZEJe7MSpkjBb7hY8uMo7ju/W9Wt",
-	"Hz6vBKrhUgj9vRFIW4pQSBmd2Ml7pCiOfI8DjUU5hOxqk7tPQgd5xeSPTGmcYNzeUyabMmOD6tbFQk6l",
-	"03mayHxtcEatfol8pVZKw8LI+wC2hp7f6XZmn+GT1+yaur0V5SIvMqOKNzdqDSsiJN5ARIt8IileHoJn",
-	"K2JoRVn9WJEl03MCXBSzObkVGtQ54bAEpUkGFO1CUWg/lgtNVqCJE4Apnhk46pS/1rZSLmfZEVSdMCvY",
-	"lCJ+pHKXppBOqA4ickqTm1SKvE3excbLkoFun8Lfr+MoBry+vDFy4A0cR2yRC9mxMX+/DJ+QX4vJnKow",
-	"IIyiOHyynBYqpM2+l5Sra5DeGBN5Dum5JTQFmiznLMO/U10olG2pwzrjs7DakgulQbYjMJdiJkH1Xv4X",
-	"ftxdHP1W0IzpVXA+R8sTQ+LBEcqonsNBpdg/YehQA5ehytCVHY3k17rZlbPae1QYlkZ1AlkHQwUyd5xy",
-	"qyUlxBUnBmWW3zNoFNlq9FVr2XSSsha2MtwyWRiHYY8aaIZ6tZ7xnrnXIdUcH0dr/6xvZAgg3vC86L99",
-	"10wNNwdRbhKSFtL6NXSRnxOxYBrF+zWDLFVkBtpbI8aJ95hA2w6fkhX8jVITFTWwp1ElKtG2oiyDNHjB",
-	"OO/f2PuFyUlKdZi76ls6+xKQXlCtucntXZq4+7VLUg0WQA3nw+YeVem42vx0rKxrE0QhcVPNHVf+scr9",
-	"6iVPtfsmvEPMVbqpRiC4/ao27BO44oxvMi+05S+j/JlJ8D6jU1Hofk3dLho6wg/AQdJsSznpPFiTOeM6",
-	"vHOa5+TFxRtyAyur69EsI9NCE6YVuWZSaUJ5SjKqNNFLQUpDU5EFVTdWydvUf9BD0L+4oreQEhNl2Hr9",
-	"SrwZY4kLMxVTdvL+3SnQIT4IuTzqn8RN2A5A3TDJ3sRffdl+NmqMbtmRHCvwBvN6i5MhxOqtjoQ/A830",
-	"fOQOKy2pe2k3LrRu7aKq3TBzKtOM8RtzveQrI3xuIXiZOF/SWDWG5kO9VC9xqHGQXzPOLA+Fwox29Kty",
-	"FGFhHgBOpxlMpFItN5X9vXI8tg1puUUGkw1y9qRd6FY/txk+C8YnCsCHwwddgGjbJFTDTEgWtuVqw9eN",
-	"uQ5vGhPSXc+DnLqJBK28BFr37OKPlUan5xTD5bdAqBObtzSz0YHhZqiq3SJdNOdE1gdcwRoUt9uCq5X9",
-	"G6Rc21oAPevrV6TXoON1oq0hpEklQQlQY7OxTBwEzCCeNl+uQqiyQKjYrxtdOOolzZuhgsGf6NvxC63L",
-	"Vg/yxr7rU8d1QHViwAFlm2tq8K0UR6qYJlTvEGejLroNOT3S5HtBFNM2jYcklLsIdkyupVgQSl5SmbIZ",
-	"5ZxUTBYbRQq101KoME04QBqwAhurtenCw4HnBMr3+FWI2lk6Lm4h1eYuo5eUk4wpTSQkwEs3pIrRy5TM",
-	"yeXVFVErntgzn1cJBeKaCD0HaWCqrJTFweL6OuyEKrgqcmdjbmzjb/NViRf0iBYKiJ4zZTH2FI5nxyXg",
-	"CSUJzXUyp8+OyQuT4WOCeYVCQWb302891IWqQ4wF0SDKU5ewhZ+1oqvRLFQt3eoqVcF4qvvKutbtjZiI",
-	"IkuN43kKRAJNx1yIa2CsH6ncxzAQ/pz/HkD4vYEbsxGlwmzZQnEJEoi6YXkO6UiNAlWRQFgrVS6nryaA",
-	"FFlKpjXwe+DIrlceMW4AsQNXPsi7K18Aq/T9+3riNxyK5dfVMnGHh8CdcBvzchtjgly6zRLMHDXRQ/KU",
-	"WuFm0jldnqDgZcrWs8pGF5wUeUo1xPYmMpqsGarIDeT6QWyVB7MgujNGEKRPFMHBFazvCcrRJso2BkMc",
-	"cPVUpPZElQrIMfmp6zB+mIkd4ZEwkdhaTSSDa+2C5DcAuap9ZgyjKnSe1sgXg+eJSVZIj+9t12xwYj0B",
-	"eFQwI4VwZoBNGMbfg8gMk9FrPsuYmhu6GZIjYLyrrYrqj2LG+HZJAcMTNTozMmy66VBv/YYQcx5kpxqj",
-	"r/E46nLqNyf45Zdffjl6+/bo1atzl4FN2HVHBkaPix/D9LcMlmGltuCahTD6lvGiqQg2U8Pa3fWY/Noe",
-	"UmgPE2Kkf0JvQTpqLkVFKoqpccO7T7jNnQ6Yg23++xIE7bg2iZWjDSLjRs7MBESa3DPy1GckOJ0nY1NJ",
-	"5erZJgX0ZwbAZy2pGpTe8toONbGyMsluY0K3mWDyIEpMc8c8UYSla9uPy/IJZsSehIFZhL7yoCOY3Umg",
-	"fbH39mnHJBtWQeomTE7DnNeXpFijvObxY5+mPoAiq2TuXYUKHWNMOpLG2v2MPXiw3DfhZV1DD6ia49f3",
-	"1gUVWWXd/Psyqg1cPvkdMapF+HCrs8EEISuwLQKzO5mgb+8vQb634UQmCf5+Th5GotQpb2SeB2jKsqOc",
-	"zoAwbsHABD8mP2E6lQRdSO7joNegkznmgKBpxmeZK3iJja+EWUeZKQp0tS+hTBCqQnFbkR9NWZYBOriU",
-	"jnEy/DeuZRMKo3gYVdWSnQM0leBGrl1ByeY2fr4iCAZJ0UKoKugufjh6/i0e6/2Ho7cvggqaKRIcTvs2",
-	"Zhoy4kAvhbxRodiNZKBMkts4b0qfBnhunIPUSZyYUKJXOUto5rXcJy1KoqazjPEWPpSUZdBb/vDeDQto",
-	"h4GiwUKBJCoREkyCqLgmz08bwq9NkXSzl9fiWPeJw25sqbeV/65A3g4I165fXSYV2VZESvL0IoPPMfkf",
-	"kGWra8Zjcnx8/IyYpAQ04SUo9Mwzrdx9gDRBrzVIYhOUgm73DocMqe18aIB3t9HZTUe3ue1MbgYojXzn",
-	"Tm3zrkqbyR6bIpsmoFRww/2R3vZYzu8lkrpFNNTjsYeU7xFJumHcFFI2iLuMLHGh2fXqXyd41B876YH0",
-	"zh2t7Xwd8LXuxJXaIhUGuiUtgeDnu/ZO/mu7G+/a6MqUw9Tyjozlb4LnwVyjeiFi7SuaZUjDhS4kfswF",
-	"h67PId1B6WpP1lw1NshTg9w8Oy3vOFSKbZc52ZN+u2/bb7NudWeFCAahQ6oQtnMHDalZ2MJG2wBJM8e4",
-	"pLi4K4HQHL3ZSmMEVZfX4Ahr3KwYrk6btXiftdAU3cEzUAPgaeZpfuQ1pFYIYAXe5g3yEwfUL9AweKJI",
-	"UthiM1uKbu3Qp1oCxzRu6ylhiiwBbp6oZ/USMj8mimvVZFwsJ3lGV/bvRZ6Ihf3fqswsLARN7X4iFgvg",
-	"KS2D8CMUJzOFMqci0s9kbskcRJ7hlSBIxtAaoN4jZA99TlA4m2um6TAKuLsgoYXqLbRonuRKFDIxtLFD",
-	"wlqjDr+xXpLYLNxYMKUsjpolHP5fhu0KHro8KgS+s9b3lnnx8DkXCiYZ5WEhPBdKh7Uh45l/9e6K+CEE",
-	"s3wKnkDqitmquZGYBW8xdvikkFl4/iVMyc9vnihC01SCwknKIuCMOL9DPe89sOz1dWDdNRxWn0S1I4cw",
-	"uQbtbVTgbpC37yy0nQuq5+rlHJKbbRI6OoglVNPTQM+FFNMMFopMV7bcIyYmoetjSb3quFnn9DE6jgJH",
-	"uKUZa9EAllRyT9NbpsnY2WtpMuWcreDcBqdW6Z94hg6epoTL4DLGBpGVyRZ4SYcBcdv2W0jhvoDxWfoZ",
-	"g7YKlhxA4p1mhjhjSJq/Hr15RXIJ1+yzL+bvCRwfqEdAhRFzPW4u96eVBkVykGj7CJ7i5QYMLR0TQdfu",
-	"1AO9eSxv0VJlS9SrXsB7irfp8+PojBdZts6K30uamOO6RDMtpEQk+A1iNtKwPSp7X25A4s9iWc22pNh5",
-	"quBpGJ3+couMQzW5AVN1P9dRHOXwOXLVj/aiy/LUCNwMcrQPI1Pbj/QZuuiKfAyujLdNi3Lbg7C0rkjn",
-	"kUNQXG8hYbmghNY6HTV3WsNjUOLUkDzG+ks0u4UJHqwlSWeKAJlUxaDDLAz7ldF0Q3Fn9MpnZAGaplRT",
-	"48HwaB8wud9MWDxaAIccZ9FLwTkkeMObA+OV49AR2xQ7Ux43PNxS72wSsBt6xMLVQgg9x83QFQ4jOMwE",
-	"f9ZocKBgAE0n9oPA0V8rzRbGSnBDjAMGI3ZG2jm+C8Hflp+bbpcO7qX42EQNeoEnGEkL46a7Q0KHN7pM",
-	"JWy1wdopuMgPhoSNzNOq3t95RCsAbbJWk23iJnM2D1rBpMYOfQKkTiB1PgnJk79ap82W1sCCfp5IUCIr",
-	"1lzWzYagE2x1MFlMQyLiv5OCZ2zBNKQDxQImnXYvuu5Ma34Qr2+7uccBUNpG49sBqIQsLZdHALUQnC6v",
-	"ru7bvGyQRK53MdsIahygq5kC4GP6mZnxcXnMgT3Ngr6Jca6W95WLxPXtpESKJWp+sjG76SEzpeYG4Jve",
-	"lN14JHvSQsIwMCDcprnHC1/HhGodgj4mVFXJHtMVoS6Hw+WBOADxlFSlBMbXxAFSSDehQpMEct3mjy5t",
-	"WQVhNeUFyWlyg7iwbYttcpENs+I1oqy36+nH6KWbitgEiY/Rs3B5VXkvOA/JqCZMHWn3Oyza6FMOTDC7",
-	"Ss0NkDNV2oMKm9iSRZFpduT+ghA99z/b5LFK2wtJ3BkHPSkkCxtb7dpGXkwxWbzMU6x0BqrhyCSjBGyS",
-	"7oZJSPQbRU39EfVEyBa/dXdHEvxtggBra2fSoY2N6MU0sJWJjzLU6KlDIGx1zXzl16/8+pVf98ev5T9q",
-	"3c1K88UbNA1E1PuhldzpQRRk/7Lf5r66sTA1KftABmve9tmx0wZRN9p2NnYVBIvNf6xCRiMgU/qZJ/SW",
-	"sgzTXHoc0q1dR9ZOE5o5tPuqO8JIed69X/Psxn2CAdX85WTt29/qRtqjsfJby/sA6PDFNwLqrfvPjNz9",
-	"jczYLfAYDU3thyHHBB8LCIlLb/AMPkbzNu/Dh39YoFxmoCFl8+9tEvj4qov63eXf9TBJxKbrFtOqbB3e",
-	"XR837HLvDzP7gr4xDXZ2UPSwfVWMc4nV8kbKk7djaytRRllLo/GmM3nNZWqUOfOpx6StxzbtEroVt7bV",
-	"6qjt6SO4nhvhfmoQ1RhNoaegUK3nCzRSdpj9bwmsMH4GFS/tNP1sJ/ljRlWVcC1Bzds387vMMhtZltRg",
-	"sd9TWdLeMtnKLryDU9ocyNs55KBJbXbJR5TVZjc0Jq3t/Yd757RRhsQ40SKlK8Qvn+g5TCiTvWlt/hmU",
-	"++S12TlG5rVZZeJxJ7a1EdcWmW3uwb2xt0eh58A1S6hub76ri3zSFTJeV+4bc25MEN58rZ5iHG0gybs0",
-	"eUI5MUwmDWrI0w8X70guxS1LQcbe90wU0/DMForEJIUko9J6ratSgkDl4VywJOy7UpBBop8ocs0+Q0rc",
-	"yMFBcHf2n/K23kk1o3nT4rCp/hRfQLAWhdJUavtIQtCSMBnl1iMQOgyaJlQCJQu6IlPzZkTm82ys3mam",
-	"RlgpzPDTwJHswvVTc8jCuTbh3rFxhHU/Y2pv/oLjjQIyhbCfT+SlwFlLZbBowpg82OP98Po9OaE5O7l9",
-	"fnKb8xNPOerkC0vvTtxMJ19uYHXX8hJARhOYl06UgBXnuSTMaIkMVYv9TTINR1i6eUY4YKGLD7Wc14pA",
-	"4o36j82yljaORXR4IDok9HHpXxymNtOTaMmOTBHgGmTz2Q2ksCiuGqzEkac5IyuQl/BvYjbLoOVGqTPM",
-	"OHnXTiiazka6Gw2U+301dpgHbwdcXe3Q9pmgV75ayGeCYt/pc2JBaWuIPkZaFvAxIifkY2Qg1JIM6uf6",
-	"OfdW9ggoDy2a2nhyYTeppuXyLcAu8m3yDGiKgfvOt6A2k0/XZI75nbjfiU2xE5KBCjHpLhJV3Z032v1V",
-	"ThBuAtue+drdHbwrNTaObnPet70PF+/c1taVjiZ24v7O44YQtot2dZzP1ct3tI/eAYH3HmsrH0+/ohdH",
-	"qpjNQOn+5/Cu/ECTyR1i0fpa9YmDh2rOtuuXWXjvkPskfI95m6W2TjVrCCJoC5n3RrcpmNxxD//3c4mP",
-	"cW0hUk1+XqC+18s991ZusyjH51Ny0zk0yQqTQtKaUbmRRLqZmBhM5n5RW3hg1vacKS1CsQFjpFDEdG3d",
-	"mKCm6JNmY1LkaNFes1u8Icr2aoOkdoWBK7NK0F0B9GbSk1H7Zzab4478MJvMqRhPwKiXwGeMg7UxYGha",
-	"7Vr66Ngc0J6c7s1T+bzPqEJIN9U6mI2kXT082L0B9f1DzbjSukAXBEnVd2VUIMf1azEFaLaU/RdRvC+m",
-	"sGlHtwZSVqLQxRS8SFrreWinI2iPiXB7kbXz16fr6CVp1dtdPZs85FHkIbl8LdvcwYvCe95nqZ6N25y3",
-	"tMNaYWkWbd/VpFygnO5TePcXtZ2MaqbxuHvTA4dlezkH2iKmORcoYmI4JJGQAteMZsqU19iodcE5ZMRO",
-	"RphWkF2v37ttHoZwP3i7rRZUbPu+lC1QHfscZiL4NZsVrQySjk1GAp7mgnE98rNrIZdUYjCkvR6NzThy",
-	"Msq2kbObQN2c8lTN6c2IbK1OBh3S6sjifFeNjnyjrM2hhkQ7jC83oMjDWN6FrKlRUn29Fip/P16Up1xN",
-	"aosED7I9iZgssmQSLJJcl6rl0Hh9U8HTYgXwJahccDVW22qtTQ5WGW+ubsm0kFhrglgsDfm/WHWD8egs",
-	"mgNNq7yKs+h/Hr3I2dFfjAbhwWS/uIvd//3V5wKZCXwajfue5uwm/LGqgjXmw0SIGwa1L6VMJ35Q8Htd",
-	"5O/FDQRSQy8kM8/uu3AXTkUyMXMv3BoAufJBwaeCShMP9GaoNTnCwDCehSO76sae7lw+ayCmUIWDTFAG",
-	"sE1ksh5xeaKIFIUGMiuoNIEZkRQL4LbWUH7kSA12hoKnIMnfPT7//uzsIz8ilhhJOcw9mlIOOyO/fvr7",
-	"OY40wKsP5ABlIzFjhN0AN9UKBmLYZWADYB85qWBmZjWZy9r0t4RMgXtMBWf1bxm6PokGqcRi3PYws+58",
-	"Rf54+i3O24Ec8tJ8dtQIsRFpNUL//ojp7oQTKW28jYXStSiHOactCsfY/fFHXsbzLd3hflFPAmlJNHpu",
-	"4yjAac6is+jb49Pjb13+pOEiHzPBTZ1kYsYMUebCCrYSzm/S6Mz2bo8sz4LSfxLpyrpouHYF7TTPM0cr",
-	"J/9wmThW8PaHVGt94e+akkHLAswfrPQx+/7m9A+B+4rNuGGec0cRdXSZNxzBRFQse5h5rkAfWby07dAN",
-	"xovDhWnd+Lu7Znwv9HG55xP7dmhdlkVnv37yoQsbeI0+4e/rKBGFruNkvTt/quqHPSZvu0kmijexiiuM",
-	"gK8odBuAkwyoCxn9joBck+izYBBv7h7h//kNUXPzRJCaiyV5amROTAzf+PxQmufPNqF8Vd4Ha2A+3RkL",
-	"+SUcyBqIc4gyQuU42i9IU6YSzCE6ydz7FaoG2CZUXrmhP5Yj7wmfYekbbrWAq/4uVCroE6VIeSD3xiwX",
-	"SxXjVdh8I2M78HqAevC1AZUprU6Mq1mdfMF/3bXS7XtfNkJMj+en5vVg8s3pM/NEWV8XrU0irnpyucxv",
-	"0IbDf3WakMvKd0pHZgc25Xg8kJirpe7uPh2EKDqbVQXpwiKh7KbElD4I7m1u1B5w//5DG+JraWt7x3xt",
-	"rYOivjWdK4h7BfKwuHccPzXpk61Yf2Gx7XDrKDQmNv2FZtmKcCqlWFoN3jS3tsryuoiLvQmSzIUCXrVi",
-	"bxKGzeY0XKM2SSMEgmrIif3YN0QfOLwmvAd+cSWkHj7aZKbem+56RVt9sTCFISIPQ1NVB/vgJW32+4Md",
-	"cwh2bOmQH4CSFV/2yrKHOAzA5GZCbFgG2w2uDTdN97W5P8rHRbMVMVnUzcaOyLkcTGuCHKT9W4zZgmXg",
-	"8ZhY3lvLj0VdlKEZTIDKjIE0c1AJNudMFNoar7bzFJKi+TGVwj/ZGCCB9TTgQ9BCcOEBpHGJR6q3c/Cq",
-	"zYEo5AvG3d+kd72a71vXm3mc5ETCevNqv2KqoRB1KECNl9AOCdsT7F7RbhlXeQjUt7yInUaEvks+czyI",
-	"wkOLBvc8rXULjYk7EJFCYOFfloJ8ht3a7Ds8XOjqLZ4wjn+QdLoDPO/e6dJoIzLI6fJ8Z2tXzWpaFCyb",
-	"plBmMxyYtoaK+BFde03NhuDQIl7Vj+zm4STBvmykhxbAJ/Xi21k4yGUfLDISoHzD2z6M4wTccg7I4nir",
-	"Irtbxt+sSOmQ8JdVbe52+O1XX90SNqix15uhUdkdunzdYW1/yz3j21nD4+wiX6u8Z7vImZRf7aIRhv+j",
-	"MIwcUfUYRnbDj9gyev/hMGaRA9cBzKKScWtmkf9b0y6yyNmzXRSujzwEKYRX3tIyshA8DJEMtoy2FJ6H",
-	"M428w7DLQVgzjmqdMVyV9GEBPsJcev+hbBL41DdIiAn1PT9svy8Zalr1LGBi2X0cwMbaBcV8NbIOSJFD",
-	"L4wRJeTtRpaPK/w+jKxx0YiHFub3sbKW2Lj+yAkJlCGKPG3IFSFJoHegf7tUcPADvcitRKyXSWsGXE0q",
-	"jTDk/JX71ZI7DE25W/Lki/2fIRqDa+qzL8S4BfaNklpXrlblAgeFlYuqQ9KDYuvE7+Pki/u/e0kJVPjd",
-	"PLbnWNlubIBvhlxV0sBq9LZLZUil98Tk+okdgN09VfWPdHt65+uMvkqSLWnzXk7Beue7MVTYcbHghI+K",
-	"0v69CKcSVcwapq4KqokuW8fleHA0lvZoYWy8wDrIytgdCj1IWi4r+zJu2brvviisuiS2onDD1G0iEm3F",
-	"R4jGfydDcQgSA0K6icf7XtG/b23cPNVge2ZJWzPt3204AG7sSu0sZo9ybybbE6BfFFr0ARupnhZaLKhm",
-	"iYMsOogxs34/EL5WJymTHTpJMa01nTH6Byd0ap6eAYIZmHHpQ7cuNJIzfDnumPyZpSnwes+ahtM7UBTA",
-	"lH7FZICn1uJq9eXPvRvPuGZOymqktcoqlytaoWq9UG2fqH/FJJ7NLhREugfSymR1Mj7bQb78l0bR16+f",
-	"UOz4+rX6v1xFmv1TWZXw66e7WsK9WikNiybpzIFmel6jnCY2/2x/3iNY3QrtvvBbkOYdyXy31QchYNTb",
-	"JgXBgQTwxg86hEvPLTbEm4eNS/wB7itmSkB8ch12N0Fhm1q9Kd8n2Ide0+xKdVi9poR8mDCx8aKD0g6B",
-	"HaDFkxSuGWfrbu4mMtxmX9WGHpA6q2UH58AzbSKszjpOKCdTcAFbvIielgVotdNX8vWZCbW60k3b+w5o",
-	"MrfFl49M6AZZaY1z01SRl1SmbEY5bxzZhb6CUHBFpDb0xvQxQchORbqyr33XvzIdPGMbefsny9FzroD8",
-	"/8erRWZ+UuQp1YTyFUkh1/NnNnZdLXpeve2Ln2M3d1coahCGGoMiT2sfnNw+fx6T2+ffkP/7v//PM1tR",
-	"axcyrg1cHZcoFKQ2bk4NTeCvCm5B0swvYFt1qqok0QXrTdFrTqXC+tjXiP3acSWYnpz++ZsM7HCaSaDp",
-	"yo7EvWjlusqs2+sI1BamGiLmRKJBHyktgS6afFU2XpgyTuUq0NDmoAb45hnt2VtVnGqg7eQQ19GKFjt+",
-	"baG9BAlE3bA8L5GcZY0ZOKZQ+DdBHi3fxtHnowX9fISsdWS6iEVn3/2356f/+Z/f/aFPYp9Y/mwPnl/C",
-	"EdKkpdSwDCgZfpNQL6GDUA9GMpcwlGQaCLc0sSak1CbtPF6B3of8L9U/XN5KCuE3M16Zv9fklfERV58f",
-	"E692+kfGjbjEV1pc4wDrOLZXKJ3RUL22XWTz0h5SmFc/SWeBXr9J9ocQFyzE7e8N01/YOk47wB0dAAxB",
-	"lSOoL/4AunVfp4dSoXevPm/pLerw2T82++ZgyPGu98PYOMYzqF1PpLC9iR2TKmw8Lq/gMEInlCu819Jz",
-	"o3gmNKdTljHtfWrlSzoG2H88/WZ3YRaHj+DutEl9pSyDlDylhKOCmnl/ZWyCktT7YQAnerYfYjCv9Nl1",
-	"uh0w5hnAKzfwIKWE1YJDHTHmMA5q9/bGNCDT55Gpb3ZPQcNqhQfxzDTQ0e6dqaNgxxhoodpBrpra7g/t",
-	"rgkuPdRlg89DGOWzDlfXeqruvtmDZ2YkFobpZet8ciDdbIOX2/Szzv2dHpKZ9shIu1fYHqv4OyjGvPL2",
-	"ACJwoCbXRNPj0uYGANhJP6/QWeeWe27Z1vhVnXT/1bW5DsKwzV06dTk75GANIUY1aKry7+4JIXvIds3t",
-	"RZr6Kv99SCw//agkr+e77VrTBmirNBgI7QzMGyR4kpnKiHZKrKrTx+cC2Y9dkk88cPgvQOXwCtqtC3of",
-	"ZW2/aS9FTd/xPaJ8oBZYst2h9L9KFrRqfuE9nR6GIXfLintQ8PYoKAPPQhxauetCTanW7VlaDkyE3a4x",
-	"zdc02J2kwfahrzcF9n7NRb4mwG6FlWHJr/dkrH/R1NcQbO3j71iew/4JdydfMHSKt35tyG8FFNBpg/zV",
-	"jAgHQdcSUM0e7DPmgZQO/2TOgnG2KBbR2fPQ8znhmW050P2mPoi2Vwm6flXPj232y/FFedbGEnJHdccW",
-	"0Q3yMH860Y136tq0rtprdntkotoqAXi9LKQEromWlKtrkOYdNlW6VDOKtj0s/Ttx6I11T53tDXh9arRV",
-	"iw0LvdGw2PYiWY+gKEHsiubg/tLE+5Nq2pYebr+Y4JBQlnj1eMinAyr8nZA9yf3T8+HsoCst8pIalMv0",
-	"kKCKBUYR8ZlnQhMplMI/mhfAj8lPmGtXezqRGLb2Tnr3iuLTP5z+FxF6DnLJFAS6zl/guJLXd3MXBYBs",
-	"ltk3jKEvoujPeQEg1YNcvINEL25viNh173uZJ1RAYicZqnStwdFr06OozOj0tOL7pciC83sULwxDiiXi",
-	"dk3o0vy+fwK06+yDAqUQ2qXGdhLfpRD6ezeup2bmVa1IxhmBYUlofLITQyfxGK/3e/ziQIpEde5hzafK",
-	"9j61fl+4Z4Kf3hd/dWT1RdhrG9+PHbu+zAP5besIag+z1/ou7RYJYVYa6Ndr4GhvomMnCsLgU5/UFmkz",
-	"H7UTEYc4/zux9MUJuKThSqbV3riyDhqlTtSKJx33x9XVFQ7Yoy5/eXXVbgmXD/9cXl0R3CpRdGk0eXSs",
-	"Tfdy41g7qvOyKRudHarP4MhXMXYUcXOQ6Iy41UCxl5Bb89neA8vu7g6DNui2G7O7BPUGIQ6Lum3Zeu9r",
-	"1G1ss7cdht06cD7sem4TQ/u7ZWsSoc0DtBvZuD1X7pgfdx9626vEDL11fuDgWzd6fPRt72LT6Hplo4fu",
-	"FtKv/bBH67QoW/yM0QOe7KwXXR+cD9LatjRYPe3EgXDqlhfh13jqTuKpfXTiijO6HFZmwH2x+IA3j20E",
-	"WVahkAVoat3t+wbtI+4A2965/WvkfJeR8z4iGRY5t7j5G+Ua9ugztmu5VhXmAXCyNEvuqlHdAGBs9Lft",
-	"1Nu26m67RWfbx9KhMIC01wZPtUawuuyG61W7Q6OtP0nnnv09/116ez6kVGpidKiYOhRD7lu730wK6lfz",
-	"f+LtSULuWRbzpwXdlyS1lWn476MbWJ1ImAFHLHXGI/2YFxdvsJvAPjOtzAqXbvqu4MsNrOx7+iJLTU6N",
-	"0iJXZCnkzQ4iuB5QLeDzqrfqSqvxevyVn2ufHfrW1+pISSrrE3cIpBbnyUURhsLuL8swAA7pQLHrWrWj",
-	"1drAvkEl/F3/+SWVfMfoCNGsZeKsi2J/sEMOQbDrSwUA5oYcllxDINg9ta6t8iDFlAMwsEmye6ZRDhoF",
-	"eBeNvrNDDkGj60sFIOSG7JVG1xIE8TigCFuYYLOGbHVM/jZnGRD4nAsFk4xy2wYvNvfjEqbk5zf4F1Op",
-	"iJel6UZmVMZr0yrOxWsTwa/ZrMCqzlxIbUs7ORcFT/AzrJtcvHp3dUzeCT036XWuExo+OuVf9AduO/rj",
-	"v3E0scdNQWIeHhfa+q8CaXdFELe7Z761VR6E+QaQ1sGZL6dKLYVMW03ql3PKZ3Dhh+0pA6ixyH1NXztb",
-	"em4TPonrdmWbzig245DaVs57BexvBc1Mi652qfZXO+QQUm19qQDpuSGHvXlDINg9ea2t8iDMPwADB2f+",
-	"25x3NemzoWjrhv5w8a7syecMVpepX5pFOI6TQtkcdleJn9jcXGzp19Kf78PFu3YO2GeAvFwTwdAVKO/c",
-	"4e4opL5MJ3V8uHhnIK8LziHDq1UDvtyUSNDklmaFa7DFAW9vCbqQfC8Aa+PqdYDtnqM/XLx7EC4eg6Od",
-	"A7yFhTfaj6ztCZS2PIy/o5onxS1LDRt7k9Spbi4T3hNWmTHvmyybx343+RhX+HDx7gCo3jNq35daxyZa",
-	"PUyEvFF7xqzNIWtJyXaxvSszbD8QN3M/SBTcrNzuBf+JTwW2DLZWSOLDnL5eLKFZZh9PcFqebQo7B+qL",
-	"Eq5AH70U4oZB207cYNzJldUb3fi7u+1w3tWr9VODJIo8QAknKN2LroiJLvIrO2a/nq5ymWD2r3vUrYGg",
-	"VHDX9FgVsxlY4UP1XO34ZYs20N3SjKVUw4lZtJ2nPrhxF2bYfnjKzP0gV5ZZ+eUckpsQ5i5AHiF48FaY",
-	"ZrBQ54SvGfr76FI8Cn34OGE/9jDhc0/Iw6lNhOJB0vTMAfuiIzewut/dtDNsOaOiG1mHURcOrBnuW324",
-	"B4p6LpG93x+XBddsAf03SGVNUlkqpPYSWc5XKJvurXwFHkJCLdqrxe1g+nDx7qIcdIhoc23BIYFmtAvL",
-	"U/yOnozZ0IEb6LCZB7afgsKWF5Cld104+in3LWb72/yzcc394+AkZkv3fCRgLwVJBvEWHEPzkZO5YAn4",
-	"B3w9Ep4ooiCDBEuqIUsfJ/2sL7DldF88Wmmh5yYBxf3bbLjxBytJmkOcb6D6W72or/bnsil47W+N1pL1",
-	"v9tWMLW/lK/zNhaXa6PKpPra32wdXe0PCL27T3f/bwA=",
+	"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",
+	"xnRRLEJWPd1K9vCT1Hdm8ylqf0Ac3n26+88BAA==",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

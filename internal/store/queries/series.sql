@@ -67,25 +67,11 @@ JOIN series s ON s.id = e.series_id
 WHERE s.monitored = 1 AND e.monitored = 1 AND e.file_path IS NULL
   AND e.air_date IS NOT NULL AND e.air_date <= CAST(@today AS TEXT)
   AND NOT EXISTS (
-      SELECT 1 FROM download_episodes de
-      JOIN downloads d ON d.id = de.download_id
-      WHERE de.episode_id = e.id AND d.status IN ('downloading', 'completed')
+      SELECT 1 FROM download_items di
+      JOIN downloads d ON d.id = di.download_id
+      WHERE di.episode_id = e.id AND d.status IN ('downloading', 'completed')
   )
 ORDER BY e.series_id, e.season, e.episode;
-
--- name: ListActiveEpisodeIDs :many
-SELECT de.episode_id FROM download_episodes de
-JOIN downloads d ON d.id = de.download_id
-WHERE d.status IN ('downloading', 'completed');
-
--- name: AddDownloadEpisode :exec
-INSERT INTO download_episodes (download_id, episode_id) VALUES (@download_id, @episode_id);
-
--- name: ListDownloadEpisodes :many
-SELECT e.* FROM episodes e
-JOIN download_episodes de ON de.episode_id = e.id
-WHERE de.download_id = @download_id
-ORDER BY e.season, e.episode;
 
 -- name: ListSeriesMissingBackdrop :many
 SELECT * FROM series WHERE backdrop_path = '' ORDER BY id;

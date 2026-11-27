@@ -57,6 +57,8 @@ export type ReleaseResult = Schemas['ReleaseResult'];
 export type IndexerFailure = Schemas['IndexerFailure'];
 export type SearchResult = Schemas['SearchResult'];
 export type AutoSearchResult = Schemas['AutoSearchResult'];
+/** What a release is searched for or grabbed for, by TMDB id. */
+export type ReleaseTarget = Schemas['ReleaseTarget'];
 export type RSSResult = Schemas['RSSResult'];
 
 export type DownloadSettings = Schemas['DownloadSettings'];

@@ -12,13 +12,13 @@
 		toggleValue,
 		type ReleaseFilter,
 		type ReleaseSortKey,
-		type ReleaseSource
+		type ReleaseTarget
 	} from '#lib/domain/releases.js';
 	import { toasts } from '#lib/stores/toast.svelte.js';
 	import type { ReleaseResult } from '#lib/api/types.js';
 
 	interface Props {
-		source: ReleaseSource;
+		target: ReleaseTarget;
 		/** Search as soon as the table is shown, instead of waiting for the button. */
 		auto?: boolean;
 		/**
@@ -28,7 +28,7 @@
 		 */
 		heading?: string;
 	}
-	let { source, auto = false, heading }: Props = $props();
+	let { target, auto = false, heading }: Props = $props();
 
 	// The search runs once started (at once with auto). activeText is the
 	// user's own query; '' means arrd's.
@@ -36,14 +36,11 @@
 	const enabled = $derived(auto || started);
 	let activeText = $state('');
 	const releases = createQuery(() => ({
-		...queries.releases(source, activeText),
+		...queries.releases(target, activeText),
 		enabled,
 		placeholderData: keepPreviousData
 	}));
-	const grabMovie = useMutation('grabMovie');
-	const grabSeries = useMutation('grabSeries');
-	const grabDiscoverMovie = useMutation('grabDiscoverMovie');
-	const grabDiscoverSeries = useMutation('grabDiscoverSeries');
+	const grabRelease = useMutation('grab');
 
 	// The search box starts with arrd's own query once it is known; after
 	// that, the text is the user's.
@@ -89,20 +86,7 @@
 			onSuccess: () => toasts.push('success', `Grabbed ${r.title}`),
 			onSettled: () => (grabbing = null)
 		};
-		switch (source.kind) {
-			case 'movie':
-				return grabMovie.mutate({ id: source.movieId, release: r }, opts);
-			case 'series':
-			case 'season':
-			case 'episode':
-				return grabSeries.mutate({ id: source.seriesId, release: r }, opts);
-			case 'discoverMovie':
-				return grabDiscoverMovie.mutate({ tmdbId: source.tmdbId, release: r }, opts);
-			case 'discoverSeries':
-			case 'discoverSeason':
-			case 'discoverEpisode':
-				return grabDiscoverSeries.mutate({ tmdbId: source.tmdbId, release: r }, opts);
-		}
+		grabRelease.mutate({ target, release: r }, opts);
 	}
 </script>
 

@@ -37,11 +37,11 @@ func TestPauseResumeDownload(t *testing.T) {
 	if movie.BackdropPath == nil || *movie.BackdropPath != backdrop {
 		t.Errorf("movie backdrop = %v, want %s", movie.BackdropPath, backdrop)
 	}
-	auto, err := svc.Acquire.AutoSearchMovie(ctx, movie.ID)
-	if err != nil || auto.Grabbed == nil {
+	auto, err := svc.Acquire.AutoSearch(ctx, acquire.MovieTarget(movie.TMDBID))
+	if err != nil || len(auto.Grabbed) != 1 {
 		t.Fatalf("auto search = %+v, %v", auto, err)
 	}
-	id := auto.Grabbed.ID
+	id := auto.Grabbed[0].ID
 	if err := svc.Acquire.PauseDownload(ctx, id); err != nil {
 		t.Fatal(err)
 	}

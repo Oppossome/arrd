@@ -54,7 +54,7 @@ func TestTrafficFailsClosedWhileVPNDown(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.Acquire.GrabMovieRelease(ctx, movie.ID, acquire.ReleaseResult{Title: "x", IndexerID: ix.ID, MagnetURI: "magnet:?xt=urn:btih:0000000000000000000000000000000000000000"}); err == nil {
+	if _, err := svc.Acquire.Grab(ctx, acquire.MovieTarget(movie.TMDBID), acquire.ReleaseResult{Title: "x", IndexerID: ix.ID, MagnetURI: "magnet:?xt=urn:btih:0000000000000000000000000000000000000000"}); err == nil {
 		t.Error("grab succeeded without an engine")
 	}
 	if _, err := svc.Indexers.TestIndexer(ctx, ix.ID); err == nil || !strings.Contains(err.Error(), "vpn is down") {

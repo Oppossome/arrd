@@ -34,6 +34,8 @@ tags:
   - name: discover
   - name: series
   - name: episodes
+  - name: releases
+    description: Searching indexers for, and grabbing, releases of a movie, collection, series, season or episode.
   - name: queue
   - name: vpn
 
@@ -837,52 +839,6 @@ paths:
         "204": { description: Removed. }
         default: { $ref: "#/components/responses/Error" }
 
-  /api/v1/movies/{id}/releases:
-    get:
-      operationId: movieReleases
-      tags: [movies]
-      parameters:
-        - { $ref: "#/components/parameters/ID" }
-        - { $ref: "#/components/parameters/ReleaseQuery" }
-      responses:
-        "200":
-          description: Releases found by an interactive search.
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/SearchResult" }
-        default: { $ref: "#/components/responses/Error" }
-
-  /api/v1/movies/{id}/search:
-    post:
-      operationId: searchMovie
-      tags: [movies]
-      parameters: [{ $ref: "#/components/parameters/ID" }]
-      responses:
-        "200":
-          description: The automatic search outcome.
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/AutoSearchResult" }
-        default: { $ref: "#/components/responses/Error" }
-
-  /api/v1/movies/{id}/grab:
-    post:
-      operationId: grabMovie
-      tags: [movies]
-      parameters: [{ $ref: "#/components/parameters/ID" }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/ReleaseInput" }
-      responses:
-        "201":
-          description: The started download.
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Download" }
-        default: { $ref: "#/components/responses/Error" }
-
   # ------------------------------------------------------------ discover
   /api/v1/discover/lists/movies/{list}:
     get:
@@ -995,41 +951,6 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/LookupMovie" }
-        default: { $ref: "#/components/responses/Error" }
-
-  /api/v1/discover/movies/{tmdbId}/releases:
-    get:
-      operationId: discoverMovieReleases
-      tags: [discover]
-      description: Searches the indexers for a movie, whether or not it is in the library.
-      parameters:
-        - { $ref: "#/components/parameters/TMDBID" }
-        - { $ref: "#/components/parameters/ReleaseQuery" }
-      responses:
-        "200":
-          description: Releases found.
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/SearchResult" }
-        default: { $ref: "#/components/responses/Error" }
-
-  /api/v1/discover/movies/{tmdbId}/grab:
-    post:
-      operationId: discoverGrabMovie
-      tags: [discover]
-      description: Downloads a release, first adding the movie to the library (unmonitored, default root folder) if it is not there.
-      parameters: [{ $ref: "#/components/parameters/TMDBID" }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/ReleaseInput" }
-      responses:
-        "201":
-          description: The started download.
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Download" }
         default: { $ref: "#/components/responses/Error" }
 
   /api/v1/discover/lists/series/{list}:
@@ -1146,76 +1067,6 @@ paths:
               schema: { $ref: "#/components/schemas/SeasonDetails" }
         default: { $ref: "#/components/responses/Error" }
 
-  /api/v1/discover/series/{tmdbId}/seasons/{season}/episodes/{episode}/releases:
-    get:
-      operationId: discoverEpisodeReleases
-      tags: [discover]
-      description: Searches the indexers for one episode of a series, whether or not it is in the library. Season packs are rejected.
-      parameters:
-        - { $ref: "#/components/parameters/TMDBID" }
-        - { $ref: "#/components/parameters/Season" }
-        - { $ref: "#/components/parameters/EpisodeNumber" }
-        - { $ref: "#/components/parameters/ReleaseQuery" }
-      responses:
-        "200":
-          description: Releases found.
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/SearchResult" }
-        default: { $ref: "#/components/responses/Error" }
-
-  /api/v1/discover/series/{tmdbId}/seasons/{season}/releases:
-    get:
-      operationId: discoverSeasonReleases
-      tags: [discover]
-      description: Searches the indexers for a season of a series, whether or not it is in the library.
-      parameters:
-        - { $ref: "#/components/parameters/TMDBID" }
-        - { $ref: "#/components/parameters/Season" }
-        - { $ref: "#/components/parameters/ReleaseQuery" }
-      responses:
-        "200":
-          description: Releases found.
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/SearchResult" }
-        default: { $ref: "#/components/responses/Error" }
-
-  /api/v1/discover/series/{tmdbId}/releases:
-    get:
-      operationId: discoverSeriesReleases
-      tags: [discover]
-      description: Searches the indexers for whole-series packs (multi-season or "Complete Series"; for a one-season series, its season pack), whether or not the series is in the library.
-      parameters:
-        - { $ref: "#/components/parameters/TMDBID" }
-        - { $ref: "#/components/parameters/ReleaseQuery" }
-      responses:
-        "200":
-          description: Releases found.
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/SearchResult" }
-        default: { $ref: "#/components/responses/Error" }
-
-  /api/v1/discover/series/{tmdbId}/grab:
-    post:
-      operationId: discoverGrabSeries
-      tags: [discover]
-      description: Downloads a TV release (episodes, a season pack or a multi-season pack), first adding the series to the library (unmonitored, default root folder) if it is not there.
-      parameters: [{ $ref: "#/components/parameters/TMDBID" }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/ReleaseInput" }
-      responses:
-        "201":
-          description: The started download.
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Download" }
-        default: { $ref: "#/components/responses/Error" }
-
   # ------------------------------------------------------------ series
   /api/v1/series/lookup:
     get:
@@ -1327,50 +1178,6 @@ paths:
                 items: { $ref: "#/components/schemas/Episode" }
         default: { $ref: "#/components/responses/Error" }
 
-  /api/v1/series/{id}/search:
-    post:
-      operationId: searchSeriesWanted
-      tags: [series]
-      parameters: [{ $ref: "#/components/parameters/ID" }]
-      responses:
-        "204": { description: Searched for every wanted episode. }
-        default: { $ref: "#/components/responses/Error" }
-
-  /api/v1/series/{id}/releases:
-    get:
-      operationId: seriesReleases
-      tags: [series]
-      description: Searches the indexers for whole-series packs (multi-season or "Complete Series"; for a one-season series, its season pack).
-      parameters:
-        - { $ref: "#/components/parameters/ID" }
-        - { $ref: "#/components/parameters/ReleaseQuery" }
-      responses:
-        "200":
-          description: Releases found by an interactive search.
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/SearchResult" }
-        default: { $ref: "#/components/responses/Error" }
-
-  /api/v1/series/{id}/grab:
-    post:
-      operationId: grabSeries
-      tags: [series]
-      description: Downloads a TV release (episodes, a season pack or a multi-season pack) for the series.
-      parameters: [{ $ref: "#/components/parameters/ID" }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/ReleaseInput" }
-      responses:
-        "201":
-          description: The started download.
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Download" }
-        default: { $ref: "#/components/responses/Error" }
-
   /api/v1/series/{id}/seasons/{season}:
     put:
       operationId: updateSeason
@@ -1385,39 +1192,6 @@ paths:
             schema: { $ref: "#/components/schemas/MonitoredRequest" }
       responses:
         "204": { description: Every episode of the season updated. }
-        default: { $ref: "#/components/responses/Error" }
-
-  /api/v1/series/{id}/seasons/{season}/releases:
-    get:
-      operationId: seasonReleases
-      tags: [series]
-      parameters:
-        - { $ref: "#/components/parameters/ID" }
-        - { $ref: "#/components/parameters/Season" }
-        - { $ref: "#/components/parameters/ReleaseQuery" }
-      responses:
-        "200":
-          description: Releases found by an interactive search.
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/SearchResult" }
-        default: { $ref: "#/components/responses/Error" }
-
-  /api/v1/series/{id}/seasons/{season}/search:
-    post:
-      operationId: searchSeason
-      tags: [series]
-      parameters:
-        - { $ref: "#/components/parameters/ID" }
-        - { $ref: "#/components/parameters/Season" }
-      responses:
-        "200":
-          description: One automatic search outcome per search made.
-          content:
-            application/json:
-              schema:
-                type: array
-                items: { $ref: "#/components/schemas/AutoSearchResult" }
         default: { $ref: "#/components/responses/Error" }
 
   # ------------------------------------------------------------ episodes
@@ -1439,50 +1213,70 @@ paths:
               schema: { $ref: "#/components/schemas/Episode" }
         default: { $ref: "#/components/responses/Error" }
 
-  /api/v1/episodes/{id}/releases:
+  # ------------------------------------------------------------ releases
+  /api/v1/releases:
     get:
-      operationId: episodeReleases
-      tags: [episodes]
+      operationId: searchReleases
+      tags: [releases]
+      description: >-
+        Searches the indexers for a target, whether or not its title is in the library (a title in the
+        library is searched as such: a season's episodes that have a file are not wanted).
+        A collection target finds multi-movie packs of the movie's TMDB collection (404 if it has none);
+        a series target finds whole-series packs.
       parameters:
-        - { $ref: "#/components/parameters/ID" }
+        - { name: kind, in: query, required: true, schema: { $ref: "#/components/schemas/ReleaseTargetKind" } }
+        - { name: tmdb_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+        - { name: season, in: query, description: Season and episode targets., schema: { type: integer, minimum: 0 } }
+        - { name: episode, in: query, description: Episode targets., schema: { type: integer, minimum: 1 } }
         - { $ref: "#/components/parameters/ReleaseQuery" }
       responses:
         "200":
-          description: Releases found by an interactive search.
+          description: Releases found, best acceptable first.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/SearchResult" }
         default: { $ref: "#/components/responses/Error" }
 
-  /api/v1/episodes/{id}/search:
+  /api/v1/grabs:
     post:
-      operationId: searchEpisode
-      tags: [episodes]
-      parameters: [{ $ref: "#/components/parameters/ID" }]
-      responses:
-        "200":
-          description: The automatic search outcome.
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/AutoSearchResult" }
-        default: { $ref: "#/components/responses/Error" }
-
-  /api/v1/episodes/{id}/grab:
-    post:
-      operationId: grabEpisode
-      tags: [episodes]
-      parameters: [{ $ref: "#/components/parameters/ID" }]
+      operationId: grabRelease
+      tags: [releases]
+      description: >-
+        Downloads a release for a target. The target's movie or series is first added to the library
+        (unmonitored, default root folder) if it is not there; a collection's other released movies are
+        added in that movie's root folder. A multi-movie pack is refused for a single movie target.
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/ReleaseInput" }
+            schema: { $ref: "#/components/schemas/GrabRequest" }
       responses:
         "201":
           description: The started download.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Download" }
+        default: { $ref: "#/components/responses/Error" }
+
+  /api/v1/searches:
+    post:
+      operationId: autoSearch
+      tags: [releases]
+      description: >-
+        Searches for a target in the library and grabs the best acceptable release. A season tries a
+        season pack first, then each episode still wanted; a series does that for every season with
+        wanted episodes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AutoSearchRequest" }
+      responses:
+        "200":
+          description: What the search grabbed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AutoSearchResult" }
         default: { $ref: "#/components/responses/Error" }
 
   /api/v1/rss/sync:
@@ -1856,7 +1650,16 @@ components:
         poster_path: { type: string }
         backdrop_path: { type: string }
         library_id: { type: integer, format: int64, description: "The movie's id in the library, when it is there." }
+        collection: { $ref: "#/components/schemas/MovieCollection" }
         extras: { $ref: "#/components/schemas/MediaExtras" }
+    MovieCollection:
+      type: object
+      additionalProperties: false
+      description: The TMDB collection (franchise) a movie belongs to. Only the single-movie lookup fills it.
+      required: [id, name]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
     LookupSeries:
       type: object
       additionalProperties: false
@@ -2075,6 +1878,7 @@ components:
         poster_path: { type: string }
         backdrop_path: { type: string }
         episodes: { type: array, items: { type: string } }
+        movies: { type: array, items: { type: string }, description: 'The movies of a multi-movie pack, as "Title (Year)".' }
         indexer_id: { type: integer, format: int64 }
         info_hash: { type: string }
         release_title: { type: string }
@@ -2149,6 +1953,7 @@ components:
         season_pack: { type: boolean }
         last_season: { type: integer, description: "The last season of a multi-season pack; season is the first." }
         complete_series: { type: boolean, description: A pack of every season that names none ("Complete Series"). }
+        movie_pack: { type: boolean, description: "A release of several movies of one collection (\"Trilogy\", \"Collection\", \"2011-2015\")." }
     ReleaseInput:
       type: object
       additionalProperties: false
@@ -2171,12 +1976,41 @@ components:
         query: { type: string, description: "The text searched for: the q given, or the text form of arrd's own query." }
         releases: { type: array, items: { $ref: "#/components/schemas/ReleaseResult" } }
         indexer_failures: { type: array, items: { $ref: "#/components/schemas/IndexerFailure" } }
+    ReleaseTargetKind:
+      type: string
+      enum: [movie, collection, series, season, episode]
+      description: >-
+        movie: one movie. collection: multi-movie packs of the movie's TMDB collection. series: whole-series
+        packs. season: a season pack or any wanted episode of the season. episode: one episode.
+    ReleaseTarget:
+      type: object
+      additionalProperties: false
+      description: What a release is wanted for, by TMDB id, whether or not the title is in the library.
+      required: [kind, tmdb_id]
+      properties:
+        kind: { $ref: "#/components/schemas/ReleaseTargetKind" }
+        tmdb_id: { type: integer, format: int64, minimum: 1, description: "The movie's (for a collection, any movie in it) or the series'." }
+        season: { type: integer, minimum: 0, description: Season and episode targets. }
+        episode: { type: integer, minimum: 1, description: Episode targets. }
+    GrabRequest:
+      type: object
+      additionalProperties: false
+      required: [target, release]
+      properties:
+        target: { $ref: "#/components/schemas/ReleaseTarget" }
+        release: { $ref: "#/components/schemas/ReleaseInput" }
+    AutoSearchRequest:
+      type: object
+      additionalProperties: false
+      required: [target]
+      properties:
+        target: { $ref: "#/components/schemas/ReleaseTarget" }
     AutoSearchResult:
       type: object
       additionalProperties: false
-      required: [releases_considered, indexer_failures]
+      required: [grabbed, releases_considered, indexer_failures]
       properties:
-        grabbed: { $ref: "#/components/schemas/Download" }
+        grabbed: { type: array, items: { $ref: "#/components/schemas/Download" } }
         releases_considered: { type: integer }
         indexer_failures: { type: array, items: { $ref: "#/components/schemas/IndexerFailure" } }
     RSSResult:

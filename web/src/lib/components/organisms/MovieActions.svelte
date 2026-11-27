@@ -16,16 +16,19 @@
 	let { id, ondownload }: Props = $props();
 
 	const movie = createQuery(() => queries.movie(id));
+	// TMDB's view of the movie says which collection, if any, it belongs to.
+	const tmdbMovie = createQuery(() => ({ ...queries.discoverMovie(movie.data?.tmdb_id ?? 0), enabled: !!movie.data }));
+	const collection = $derived(tmdbMovie.data?.collection);
 	const monitor = useMutation('setMovieMonitored');
-	const search = useMutation('searchMovie');
+	const search = useMutation('autoSearch');
 	const del = useMutation('deleteMovie');
 	let confirming = $state(false);
 
-	function autoSearch() {
-		search.mutate(id, {
+	function autoSearch(tmdbId: number) {
+		search.mutate({ kind: 'movie', tmdb_id: tmdbId }, {
 			onSuccess: (r) =>
-				r.grabbed
-					? toasts.push('success', `Grabbed ${r.grabbed.release_title}`)
+				r.grabbed.length > 0
+					? toasts.push('success', `Grabbed ${r.grabbed[0].release_title}`)
 					: toasts.push('info', `No acceptable release among ${r.releases_considered} results`)
 		});
 	}
@@ -38,10 +41,18 @@
 	{@const showStatus = m.status !== 'unmonitored'}
 	<div class="stack">
 		<div class="actions">
-			<Button variant="primary" onclick={() => ondownload({ title: m.title, source: { kind: 'movie', movieId: id } })}>
+			<Button variant="primary" onclick={() => ondownload({ title: m.title, target: { kind: 'movie', tmdb_id: m.tmdb_id } })}>
 				<Icon name="download" />Download
 			</Button>
-			<Button loading={search.isPending} onclick={autoSearch}><Icon name="search" />Automatic search</Button>
+			{#if collection}
+				<Button
+					onclick={() =>
+						ondownload({ title: `${collection.name} · Movie packs`, target: { kind: 'collection', tmdb_id: m.tmdb_id } })}
+				>
+					<Icon name="download" />Download collection
+				</Button>
+			{/if}
+			<Button loading={search.isPending} onclick={() => autoSearch(m.tmdb_id)}><Icon name="search" />Automatic search</Button>
 			<MonitorToggle
 				showLabel
 				monitored={m.monitored}

@@ -27,12 +27,12 @@ describe('query layer', () => {
 		expect(queueRefetchInterval(undefined)).toBe(15_000);
 	});
 
-	it('grabbing invalidates the queue and the movie', async () => {
+	it('grabbing invalidates the queue and every movie and series, since a grab may add titles', async () => {
 		const qc = new QueryClient();
 		const keysOf = invalidated(qc);
-		await mutations.grabMovie(qc).onSuccess({} as Download, { id: 7 });
+		await mutations.grab(qc).onSuccess();
 		expect(keysOf()).toEqual(
-			expect.arrayContaining([JSON.stringify(keys.queue.all), JSON.stringify(keys.movies.detail(7)), JSON.stringify(keys.movies.list)])
+			expect.arrayContaining([JSON.stringify(keys.queue.all), JSON.stringify(keys.movies.all), JSON.stringify(keys.series.all)])
 		);
 	});
 

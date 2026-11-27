@@ -43,7 +43,16 @@ type Movie struct {
 	// discover results, not with GetMovie.
 	GenreIDs         []int64 `json:"genre_ids,omitempty"`
 	OriginalLanguage string  `json:"original_language,omitempty"`
+	// Collection is the franchise the movie belongs to; nil if none. Only
+	// GetMovie fills it.
+	Collection *CollectionRef `json:"collection,omitempty"`
 	Extras
+}
+
+// CollectionRef names a TMDB collection (a franchise such as a trilogy).
+type CollectionRef struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 // SearchMovies searches by title, optionally narrowed by year (0 = any).
@@ -96,6 +105,7 @@ type tmdbMovie struct {
 	Videos       tmdbVideos       `json:"videos"`
 	Credits      tmdbCredits      `json:"credits"`
 	ReleaseDates tmdbReleaseDates `json:"release_dates"`
+	Collection   *CollectionRef   `json:"belongs_to_collection"`
 }
 
 func (m tmdbMovie) toMovie() Movie {
@@ -106,7 +116,7 @@ func (m tmdbMovie) toMovie() Movie {
 	return Movie{
 		TMDBID: m.ID, IMDBID: m.IMDBID, Title: m.Title, OriginalTitle: m.OriginalTitle,
 		Year: year, Overview: m.Overview, PosterPath: m.PosterPath, BackdropPath: m.BackdropPath,
-		GenreIDs: m.GenreIDs, OriginalLanguage: m.OriginalLanguage,
+		GenreIDs: m.GenreIDs, OriginalLanguage: m.OriginalLanguage, Collection: m.Collection,
 		Extras: Extras{
 			Tagline: m.Tagline, Runtime: m.Runtime, VoteAverage: m.VoteAverage, VoteCount: m.VoteCount,
 			Certification: m.ReleaseDates.certification(), Genres: m.Genres,

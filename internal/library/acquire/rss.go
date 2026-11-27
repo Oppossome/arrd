@@ -3,6 +3,8 @@ package acquire
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 
 	"generic-arr-project/internal/indexer"
 	"generic-arr-project/internal/library/indexers"
@@ -16,14 +18,6 @@ type RSSResult struct {
 	Releases int                       `json:"releases_seen"`
 	Grabbed  []Download                `json:"grabbed"`
 	Failures []indexers.IndexerFailure `json:"indexer_failures"`
-}
-
-// rssCandidate is an accepted RSS release and what it would satisfy.
-type rssCandidate struct {
-	release    ReleaseResult
-	movieID    int64   // set for movies
-	seriesID   int64   // set for TV
-	episodeIDs []int64 // wanted episodes it covers
 }
 
 // RSSSync reads the recent-releases feed of every RSS-enabled indexer and
@@ -61,34 +55,22 @@ func (s *Service) RSSSync(ctx context.Context) (RSSResult, error) {
 
 	// Grab greedily, best first, skipping anything already covered by an
 	// earlier grab in this pass.
-	grabbedMovies := map[int64]bool{}
-	grabbedEpisodes := map[int64]bool{}
+	grabbed := map[downloadItem]bool{}
 	for _, c := range candidates {
-		cand := c.Item
-		if cand.movieID != 0 {
-			if grabbedMovies[cand.movieID] {
-				continue
-			}
-			dl, err := s.GrabMovieRelease(ctx, cand.movieID, cand.release)
-			if err != nil {
-				s.log.Warn().Str("release", cand.release.Title).Err(err).Msg("rss grab")
-				continue
-			}
-			grabbedMovies[cand.movieID] = true
-			out.Grabbed = append(out.Grabbed, dl)
-			continue
-		}
-		if anyGrabbed(cand.episodeIDs, grabbedEpisodes) {
-			continue
-		}
-		dl, err := s.GrabSeriesRelease(ctx, cand.seriesID, cand.release)
+		target, err := c.Item.want.claim(ctx, parsed(c.Item.release))
 		if err != nil {
-			s.log.Warn().Str("release", cand.release.Title).Err(err).Msg("rss grab")
+			s.log.Warn().Str("release", c.Item.release.Title).Err(err).Msg("rss grab")
 			continue
 		}
-		for _, id := range cand.episodeIDs {
-			grabbedEpisodes[id] = true
+		if target.coversAny(grabbed) {
+			continue
 		}
+		dl, err := s.grab(ctx, target, c.Item.release)
+		if err != nil {
+			s.log.Warn().Str("release", c.Item.release.Title).Err(err).Msg("rss grab")
+			continue
+		}
+		target.markIn(grabbed)
 		out.Grabbed = append(out.Grabbed, dl)
 	}
 	if len(out.Grabbed) > 0 {
@@ -97,25 +79,43 @@ func (s *Service) RSSSync(ctx context.Context) (RSSResult, error) {
 	return out, nil
 }
 
-func anyGrabbed(ids []int64, grabbed map[int64]bool) bool {
-	for _, id := range ids {
-		if grabbed[id] {
+// downloadItem is a movie or an episode a download brings in.
+type downloadItem struct {
+	movie bool
+	id    int64
+}
+
+func (t grabTarget) items() []downloadItem {
+	out := make([]downloadItem, 0, len(t.movieIDs)+len(t.episodeIDs))
+	for _, id := range t.movieIDs {
+		out = append(out, downloadItem{movie: true, id: id})
+	}
+	for _, id := range t.episodeIDs {
+		out = append(out, downloadItem{id: id})
+	}
+	return out
+}
+
+func (t grabTarget) coversAny(set map[downloadItem]bool) bool {
+	for _, it := range t.items() {
+		if set[it] {
 			return true
 		}
 	}
 	return false
 }
 
-// wantedMatcher matches feed releases against what the library wants.
+func (t grabTarget) markIn(set map[downloadItem]bool) {
+	for _, it := range t.items() {
+		set[it] = true
+	}
+}
+
+// wantedMatcher matches feed releases against everything the library
+// wants: each wanted movie, and each season with wanted episodes.
 type wantedMatcher struct {
 	limits release.Limits
-	movies []db.Movie
-	series []db.Series
-	// wanted episodes by series, then season
-	wanted map[int64]map[int][]db.Episode
-	// seasons in which every episode has aired, by series
-	fullyAired map[int64]map[int]bool
-	seasonSize map[int64]map[int]int
+	wants  []wanted
 }
 
 func (s *Service) newWantedMatcher(ctx context.Context) (*wantedMatcher, error) {
@@ -123,101 +123,101 @@ func (s *Service) newWantedMatcher(ctx context.Context) (*wantedMatcher, error) 
 	if err != nil {
 		return nil, err
 	}
+	m := &wantedMatcher{limits: q.Limits()}
 	movies, err := s.store.ListWantedMovies(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list wanted movies: %w", err)
 	}
-	wantedEps, err := s.store.ListWantedEpisodes(ctx, s.media.Today())
+	for _, mv := range movies {
+		m.wants = append(m.wants, movieWant{s: s, movie: mv})
+	}
+	seasons, err := s.wantedSeasons(ctx)
+	if err != nil {
+		return nil, err
+	}
+	m.wants = append(m.wants, seasons...)
+	return m, nil
+}
+
+// wantedSeasons is a want per season with wanted episodes. A season pack
+// is accepted only once every episode of the season has aired and at
+// least two are wanted.
+func (s *Service) wantedSeasons(ctx context.Context) ([]wanted, error) {
+	today := s.media.Today()
+	wantedEps, err := s.store.ListWantedEpisodes(ctx, today)
 	if err != nil {
 		return nil, fmt.Errorf("list wanted episodes: %w", err)
 	}
-	m := &wantedMatcher{
-		limits: q.Limits(), movies: movies,
-		wanted: map[int64]map[int][]db.Episode{}, fullyAired: map[int64]map[int]bool{}, seasonSize: map[int64]map[int]int{},
-	}
+	bySeries := map[int64]map[int][]db.Episode{}
+	var seriesOrder []int64
 	for _, e := range wantedEps {
-		if m.wanted[e.SeriesID] == nil {
-			m.wanted[e.SeriesID] = map[int][]db.Episode{}
+		if bySeries[e.SeriesID] == nil {
+			bySeries[e.SeriesID] = map[int][]db.Episode{}
+			seriesOrder = append(seriesOrder, e.SeriesID)
 		}
-		m.wanted[e.SeriesID][int(e.Season)] = append(m.wanted[e.SeriesID][int(e.Season)], e)
+		bySeries[e.SeriesID][int(e.Season)] = append(bySeries[e.SeriesID][int(e.Season)], e)
 	}
-	today := s.media.Today()
-	for seriesID := range m.wanted {
+	var out []wanted
+	for _, seriesID := range seriesOrder {
 		series, err := s.store.GetSeries(ctx, seriesID)
 		if err != nil {
 			return nil, fmt.Errorf("load series %d: %w", seriesID, err)
 		}
-		m.series = append(m.series, series)
 		all, err := s.store.ListEpisodes(ctx, seriesID)
 		if err != nil {
 			return nil, fmt.Errorf("list episodes: %w", err)
 		}
-		m.fullyAired[seriesID], m.seasonSize[seriesID] = map[int]bool{}, map[int]int{}
+		fullyAired, size := map[int]bool{}, map[int]int{}
 		for _, e := range all {
 			season := int(e.Season)
-			if _, seen := m.fullyAired[seriesID][season]; !seen {
-				m.fullyAired[seriesID][season] = true
+			if _, seen := fullyAired[season]; !seen {
+				fullyAired[season] = true
 			}
 			if !media.Aired(e, today) {
-				m.fullyAired[seriesID][season] = false
+				fullyAired[season] = false
 			}
-			m.seasonSize[seriesID][season]++
+			size[season]++
+		}
+		for _, season := range slices.Sorted(maps.Keys(bySeries[seriesID])) {
+			eps := bySeries[seriesID][season]
+			want := release.EpisodeWant{
+				Season:       season,
+				AllowPack:    fullyAired[season] && len(eps) >= 2,
+				PackEpisodes: size[season],
+			}
+			for _, e := range eps {
+				want.Episodes = append(want.Episodes, int(e.Episode))
+			}
+			out = append(out, episodesWant{s: s, series: series, want: want})
 		}
 	}
-	return m, nil
+	return out, nil
+}
+
+// rssCandidate is an accepted RSS release and what it was accepted for.
+type rssCandidate struct {
+	release ReleaseResult
+	want    wanted
 }
 
 func (m *wantedMatcher) match(f indexers.FoundRelease) []release.Ranked[rssCandidate] {
-	info := release.Parse(f.Title)
-	cand := release.Candidate{Info: info, Size: f.Size, Seeders: f.Seeders}
 	if int64(f.Seeders) < f.MinSeeders {
 		return nil
 	}
-	rel := ReleaseResult{
-		Title: f.Title, IndexerID: f.IndexerID, Indexer: f.Indexer, DownloadURL: f.DownloadURL,
-		MagnetURI: f.MagnetURI, InfoHash: f.InfoHash, Size: f.Size, Seeders: f.Seeders, Peers: f.Peers,
-		PublishDate: f.PublishDate, Quality: info.Quality(), Accepted: true,
-	}
+	info := release.Parse(f.Title)
+	cand := release.Candidate{Info: info, Size: f.Size, Seeders: f.Seeders}
 	var out []release.Ranked[rssCandidate]
-	if !info.IsTV {
-		for _, mv := range m.movies {
-			d := release.EvaluateMovie(cand, release.MovieTarget{Title: mv.Title, OriginalTitle: mv.OriginalTitle, Year: int(mv.Year)}, m.limits)
-			if d.Accepted {
-				rel.Score = d.Score
-				out = append(out, release.Ranked[rssCandidate]{Item: rssCandidate{release: rel, movieID: mv.ID}, Decision: d, Seeders: f.Seeders})
-			}
-		}
-		return out
-	}
-	for _, sr := range m.series {
-		if ok, _ := release.MatchesSeries(info, seriesTarget(sr)); !ok {
+	for _, w := range m.wants {
+		d := w.evaluate(cand, m.limits)
+		if !d.Accepted {
 			continue
 		}
-		wanted := m.wanted[sr.ID][info.Season]
-		if len(wanted) == 0 {
-			continue
+		rel := ReleaseResult{
+			Title: f.Title, IndexerID: f.IndexerID, Indexer: f.Indexer, DownloadURL: f.DownloadURL,
+			MagnetURI: f.MagnetURI, InfoHash: f.InfoHash, Size: f.Size, Seeders: f.Seeders, Peers: f.Peers,
+			PublishDate: f.PublishDate, Quality: info.Quality(), Accepted: true, Score: d.Score,
 		}
-		want := release.EpisodeWant{
-			Season:       info.Season,
-			AllowPack:    m.fullyAired[sr.ID][info.Season] && len(wanted) >= 2,
-			PackEpisodes: m.seasonSize[sr.ID][info.Season],
-		}
-		var covered []int64
-		for _, e := range wanted {
-			want.Episodes = append(want.Episodes, int(e.Episode))
-			if info.Covers(int(e.Season), int(e.Episode)) {
-				covered = append(covered, e.ID)
-			}
-		}
-		d := release.EvaluateEpisode(cand, seriesTarget(sr), want, m.limits)
-		if !d.Accepted || len(covered) == 0 {
-			continue
-		}
-		rel.Score = d.Score
-		out = append(out, release.Ranked[rssCandidate]{
-			Item:     rssCandidate{release: rel, seriesID: sr.ID, episodeIDs: covered},
-			Decision: d, Seeders: f.Seeders,
-		})
+		out = append(out, release.Ranked[rssCandidate]{Item: rssCandidate{release: rel, want: w}, Decision: d, Seeders: f.Seeders})
 	}
 	return out
 }

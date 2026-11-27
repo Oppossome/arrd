@@ -51,22 +51,6 @@ func (h *handlers) DiscoverMovie(ctx context.Context, req apigen.DiscoverMovieRe
 	return apigen.DiscoverMovie200JSONResponse(movie), nil
 }
 
-func (h *handlers) DiscoverMovieReleases(ctx context.Context, req apigen.DiscoverMovieReleasesRequestObject) (apigen.DiscoverMovieReleasesResponseObject, error) {
-	out, err := h.svc.Acquire.SearchDiscoveredMovie(ctx, req.TMDBID, deref(req.Params.Q))
-	if err != nil {
-		return nil, err
-	}
-	return apigen.DiscoverMovieReleases200JSONResponse(toAPISearchResult(out)), nil
-}
-
-func (h *handlers) DiscoverGrabMovie(ctx context.Context, req apigen.DiscoverGrabMovieRequestObject) (apigen.DiscoverGrabMovieResponseObject, error) {
-	out, err := h.svc.Acquire.GrabDiscoveredMovie(ctx, req.TMDBID, fromAPIRelease(*req.Body))
-	if err != nil {
-		return nil, err
-	}
-	return apigen.DiscoverGrabMovie201JSONResponse(toAPIDownload(out)), nil
-}
-
 func (h *handlers) SeriesList(ctx context.Context, req apigen.SeriesListRequestObject) (apigen.SeriesListResponseObject, error) {
 	out, err := h.svc.Media.TMDBSeriesList(ctx, metadata.SeriesList(req.List))
 	if err != nil {
@@ -116,30 +100,6 @@ func (h *handlers) DiscoverSeason(ctx context.Context, req apigen.DiscoverSeason
 		return nil, err
 	}
 	return apigen.DiscoverSeason200JSONResponse(toAPISeasonDetails(out)), nil
-}
-
-func (h *handlers) DiscoverEpisodeReleases(ctx context.Context, req apigen.DiscoverEpisodeReleasesRequestObject) (apigen.DiscoverEpisodeReleasesResponseObject, error) {
-	out, err := h.svc.Acquire.SearchDiscoveredEpisode(ctx, req.TMDBID, req.Season, req.Episode, deref(req.Params.Q))
-	if err != nil {
-		return nil, err
-	}
-	return apigen.DiscoverEpisodeReleases200JSONResponse(toAPISearchResult(out)), nil
-}
-
-func (h *handlers) DiscoverSeasonReleases(ctx context.Context, req apigen.DiscoverSeasonReleasesRequestObject) (apigen.DiscoverSeasonReleasesResponseObject, error) {
-	out, err := h.svc.Acquire.SearchDiscoveredSeason(ctx, req.TMDBID, req.Season, deref(req.Params.Q))
-	if err != nil {
-		return nil, err
-	}
-	return apigen.DiscoverSeasonReleases200JSONResponse(toAPISearchResult(out)), nil
-}
-
-func (h *handlers) DiscoverGrabSeries(ctx context.Context, req apigen.DiscoverGrabSeriesRequestObject) (apigen.DiscoverGrabSeriesResponseObject, error) {
-	out, err := h.svc.Acquire.GrabDiscoveredSeries(ctx, req.TMDBID, fromAPIRelease(*req.Body))
-	if err != nil {
-		return nil, err
-	}
-	return apigen.DiscoverGrabSeries201JSONResponse(toAPIDownload(out)), nil
 }
 
 func toAPIDiscoverMovie(m media.DiscoverMovie) apigen.LookupMovie {
@@ -249,10 +209,3 @@ func fromAPIBrowse(filter media.TitleFilter, sort *apigen.DiscoverSort, page *in
 	return q
 }
 
-func (h *handlers) DiscoverSeriesReleases(ctx context.Context, req apigen.DiscoverSeriesReleasesRequestObject) (apigen.DiscoverSeriesReleasesResponseObject, error) {
-	out, err := h.svc.Acquire.SearchDiscoveredSeriesPacks(ctx, req.TMDBID, deref(req.Params.Q))
-	if err != nil {
-		return nil, err
-	}
-	return apigen.DiscoverSeriesReleases200JSONResponse(toAPISearchResult(out)), nil
-}

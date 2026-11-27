@@ -55,30 +55,6 @@ func (h *handlers) DeleteMovie(ctx context.Context, req apigen.DeleteMovieReques
 	return apigen.DeleteMovie204Response{}, nil
 }
 
-func (h *handlers) MovieReleases(ctx context.Context, req apigen.MovieReleasesRequestObject) (apigen.MovieReleasesResponseObject, error) {
-	out, err := h.svc.Acquire.SearchMovie(ctx, req.ID, deref(req.Params.Q))
-	if err != nil {
-		return nil, err
-	}
-	return apigen.MovieReleases200JSONResponse(toAPISearchResult(out)), nil
-}
-
-func (h *handlers) SearchMovie(ctx context.Context, req apigen.SearchMovieRequestObject) (apigen.SearchMovieResponseObject, error) {
-	out, err := h.svc.Acquire.AutoSearchMovie(ctx, req.ID)
-	if err != nil {
-		return nil, err
-	}
-	return apigen.SearchMovie200JSONResponse(toAPIAutoSearchResult(out)), nil
-}
-
-func (h *handlers) GrabMovie(ctx context.Context, req apigen.GrabMovieRequestObject) (apigen.GrabMovieResponseObject, error) {
-	out, err := h.svc.Acquire.GrabMovieRelease(ctx, req.ID, fromAPIRelease(*req.Body))
-	if err != nil {
-		return nil, err
-	}
-	return apigen.GrabMovie201JSONResponse(toAPIDownload(out)), nil
-}
-
 func toAPIMovie(m media.Movie) apigen.Movie {
 	return apigen.Movie{
 		ID:            m.ID,
@@ -109,7 +85,15 @@ func toAPILookupMovie(m metadata.Movie) apigen.LookupMovie {
 		Overview:      m.Overview,
 		PosterPath:    optional(m.PosterPath),
 		BackdropPath:  optional(m.BackdropPath),
+		Collection:    toAPIMovieCollection(m.Collection),
 	}
+}
+
+func toAPIMovieCollection(c *metadata.CollectionRef) *apigen.MovieCollection {
+	if c == nil {
+		return nil
+	}
+	return &apigen.MovieCollection{ID: c.ID, Name: c.Name}
 }
 
 func fromAPIAddMovie(in apigen.AddMovieRequest) media.AddMovieInput {

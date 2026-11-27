@@ -152,13 +152,13 @@ func (s *Service) Movies(ctx context.Context) ([]Movie, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list movies: %w", err)
 	}
-	active, err := s.moviesWithActiveDownloads(ctx)
+	active, err := s.ActiveItems(ctx)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]Movie, len(rows))
 	for i, r := range rows {
-		out[i] = movieFromRow(r, active[r.ID])
+		out[i] = movieFromRow(r, active.Movies[r.ID])
 	}
 	return out, nil
 }
@@ -174,22 +174,6 @@ func (s *Service) Movie(ctx context.Context, id int64) (Movie, error) {
 		return Movie{}, fmt.Errorf("list downloads: %w", err)
 	}
 	return movieFromRow(row, hasActive(dls)), nil
-}
-
-func (s *Service) moviesWithActiveDownloads(ctx context.Context) (map[int64]bool, error) {
-	out := map[int64]bool{}
-	for _, status := range []string{DownloadDownloading, DownloadCompleted} {
-		rows, err := s.store.ListDownloadsByStatus(ctx, status)
-		if err != nil {
-			return nil, fmt.Errorf("list downloads: %w", err)
-		}
-		for _, d := range rows {
-			if d.MovieID != nil {
-				out[*d.MovieID] = true
-			}
-		}
-	}
-	return out, nil
 }
 
 func hasActive(dls []db.Download) bool {

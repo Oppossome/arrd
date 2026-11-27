@@ -628,54 +628,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/movies/{id}/releases": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["movieReleases"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/movies/{id}/search": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["searchMovie"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/movies/{id}/grab": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["grabMovie"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/discover/lists/movies/{list}": {
         parameters: {
             query?: never;
@@ -786,40 +738,6 @@ export interface paths {
         get: operations["moviesLike"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/discover/movies/{tmdbId}/releases": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Searches the indexers for a movie, whether or not it is in the library. */
-        get: operations["discoverMovieReleases"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/discover/movies/{tmdbId}/grab": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @description Downloads a release, first adding the movie to the library (unmonitored, default root folder) if it is not there. */
-        post: operations["discoverGrabMovie"];
         delete?: never;
         options?: never;
         head?: never;
@@ -942,74 +860,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/discover/series/{tmdbId}/seasons/{season}/episodes/{episode}/releases": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Searches the indexers for one episode of a series, whether or not it is in the library. Season packs are rejected. */
-        get: operations["discoverEpisodeReleases"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/discover/series/{tmdbId}/seasons/{season}/releases": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Searches the indexers for a season of a series, whether or not it is in the library. */
-        get: operations["discoverSeasonReleases"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/discover/series/{tmdbId}/releases": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Searches the indexers for whole-series packs (multi-season or "Complete Series"; for a one-season series, its season pack), whether or not the series is in the library. */
-        get: operations["discoverSeriesReleases"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/discover/series/{tmdbId}/grab": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @description Downloads a TV release (episodes, a season pack or a multi-season pack), first adding the series to the library (unmonitored, default root folder) if it is not there. */
-        post: operations["discoverGrabSeries"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/series/lookup": {
         parameters: {
             query?: never;
@@ -1092,56 +942,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/series/{id}/search": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["searchSeriesWanted"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/series/{id}/releases": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Searches the indexers for whole-series packs (multi-season or "Complete Series"; for a one-season series, its season pack). */
-        get: operations["seriesReleases"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/series/{id}/grab": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @description Downloads a TV release (episodes, a season pack or a multi-season pack) for the series. */
-        post: operations["grabSeries"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/series/{id}/seasons/{season}": {
         parameters: {
             query?: never;
@@ -1152,38 +952,6 @@ export interface paths {
         get?: never;
         put: operations["updateSeason"];
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/series/{id}/seasons/{season}/releases": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["seasonReleases"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/series/{id}/seasons/{season}/search": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["searchSeason"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1206,14 +974,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/episodes/{id}/releases": {
+    "/api/v1/releases": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["episodeReleases"];
+        /** @description Searches the indexers for a target, whether or not its title is in the library (a title in the library is searched as such: a season's episodes that have a file are not wanted). A collection target finds multi-movie packs of the movie's TMDB collection (404 if it has none); a series target finds whole-series packs. */
+        get: operations["searchReleases"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1222,7 +991,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/episodes/{id}/search": {
+    "/api/v1/grabs": {
         parameters: {
             query?: never;
             header?: never;
@@ -1231,14 +1000,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["searchEpisode"];
+        /** @description Downloads a release for a target. The target's movie or series is first added to the library (unmonitored, default root folder) if it is not there; a collection's other released movies are added in that movie's root folder. A multi-movie pack is refused for a single movie target. */
+        post: operations["grabRelease"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/episodes/{id}/grab": {
+    "/api/v1/searches": {
         parameters: {
             query?: never;
             header?: never;
@@ -1247,7 +1017,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["grabEpisode"];
+        /** @description Searches for a target in the library and grabs the best acceptable release. A season tries a season pack first, then each episode still wanted; a series does that for every season with wanted episodes. */
+        post: operations["autoSearch"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1533,7 +1304,14 @@ export interface components {
              * @description The movie's id in the library, when it is there.
              */
             library_id?: number;
+            collection?: components["schemas"]["MovieCollection"];
             extras?: components["schemas"]["MediaExtras"];
+        };
+        /** @description The TMDB collection (franchise) a movie belongs to. Only the single-movie lookup fills it. */
+        MovieCollection: {
+            /** Format: int64 */
+            id: number;
+            name: string;
         };
         /** @description A TMDB lookup result (not yet in the library). */
         LookupSeries: {
@@ -1723,6 +1501,8 @@ export interface components {
             poster_path?: string;
             backdrop_path?: string;
             episodes?: string[];
+            /** @description The movies of a multi-movie pack, as "Title (Year)". */
+            movies?: string[];
             /** Format: int64 */
             indexer_id?: number;
             info_hash: string;
@@ -1818,6 +1598,8 @@ export interface components {
             last_season?: number;
             /** @description A pack of every season that names none ("Complete Series"). */
             complete_series?: boolean;
+            /** @description A release of several movies of one collection ("Trilogy", "Collection", "2011-2015"). */
+            movie_pack?: boolean;
         };
         /** @description A release to grab, as returned by a search. Only title and indexer_id are needed. */
         ReleaseInput: {
@@ -1845,6 +1627,8 @@ export interface components {
             last_season?: number;
             /** @description A pack of every season that names none ("Complete Series"). */
             complete_series?: boolean;
+            /** @description A release of several movies of one collection ("Trilogy", "Collection", "2011-2015"). */
+            movie_pack?: boolean;
         };
         IndexerFailure: {
             /** Format: int64 */
@@ -1858,8 +1642,33 @@ export interface components {
             releases: components["schemas"]["ReleaseResult"][];
             indexer_failures: components["schemas"]["IndexerFailure"][];
         };
+        /**
+         * @description movie: one movie. collection: multi-movie packs of the movie's TMDB collection. series: whole-series packs. season: a season pack or any wanted episode of the season. episode: one episode.
+         * @enum {string}
+         */
+        ReleaseTargetKind: "movie" | "collection" | "series" | "season" | "episode";
+        /** @description What a release is wanted for, by TMDB id, whether or not the title is in the library. */
+        ReleaseTarget: {
+            kind: components["schemas"]["ReleaseTargetKind"];
+            /**
+             * Format: int64
+             * @description The movie's (for a collection, any movie in it) or the series'.
+             */
+            tmdb_id: number;
+            /** @description Season and episode targets. */
+            season?: number;
+            /** @description Episode targets. */
+            episode?: number;
+        };
+        GrabRequest: {
+            target: components["schemas"]["ReleaseTarget"];
+            release: components["schemas"]["ReleaseInput"];
+        };
+        AutoSearchRequest: {
+            target: components["schemas"]["ReleaseTarget"];
+        };
         AutoSearchResult: {
-            grabbed?: components["schemas"]["Download"];
+            grabbed: components["schemas"]["Download"][];
             releases_considered: number;
             indexer_failures: components["schemas"]["IndexerFailure"][];
         };
@@ -3477,82 +3286,6 @@ export interface operations {
             default: components["responses"]["Error"];
         };
     };
-    movieReleases: {
-        parameters: {
-            query?: {
-                /** @description Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for. */
-                q?: components["parameters"]["ReleaseQuery"];
-            };
-            header?: never;
-            path: {
-                id: components["parameters"]["ID"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Releases found by an interactive search. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SearchResult"];
-                };
-            };
-            default: components["responses"]["Error"];
-        };
-    };
-    searchMovie: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: components["parameters"]["ID"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The automatic search outcome. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AutoSearchResult"];
-                };
-            };
-            default: components["responses"]["Error"];
-        };
-    };
-    grabMovie: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: components["parameters"]["ID"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReleaseInput"];
-            };
-        };
-        responses: {
-            /** @description The started download. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Download"];
-                };
-            };
-            default: components["responses"]["Error"];
-        };
-    };
     movieList: {
         parameters: {
             query?: never;
@@ -3709,59 +3442,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LookupMovie"][];
-                };
-            };
-            default: components["responses"]["Error"];
-        };
-    };
-    discoverMovieReleases: {
-        parameters: {
-            query?: {
-                /** @description Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for. */
-                q?: components["parameters"]["ReleaseQuery"];
-            };
-            header?: never;
-            path: {
-                tmdbId: components["parameters"]["TMDBID"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Releases found. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SearchResult"];
-                };
-            };
-            default: components["responses"]["Error"];
-        };
-    };
-    discoverGrabMovie: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tmdbId: components["parameters"]["TMDBID"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReleaseInput"];
-            };
-        };
-        responses: {
-            /** @description The started download. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Download"];
                 };
             };
             default: components["responses"]["Error"];
@@ -3926,114 +3606,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SeasonDetails"];
-                };
-            };
-            default: components["responses"]["Error"];
-        };
-    };
-    discoverEpisodeReleases: {
-        parameters: {
-            query?: {
-                /** @description Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for. */
-                q?: components["parameters"]["ReleaseQuery"];
-            };
-            header?: never;
-            path: {
-                tmdbId: components["parameters"]["TMDBID"];
-                season: components["parameters"]["Season"];
-                episode: components["parameters"]["EpisodeNumber"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Releases found. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SearchResult"];
-                };
-            };
-            default: components["responses"]["Error"];
-        };
-    };
-    discoverSeasonReleases: {
-        parameters: {
-            query?: {
-                /** @description Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for. */
-                q?: components["parameters"]["ReleaseQuery"];
-            };
-            header?: never;
-            path: {
-                tmdbId: components["parameters"]["TMDBID"];
-                season: components["parameters"]["Season"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Releases found. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SearchResult"];
-                };
-            };
-            default: components["responses"]["Error"];
-        };
-    };
-    discoverSeriesReleases: {
-        parameters: {
-            query?: {
-                /** @description Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for. */
-                q?: components["parameters"]["ReleaseQuery"];
-            };
-            header?: never;
-            path: {
-                tmdbId: components["parameters"]["TMDBID"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Releases found. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SearchResult"];
-                };
-            };
-            default: components["responses"]["Error"];
-        };
-    };
-    discoverGrabSeries: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tmdbId: components["parameters"]["TMDBID"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReleaseInput"];
-            };
-        };
-        responses: {
-            /** @description The started download. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Download"];
                 };
             };
             default: components["responses"]["Error"];
@@ -4231,80 +3803,6 @@ export interface operations {
             default: components["responses"]["Error"];
         };
     };
-    searchSeriesWanted: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: components["parameters"]["ID"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Searched for every wanted episode. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            default: components["responses"]["Error"];
-        };
-    };
-    seriesReleases: {
-        parameters: {
-            query?: {
-                /** @description Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for. */
-                q?: components["parameters"]["ReleaseQuery"];
-            };
-            header?: never;
-            path: {
-                id: components["parameters"]["ID"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Releases found by an interactive search. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SearchResult"];
-                };
-            };
-            default: components["responses"]["Error"];
-        };
-    };
-    grabSeries: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: components["parameters"]["ID"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReleaseInput"];
-            };
-        };
-        responses: {
-            /** @description The started download. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Download"];
-                };
-            };
-            default: components["responses"]["Error"];
-        };
-    };
     updateSeason: {
         parameters: {
             query?: never;
@@ -4327,57 +3825,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            default: components["responses"]["Error"];
-        };
-    };
-    seasonReleases: {
-        parameters: {
-            query?: {
-                /** @description Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for. */
-                q?: components["parameters"]["ReleaseQuery"];
-            };
-            header?: never;
-            path: {
-                id: components["parameters"]["ID"];
-                season: components["parameters"]["Season"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Releases found by an interactive search. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SearchResult"];
-                };
-            };
-            default: components["responses"]["Error"];
-        };
-    };
-    searchSeason: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: components["parameters"]["ID"];
-                season: components["parameters"]["Season"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description One automatic search outcome per search made. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AutoSearchResult"][];
-                };
             };
             default: components["responses"]["Error"];
         };
@@ -4409,21 +3856,25 @@ export interface operations {
             default: components["responses"]["Error"];
         };
     };
-    episodeReleases: {
+    searchReleases: {
         parameters: {
-            query?: {
+            query: {
+                kind: components["schemas"]["ReleaseTargetKind"];
+                tmdb_id: number;
+                /** @description Season and episode targets. */
+                season?: number;
+                /** @description Episode targets. */
+                episode?: number;
                 /** @description Text to search the indexers for instead of arrd's own query. Results are still judged against the title being searched for. */
                 q?: components["parameters"]["ReleaseQuery"];
             };
             header?: never;
-            path: {
-                id: components["parameters"]["ID"];
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Releases found by an interactive search. */
+            /** @description Releases found, best acceptable first. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -4435,41 +3886,16 @@ export interface operations {
             default: components["responses"]["Error"];
         };
     };
-    searchEpisode: {
+    grabRelease: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                id: components["parameters"]["ID"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The automatic search outcome. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AutoSearchResult"];
-                };
-            };
-            default: components["responses"]["Error"];
-        };
-    };
-    grabEpisode: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: components["parameters"]["ID"];
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ReleaseInput"];
+                "application/json": components["schemas"]["GrabRequest"];
             };
         };
         responses: {
@@ -4480,6 +3906,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Download"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    autoSearch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AutoSearchRequest"];
+            };
+        };
+        responses: {
+            /** @description What the search grabbed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutoSearchResult"];
                 };
             };
             default: components["responses"]["Error"];

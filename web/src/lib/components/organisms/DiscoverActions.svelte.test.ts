@@ -29,7 +29,7 @@ describe('DiscoverActions for a movie not in the library', () => {
 		await fireEvent.click(await screen.findByRole('button', { name: 'Download' }));
 		expect(ondownload).toHaveBeenCalledWith({
 			title: 'The Glass Orchard',
-			source: { kind: 'discoverMovie', tmdbId: 900001 }
+			target: { kind: 'movie', tmdb_id: 900001 }
 		});
 
 		await fireEvent.click(screen.getByRole('button', { name: 'Add to library (monitored)' }));
@@ -68,7 +68,32 @@ describe('DiscoverActions for a series in the library', () => {
 		await fireEvent.click(screen.getByRole('button', { name: 'Download series' }));
 		expect(ondownload).toHaveBeenCalledWith({
 			title: 'Harbor Watch · Whole series',
-			source: { kind: 'discoverSeries', tmdbId: 800001 }
+			target: { kind: 'series', tmdb_id: 800001 }
 		});
+	});
+});
+
+describe('DiscoverActions for a movie in a collection', () => {
+	it('offers multi-movie packs of the collection beside the movie itself', async () => {
+		mockFetch({
+			'GET /api/v1/discover/movies/900011': () =>
+				Response.json({
+					tmdb_id: 900011,
+					title: 'Skyfarer',
+					original_title: 'Skyfarer',
+					year: 2011,
+					overview: 'A fictional sky voyage.',
+					collection: { id: 700001, name: 'Skyfarer Collection' }
+				})
+		});
+		const ondownload = vi.fn();
+		renderWithClient(DiscoverActions, { kind: 'movies' as const, tmdbId: 900011, ondownload });
+
+		await fireEvent.click(await screen.findByRole('button', { name: 'Download collection' }));
+		expect(ondownload).toHaveBeenCalledWith({
+			title: 'Skyfarer Collection · Movie packs',
+			target: { kind: 'collection', tmdb_id: 900011 }
+		});
+		expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument();
 	});
 });

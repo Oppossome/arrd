@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"generic-arr-project/internal/geoip"
+	"generic-arr-project/internal/library/apperr"
 	"generic-arr-project/internal/library/engine"
 	"generic-arr-project/internal/library/indexers"
 	"generic-arr-project/internal/library/media"
@@ -68,7 +69,11 @@ func New(d Deps) (*Service, error) {
 // SearchNewMovie runs an automatic search for a movie; it satisfies
 // media.WantedSearcher.
 func (s *Service) SearchNewMovie(ctx context.Context, movieID int64) error {
-	_, err := s.AutoSearchMovie(ctx, movieID)
+	movie, err := s.store.GetMovie(ctx, movieID)
+	if err != nil {
+		return apperr.NotFound(err, "movie", movieID)
+	}
+	_, err = s.autoSearch(ctx, movieWant{s: s, movie: movie}, nil)
 	return err
 }
 

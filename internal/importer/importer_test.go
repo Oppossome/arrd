@@ -24,6 +24,20 @@ func TestPickMovieFile(t *testing.T) {
 	}
 }
 
+func TestMovieFiles(t *testing.T) {
+	files := []File{
+		{"Pack/Skyfarer.2011.1080p.mkv", 4 << 30},
+		{"Pack/Skyfarer.Ascent.2013.1080p.mkv", 5 << 30},
+		{"Pack/Skyfarer.2011.1080p-sample.mkv", 100 << 20},
+		{"Pack/info.nfo", 1 << 10},
+		{"Pack/tiny.mp4", 1 << 20},
+	}
+	got := MovieFiles(files)
+	if len(got) != 2 || got[0].Path != files[0].Path || got[1].Path != files[1].Path {
+		t.Errorf("MovieFiles = %+v", got)
+	}
+}
+
 func TestNames(t *testing.T) {
 	if got := MovieFolder("Agent Zero: Part / One?", 2018); got != "Agent Zero- Part  One (2018)" {
 		t.Errorf("MovieFolder = %q", got)

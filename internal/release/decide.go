@@ -98,9 +98,12 @@ func EvaluateMovie(c Candidate, m MovieTarget, lim Limits) Decision {
 	if c.Info.IsTV {
 		reject.add("is a TV release")
 	}
-	want := NormalizeTitle(m.Title)
-	got := NormalizeTitle(c.Info.Title)
-	if got == "" || (got != want && got != NormalizeTitle(m.OriginalTitle)) {
+	switch {
+	case MatchesMovieTitle(c.Info, m):
+		// A title containing a pack word is still this movie.
+	case c.Info.MoviePack:
+		reject.add("is a multi-movie pack; download it from the collection instead")
+	default:
 		reject.add("title %q does not match %q", c.Info.Title, m.Title)
 	}
 	switch {

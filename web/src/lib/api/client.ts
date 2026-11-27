@@ -103,10 +103,6 @@ async function done(result: Promise<unknown>): Promise<void> {
 const id = (id: number) => ({ params: { path: { id } } });
 const season = (id: number, season: number) => ({ params: { path: { id, season } } });
 const tmdb = (tmdbId: number) => ({ params: { path: { tmdbId } } });
-/** Path parameters plus a release search's own text, left out when blank. */
-const searchText = <P extends object>(at: { params: { path: P } }, q?: string) => ({
-	params: { ...at.params, query: { q: q?.trim() || undefined } }
-});
 /** The genre and lang query parameters of a title filter, left out when unset. */
 export const filterQuery = (f?: T.TitleFilter) => ({
 	genre: f?.genres.length ? f.genres : undefined,
@@ -145,10 +141,6 @@ export const api = {
 		moviesLike: (tmdbId: number) => body(http().GET('/api/v1/discover/movies/{tmdbId}/recommendations', tmdb(tmdbId))),
 		movieRecommendations: () => body(http().GET('/api/v1/discover/movies/recommendations')),
 		movie: (tmdbId: number) => body(http().GET('/api/v1/discover/movies/{tmdbId}', tmdb(tmdbId))),
-		movieReleases: (tmdbId: number, q?: string) =>
-			body(http().GET('/api/v1/discover/movies/{tmdbId}/releases', searchText(tmdb(tmdbId), q))),
-		grabMovie: (tmdbId: number, release: T.ReleaseResult) =>
-			body(http().POST('/api/v1/discover/movies/{tmdbId}/grab', { ...tmdb(tmdbId), body: release })),
 		seriesList: (list: T.SeriesList) =>
 			body(http().GET('/api/v1/discover/lists/series/{list}', { params: { path: { list } } })),
 		seriesGenres: () => body(http().GET('/api/v1/discover/series/genres')),
@@ -156,26 +148,8 @@ export const api = {
 		seriesLike: (tmdbId: number) => body(http().GET('/api/v1/discover/series/{tmdbId}/recommendations', tmdb(tmdbId))),
 		seriesRecommendations: () => body(http().GET('/api/v1/discover/series/recommendations')),
 		show: (tmdbId: number) => body(http().GET('/api/v1/discover/series/{tmdbId}', tmdb(tmdbId))),
-		seriesReleases: (tmdbId: number, q?: string) =>
-			body(http().GET('/api/v1/discover/series/{tmdbId}/releases', searchText(tmdb(tmdbId), q))),
-		seasonReleases: (tmdbId: number, season: number, q?: string) =>
-			body(
-				http().GET(
-					'/api/v1/discover/series/{tmdbId}/seasons/{season}/releases',
-					searchText({ params: { path: { tmdbId, season } } }, q)
-				)
-			),
 		season: (tmdbId: number, season: number) =>
-			body(http().GET('/api/v1/discover/series/{tmdbId}/seasons/{season}', { params: { path: { tmdbId, season } } })),
-		episodeReleases: (tmdbId: number, season: number, episode: number, q?: string) =>
-			body(
-				http().GET(
-					'/api/v1/discover/series/{tmdbId}/seasons/{season}/episodes/{episode}/releases',
-					searchText({ params: { path: { tmdbId, season, episode } } }, q)
-				)
-			),
-		grabSeries: (tmdbId: number, release: T.ReleaseResult) =>
-			body(http().POST('/api/v1/discover/series/{tmdbId}/grab', { ...tmdb(tmdbId), body: release }))
+			body(http().GET('/api/v1/discover/series/{tmdbId}/seasons/{season}', { params: { path: { tmdbId, season } } }))
 	},
 
 	movies: {
@@ -186,11 +160,7 @@ export const api = {
 		add: (input: T.AddMovieRequest) => body(http().POST('/api/v1/movies', { body: input })),
 		update: (movieId: number, input: T.UpdateMovieRequest) =>
 			body(http().PUT('/api/v1/movies/{id}', { ...id(movieId), body: input })),
-		remove: (movieId: number) => done(http().DELETE('/api/v1/movies/{id}', id(movieId))),
-		releases: (movieId: number, q?: string) => body(http().GET('/api/v1/movies/{id}/releases', searchText(id(movieId), q))),
-		search: (movieId: number) => body(http().POST('/api/v1/movies/{id}/search', id(movieId))),
-		grab: (movieId: number, release: T.ReleaseResult) =>
-			body(http().POST('/api/v1/movies/{id}/grab', { ...id(movieId), body: release }))
+		remove: (movieId: number) => done(http().DELETE('/api/v1/movies/{id}', id(movieId)))
 	},
 
 	series: {
@@ -204,25 +174,23 @@ export const api = {
 			body(http().PUT('/api/v1/series/{id}', { ...id(seriesId), body: input })),
 		remove: (seriesId: number) => done(http().DELETE('/api/v1/series/{id}', id(seriesId))),
 		refresh: (seriesId: number) => body(http().POST('/api/v1/series/{id}/refresh', id(seriesId))),
-		searchWanted: (seriesId: number) => done(http().POST('/api/v1/series/{id}/search', id(seriesId))),
-		releases: (seriesId: number, q?: string) =>
-			body(http().GET('/api/v1/series/{id}/releases', searchText(id(seriesId), q))),
-		grab: (seriesId: number, release: T.ReleaseResult) =>
-			body(http().POST('/api/v1/series/{id}/grab', { ...id(seriesId), body: release })),
 		setSeasonMonitored: (seriesId: number, n: number, monitored: boolean) =>
-			done(http().PUT('/api/v1/series/{id}/seasons/{season}', { ...season(seriesId, n), body: { monitored } })),
-		seasonReleases: (seriesId: number, n: number, q?: string) =>
-			body(http().GET('/api/v1/series/{id}/seasons/{season}/releases', searchText(season(seriesId, n), q))),
-		searchSeason: (seriesId: number, n: number) =>
-			body(http().POST('/api/v1/series/{id}/seasons/{season}/search', season(seriesId, n)))
+			done(http().PUT('/api/v1/series/{id}/seasons/{season}', { ...season(seriesId, n), body: { monitored } }))
 	},
 
 	episodes: {
 		setMonitored: (episodeId: number, monitored: boolean) =>
-			body(http().PUT('/api/v1/episodes/{id}', { ...id(episodeId), body: { monitored } })),
-		releases: (episodeId: number, q?: string) =>
-			body(http().GET('/api/v1/episodes/{id}/releases', searchText(id(episodeId), q))),
-		search: (episodeId: number) => body(http().POST('/api/v1/episodes/{id}/search', id(episodeId)))
+			body(http().PUT('/api/v1/episodes/{id}', { ...id(episodeId), body: { monitored } }))
+	},
+
+	// Searching for and grabbing releases of any target: a movie, a
+	// collection, a series, a season or an episode.
+	releases: {
+		search: (target: T.ReleaseTarget, q?: string) =>
+			body(http().GET('/api/v1/releases', { params: { query: { ...target, q: q?.trim() || undefined } } })),
+		grab: (target: T.ReleaseTarget, release: T.ReleaseResult) =>
+			body(http().POST('/api/v1/grabs', { body: { target, release } })),
+		autoSearch: (target: T.ReleaseTarget) => body(http().POST('/api/v1/searches', { body: { target } }))
 	},
 
 	queue: {

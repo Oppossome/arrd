@@ -35,11 +35,14 @@ type Download struct {
 	SeriesID *int64 `json:"series_id,omitempty"`
 	// Title, Year and the image paths describe the movie or series;
 	// Episodes lists TV episode codes ("S01E02"). Filled by Queue.
-	Title        string            `json:"title,omitempty"`
-	Year         int               `json:"year,omitempty"`
-	PosterPath   *string           `json:"poster_path,omitempty"`
-	BackdropPath *string           `json:"backdrop_path,omitempty"`
-	Episodes     []string          `json:"episodes,omitempty"`
+	Title        string   `json:"title,omitempty"`
+	Year         int      `json:"year,omitempty"`
+	PosterPath   *string  `json:"poster_path,omitempty"`
+	BackdropPath *string  `json:"backdrop_path,omitempty"`
+	Episodes     []string `json:"episodes,omitempty"`
+	// Movies lists the movies of a multi-movie pack ("Title (Year)").
+	// Filled by Queue.
+	Movies       []string          `json:"movies,omitempty"`
 	Paused       bool              `json:"paused"`
 	IndexerID    *int64            `json:"indexer_id,omitempty"`
 	InfoHash     string            `json:"info_hash"`
@@ -116,22 +119,14 @@ func countPeerCountries(peers []Peer) []CountryCount {
 	return out
 }
 
-// grabTarget says what a download is for: one movie, or episodes of a
-// series.
+// grabTarget says what a download is for. movieID or seriesID is the
+// title it was grabbed for (its name and art in the queue); movieIDs and
+// episodeIDs are the items it is expected to contain.
 type grabTarget struct {
 	movieID    *int64
 	seriesID   *int64
+	movieIDs   []int64
 	episodeIDs []int64
-}
-
-// GrabMovieRelease downloads r for the movie. r normally comes from
-// SearchMovie; the indexer it names supplies the network for fetching the
-// .torrent file.
-func (s *Service) GrabMovieRelease(ctx context.Context, movieID int64, r ReleaseResult) (Download, error) {
-	if _, err := s.store.GetMovie(ctx, movieID); err != nil {
-		return Download{}, apperr.NotFound(err, "movie", movieID)
-	}
-	return s.grab(ctx, grabTarget{movieID: &movieID}, r)
 }
 
 // resolveRelease fetches what a release points at through the indexer's
@@ -212,8 +207,13 @@ func (s *Service) addAndRecord(ctx context.Context, eng *torrent.Engine, target 
 		if err != nil {
 			return err
 		}
-		for _, epID := range target.episodeIDs {
-			if err := q.AddDownloadEpisode(ctx, db.AddDownloadEpisodeParams{DownloadID: row.ID, EpisodeID: epID}); err != nil {
+		for _, id := range target.movieIDs {
+			if err := q.AddDownloadItem(ctx, db.AddDownloadItemParams{DownloadID: row.ID, MovieID: &id}); err != nil {
+				return err
+			}
+		}
+		for _, id := range target.episodeIDs {
+			if err := q.AddDownloadItem(ctx, db.AddDownloadItemParams{DownloadID: row.ID, EpisodeID: &id}); err != nil {
 				return err
 			}
 		}
@@ -231,7 +231,7 @@ func (s *Service) addAndRecord(ctx context.Context, eng *torrent.Engine, target 
 		return Download{}, fmt.Errorf("record download: %w", err)
 	}
 	s.log.Info().Str("release", r.Title).Str("indexer", ixRow.Name).Str("info_hash", row.InfoHash).
-		Int64("movie", deref(target.movieID)).Int64("series", deref(target.seriesID)).Int("episodes", len(target.episodeIDs)).
+		Int64("movie", deref(target.movieID)).Int64("series", deref(target.seriesID)).Int("episodes", len(target.episodeIDs)).Int("pack_movies", len(target.movieIDs)).
 		Msg("grabbed release")
 	return s.downloadFromRow(eng, row), nil
 }
@@ -577,13 +577,9 @@ func (s *Service) Queue(ctx context.Context, f QueueFilter) ([]Download, error) 
 		case r.SeriesID != nil:
 			n := series[*r.SeriesID]
 			d.Title, d.Year, d.PosterPath, d.BackdropPath = n.title, n.year, n.poster, n.backdrop
-			eps, err := s.store.ListDownloadEpisodes(ctx, r.ID)
-			if err != nil {
-				return nil, fmt.Errorf("list download episodes: %w", err)
-			}
-			for _, e := range eps {
-				d.Episodes = append(d.Episodes, fmt.Sprintf("S%02dE%02d", e.Season, e.Episode))
-			}
+		}
+		if err := s.describeItems(ctx, &d); err != nil {
+			return nil, err
 		}
 		out[i] = d
 	}
@@ -596,4 +592,31 @@ func deref(p *int64) int64 {
 		return 0
 	}
 	return *p
+}
+
+// describeItems lists what d is expected to contain: its episode codes, or
+// the movies of a multi-movie pack. A download whose title is gone takes
+// its name and art from the first movie it still lists.
+func (s *Service) describeItems(ctx context.Context, d *Download) error {
+	eps, err := s.store.ListDownloadItemEpisodes(ctx, d.ID)
+	if err != nil {
+		return fmt.Errorf("list download episodes: %w", err)
+	}
+	for _, e := range eps {
+		d.Episodes = append(d.Episodes, fmt.Sprintf("S%02dE%02d", e.Season, e.Episode))
+	}
+	movies, err := s.store.ListDownloadItemMovies(ctx, d.ID)
+	if err != nil {
+		return fmt.Errorf("list download movies: %w", err)
+	}
+	if len(movies) > 1 {
+		for _, m := range movies {
+			d.Movies = append(d.Movies, movieLabel(m))
+		}
+	}
+	if d.Title == "" && len(movies) > 0 {
+		m := movies[0]
+		d.Title, d.Year, d.PosterPath, d.BackdropPath = m.Title, int(m.Year), m.PosterPath, media.OptString(m.BackdropPath)
+	}
+	return nil
 }

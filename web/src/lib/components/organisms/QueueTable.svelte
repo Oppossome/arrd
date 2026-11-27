@@ -4,6 +4,7 @@
 	import { ConfirmDialog, DownloadProgress, EmptyState, ErrorMessage, StatusBadge } from '#lib/components/molecules/index.js';
 	import { formatBytes, timeAgo } from '#lib/utils/format.js';
 	import { libraryHref } from '#lib/nav/links.js';
+	import { downloadContents } from '#lib/domain/downloads.js';
 	import { queries, useMutation, type QueueFilter } from '#lib/api/query.js';
 	import PeerPopover from './PeerPopover.svelte';
 	import type { Download } from '#lib/api/types.js';
@@ -60,8 +61,10 @@
 								{:else}
 									<Text size="sm" tone="muted" as="span">Removed from library</Text>
 								{/if}
-								{#if d.episodes?.length}
-									<Text size="xs" tone="muted">{d.episodes.length > 3 ? `${d.episodes[0]} … ${d.episodes[d.episodes.length - 1]}` : d.episodes.join(', ')}</Text>
+								{#if d.movies?.length}
+									<Text size="xs" tone="muted">{d.movies.join(', ')}</Text>
+								{:else if d.episodes?.length}
+									<Text size="xs" tone="muted">{downloadContents(d)}</Text>
 								{/if}
 							</td>
 						{/if}

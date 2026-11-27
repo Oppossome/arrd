@@ -35,10 +35,10 @@ var videoExts = map[string]bool{".mkv": true, ".mp4": true, ".avi": true, ".m4v"
 // minMovieSize skips samples and extras.
 const minMovieSize = 50 << 20
 
-// PickMovieFile returns the main feature: the largest video file that is
-// not a sample.
-func PickMovieFile(files []File) (File, error) {
-	var best File
+// MovieFiles returns the video files that may be movies: at least 50 MiB
+// and not named as a sample.
+func MovieFiles(files []File) []File {
+	var out []File
 	for _, f := range files {
 		if !videoExts[strings.ToLower(filepath.Ext(f.Path))] {
 			continue
@@ -46,6 +46,16 @@ func PickMovieFile(files []File) (File, error) {
 		if strings.Contains(strings.ToLower(filepath.Base(f.Path)), "sample") || f.Size < minMovieSize {
 			continue
 		}
+		out = append(out, f)
+	}
+	return out
+}
+
+// PickMovieFile returns the main feature: the largest video file that is
+// not a sample.
+func PickMovieFile(files []File) (File, error) {
+	var best File
+	for _, f := range MovieFiles(files) {
 		if f.Size > best.Size {
 			best = f
 		}

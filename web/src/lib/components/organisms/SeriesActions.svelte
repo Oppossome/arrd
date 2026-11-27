@@ -19,7 +19,7 @@
 	const series = createQuery(() => queries.series(id));
 	const monitor = useMutation('setSeriesMonitored');
 	const refresh = useMutation('refreshSeries');
-	const search = useMutation('searchSeriesWanted');
+	const search = useMutation('autoSearch');
 	const del = useMutation('deleteSeries');
 	let confirming = $state(false);
 </script>
@@ -33,11 +33,11 @@
 			<Button
 				variant="primary"
 				loading={search.isPending}
-				onclick={() => search.mutate(id, { onSuccess: () => toasts.push('info', 'Search finished; see Activity for grabs') })}
+				onclick={() => search.mutate({ kind: 'series', tmdb_id: s.tmdb_id }, { onSuccess: () => toasts.push('info', 'Search finished; see Activity for grabs') })}
 				><Icon name="search" />Search wanted episodes</Button
 			>
 			{#if ondownload}
-				<Button onclick={() => ondownload({ title: `${s.title} · Whole series`, source: { kind: 'series', seriesId: id } })}>
+				<Button onclick={() => ondownload({ title: `${s.title} · Whole series`, target: { kind: 'series', tmdb_id: s.tmdb_id } })}>
 					<Icon name="download" />Download series
 				</Button>
 			{/if}
